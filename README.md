@@ -36,6 +36,28 @@ Each skill knows its place in the method. Run them in order for a new project, o
 
 The skills then activate on their triggers; the `synthetic-respondent` agent becomes available to launch.
 
+## How to use it
+
+Start a new product idea and let the cycle carry it end to end:
+
+1. **Capture the job.** Say `describe my project with humane:jtbd` (or paste customer reviews / an interview transcript). The interview produces `~/jtbd/<slug>/jtbd.json` — the corpus every later step reads.
+2. **Score and stage the outcomes.** Ask for the ODI pass: each outcome gets importance / satisfaction and one of the eight process stages. Honest scores beat flattering ones — `creator-estimate` is a valid, labeled source.
+3. **Pressure-test with people.** Run `humane:persona-review` on the brief, or launch the `synthetic-respondent` agent against your copy for a gut reaction with no politeness filter.
+4. **Set the system.** `humane:design-tokens` turns the brand into DTCG tokens and compiled CSS variables before any layout exists.
+5. **Build under constraints.** Before writing HTML/CSS, load `humane:layout-rules` and treat its avoid-list as hard rules; audit the result with `humane:nielsen-heuristics`.
+6. **Prove it.** `humane:before-after` shows the change worked; feed what you learned back into step 1.
+
+Two commands ship with the `jtbd` skill for looking at the corpus:
+
+```
+python3 <plugin>/skills/jtbd/scripts/graph.py            # interactive corpus viewer (11 views)
+python3 <plugin>/skills/jtbd/scripts/report.py exec-summary <slug>   # one-page stakeholder summary
+```
+
+## Learn the method live
+
+The cycle is taught hands-on at the [Agentic Design Lab](https://ai-design.salient.community/) — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method. Next cohort starts September 7.
+
 ### Any other agent (Codex, and others) via npx skills
 
 The skills are stdlib-only and self-contained. Add them to any agent that reads the `skills` convention:

@@ -1,0 +1,2447 @@
+{
+ "root": "/Users/glebkalinin/jtbd",
+ "lang": "auto",
+ "corpus": {
+  "business_outcomes": [
+   {
+    "id": "bo-ship-ai-creative",
+    "name": "Ship AI-assisted creative work clients approve",
+    "macros": [
+     "m-visual-pipeline",
+     "m-video-approval"
+    ]
+   },
+   {
+    "id": "bo-decision-grade",
+    "name": "Turn fuzzy inputs into decision-grade specs and reusable knowledge",
+    "macros": [
+     "m-jtbd-tooling",
+     "m-knowledge"
+    ]
+   },
+   {
+    "id": "bo-operate-solo",
+    "name": "Operate a one-person shop with agents in the loop",
+    "macros": [
+     "m-agent-control",
+     "m-self-ops"
+    ]
+   }
+  ],
+  "macros": [
+   {
+    "id": "m-visual-pipeline",
+    "name": "Manage AI visual production"
+   },
+   {
+    "id": "m-video-approval",
+    "name": "Get video approved by clients"
+   },
+   {
+    "id": "m-jtbd-tooling",
+    "name": "Turn product ideas into decision-grade specs"
+   },
+   {
+    "id": "m-agent-control",
+    "name": "Stay in control of working agents"
+   },
+   {
+    "id": "m-self-ops",
+    "name": "Run the day with limited capacity"
+   },
+   {
+    "id": "m-knowledge",
+    "name": "Capture and reuse session knowledge"
+   }
+  ],
+  "touchpoints": [
+   "Terminal",
+   "Browser",
+   "Chat/Telegram",
+   "Email",
+   "Voice",
+   "Canvas/Editor",
+   "Calendar",
+   "Desktop app"
+  ]
+ },
+ "projects": [
+  {
+   "slug": "agent-diff-viewer",
+   "path": "/Users/glebkalinin/jtbd/agent-diff-viewer/jtbd.json",
+   "name": "agent-diff-viewer",
+   "actor": "",
+   "macro": "m-agent-control",
+   "context": "",
+   "depends_on": [],
+   "hook": "A browser-based diff viewer that shows AI agent code changes visually, with test impact and selective undo — so developers can trust, debug, and control agent output.",
+   "situation": "When an AI coding agent (Claude Code, Cursor, Copilot) finishes a multi-file edit session...",
+   "motivation": "I want to see exactly what changed, what might break, and revert specific edits...",
+   "outcome": "So I can ship agent-generated code with confidence instead of anxiety.",
+   "what_hurts": "Terminal diffs are sequential noise — developers lose context across files, miss risky edits, and spend 5-15 minutes per incident tracing breakage back to specific agent changes.",
+   "cost_today": "5-15 minutes per debug incident (daily for teams), missed regressions that reach production, eroding trust in AI tools.",
+   "needs": {
+    "functional": [
+     "Show multi-file diffs in one visual view with syntax highlighting",
+     "Correlate test failures to specific file changes",
+     "Allow selective revert of individual edits without breaking deps",
+     "Flag files the agent touched outside the requested scope",
+     "Load in under 2 seconds from any git state"
+    ],
+    "emotional": [
+     "Feel confident approving agent changes",
+     "Feel in control, not at the mercy of the agent",
+     "Reduce the anxiety of 'what did it actually do?'"
+    ],
+    "social": [
+     "Demonstrate to the team that AI-generated code gets proper review",
+     "Build trust in AI tooling adoption across the org"
+    ]
+   },
+   "forces": {
+    "push": "Terminal diffs are unreadable for multi-file agent changes. Developers miss things, ship regressions, lose trust in their AI tools.",
+    "pull": "Visual, instant, integrated diff view that shows what changed + what might break. Feels like GitHub PR review but for local agent sessions.",
+    "habit": "git diff, VS Code built-in diff, and GitHub PRs already work for 80% of cases. Developers have muscle memory for these tools.",
+    "anxiety": "Another tool in the stack. Will it be slow? Will it require context-switching? Will it break on large diffs or edge cases?"
+   },
+   "outputs": [
+    "Browser-based visual diff viewer (HTML, local or served)",
+    "CLI command that opens the viewer from any git state",
+    "Optional Claude Code hook for auto-launch after edits"
+   ],
+   "guardrails": [
+    "Must load in under 2 seconds",
+    "No cloud dependency — works fully local",
+    "No login or account required",
+    "Must handle diffs of 50+ files without choking",
+    "CLI-first, browser is the viewer not the workflow"
+   ],
+   "target_users": [],
+   "before_after": {
+    "before": "Scrolling terminal output, mentally compiling changes across files, asking the agent 'what did you change?', 10-minute debug sessions tracing test failures to specific edits.",
+    "after": "One visual view, instantly see scope and risk, click to revert a single edit, test failures mapped to the change that caused them."
+   },
+   "scenarios": [
+    {
+     "title": "Debug the breakage",
+     "vignette": "Tests fail after a Claude Code session. Dev opens the diff viewer, sees 6 files changed, clicks the failing test — it highlights the function edit that broke it. Reverts that one change. Tests pass. 90 seconds, not 10 minutes."
+    },
+    {
+     "title": "Review before approve",
+     "vignette": "Claude Code says 'I've updated 8 files.' Dev opens the viewer, scans the file tree heat map, spots that the agent also touched .env. Flags it, approves the rest. Catches a mistake before it ships."
+    },
+    {
+     "title": "Selective undo",
+     "vignette": "Agent refactored 5 utility functions. 4 are great, 1 introduced a subtle bug. Dev clicks that one function's diff, hits revert. The other 4 changes stay. No git surgery required."
+    },
+    {
+     "title": "Question the reasoning",
+     "vignette": "Dev sees an unexpected import added. Clicks it, asks 'why?' inline. The tool shows the agent's reasoning from the session context. Dev decides to keep it."
+    }
+   ],
+   "trigger": {},
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "When tests break, the tool pays for itself immediately. Job 1 is the prevention version of Job 4.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "The real problem isn't seeing the scope — it's deciding 'is this safe?'",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "A diff viewer that shows 'hey, this file wasn't in your request' would be huge.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I want to click a change and ask Claude 'why did you do this?' without leaving the tool.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Show me which file edits are most likely to have caused test X to fail.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Not just what changed, but: anything built on my own time/machine outside of cohort sessions stays mine.",
+     "who": ""
+    }
+   ],
+   "evidence_source": "synthetic_respondent_interviews",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "synthetic respondents, not real interviews",
+    "no actual usage data"
+   ],
+   "open_questions": [
+    "Should test impact analysis be built-in or pluggable?",
+    "How to access agent reasoning/session context for 'why?' feature?",
+    "Editor extension vs standalone tool vs Claude Code hook?",
+    "Free OSS or paid product?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "agent-diff-viewer:o0",
+     "statement": "Minimize the time to see all agent changes across files in one view",
+     "imp": 9,
+     "sat": 3,
+     "opp": 15,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "agent-diff-viewer:o1",
+     "statement": "Minimize the time to trace a test failure back to the specific change",
+     "imp": 8.5,
+     "sat": 3.5,
+     "opp": 13.5,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "agent-diff-viewer:o2",
+     "statement": "Minimize the risk of missing an out-of-scope edit",
+     "imp": 8,
+     "sat": 2.5,
+     "opp": 13.5,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "agent-diff-viewer:o3",
+     "statement": "Minimize the effort to revert a single bad edit without breaking others",
+     "imp": 8.5,
+     "sat": 4,
+     "opp": 13.0,
+     "tier": "prioritize",
+     "stage": "modify",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "agent-diff-viewer:o4",
+     "statement": "Minimize the time to open the viewer from any git state",
+     "imp": 6.5,
+     "sat": 5,
+     "opp": 8.0,
+     "tier": "skip",
+     "stage": "prepare",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "agent-diff-viewer:o5",
+     "statement": "Minimize the effort to confirm a change set is safe to commit",
+     "imp": 8,
+     "sat": 4,
+     "opp": 12,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "cull",
+   "path": "/Users/glebkalinin/jtbd/cull/jtbd.json",
+   "name": "cull",
+   "actor": "",
+   "macro": "m-visual-pipeline",
+   "context": "",
+   "depends_on": [],
+   "hook": "A local-first image library for AI-heavy creative workflows that keeps provenance, ratings, and selection state in one place so teams can review faster and handoff confidently.",
+   "situation": "When I inherit or generate large image batches across generators, cameras, or folders and need to decide what to keep, share, and use next without losing context or waiting for manual file handoffs.",
+   "motivation": "I want one place to find the right image quickly, understand how it was created, and move review decisions through to export or handoff.",
+   "outcome": "So my team can review, approve, and reuse visual output faster while avoiding context loss and provenance mistakes.",
+   "what_hurts": "Image streams arrive in mixed directories with inconsistent names and missing decision history. Reviewers burn time hunting, re-opening files, and re-deriving context, then still need a separate path to share and approve remotely.",
+   "cost_today": "",
+   "needs": {
+    "functional": [
+     "Import and index local image sets without deleting source files",
+     "Attach generation metadata (provider, model, settings, seed) from sidecars when available",
+     "Support fast filtering by prompt, source, model, dates, ratings, tags, and visual similarity",
+     "Capture rating/selection and collection decisions as persistent, auditable local state",
+     "Surface provenance evidence so selection can be justified during review or delivery",
+     "Run remote review sessions through a streamable browser HTTP endpoint",
+     "Preserve workflow continuity across local/offline and connected review states"
+    ],
+    "emotional": [
+     "Feel confident that selections are recoverable and explainable after a long session",
+     "Feel in control of a large visual backlog instead of overwhelmed by it",
+     "Feel free to collaborate remotely without waiting for file copy cycles"
+    ],
+    "social": [
+     "Reduce friction for creative directors and clients in approval loops",
+     "Support teams that need shared decisions without local file transfer bottlenecks",
+     "Protect trust in production by making provenance auditable"
+    ]
+   },
+   "forces": {
+    "push": "Thousands of images without a consistent context layer, mixed folder/import sources, and slow manual triage across previews, exports, and chat-based feedback.",
+    "pull": "A single application that connects local-first cataloging, generation metadata, and remote viewing so review and handoff become a contiguous loop.",
+    "habit": "Teams currently keep using manual folders, Preview windows, and ad-hoc sharing habits because they already exist and are familiar, even when they are slow.",
+    "anxiety": "Risk of exposing or losing data in a shared review path, and risk of losing local truth if a new layer adds complexity."
+   },
+   "outputs": [
+    "Local catalog and selection workspace in a Tauri desktop app",
+    "Queryable SQLite-backed image metadata and provenance store",
+    "Smart collections, rating model, and selection persistence",
+    "Streaming browser read path (shareable HTTP) for remote review",
+    "Export or handoff workflows that preserve selected outputs and rationale"
+   ],
+   "guardrails": [
+    "Preserve user-owned files: no implicit deletion or destructive file moves in core flows",
+    "Do not rely on network calls for core import, filter, and rating operations",
+    "Remote sharing must remain explicit and auditable so accidental exposure is visible",
+    "Keep local selections and provenance as source of truth even when remote review is active"
+   ],
+   "target_users": [
+    "AI artists iterating on high-volume generation",
+    "Creative directors managing client concept rounds",
+    "Prompt engineers comparing multi-generator output",
+    "Small studios handling rights-aware delivery and review"
+   ],
+   "before_after": {
+    "before": "Images land across folders or tools, review loops include hunting through files, and approvals happen through repeated export-and-share exchanges.",
+    "after": "Images are indexed with evidence and decisions attached, reviews happen in a shared stream when needed, and selected outputs are carried forward with provenance intact."
+   },
+   "scenarios": [
+    {
+     "title": "AI iteration history",
+     "vignette": "An artist generates dozens of variants per prompt and needs to recover the exact context for a later round. Cull keeps run metadata and selection state so the best candidates remain findable."
+    },
+    {
+     "title": "Campaign concept review",
+     "vignette": "A creative director triages 200 concept images and tags high-fit options by project direction, style, and quality while preparing stakeholder approvals."
+    },
+    {
+     "title": "Cross-tool prompt optimization",
+     "vignette": "A prompt engineer compares outputs from Midjourney, SD, DALL-E, and Gemini by model/source and visual similarity to decide what to keep or regenerate."
+    },
+    {
+     "title": "Provenance-first handoff",
+     "vignette": "A studio lead must prove source evidence before handoff. Cull keeps sidecar and source signals alongside selections so origin questions can be answered quickly."
+    },
+    {
+     "title": "Reusable reference library",
+     "vignette": "A creator starts a new project and needs to recall prior visual references quickly; Cull returns close matches and previously selected assets from an existing library."
+    },
+    {
+     "title": "Remote review replacement for tethering",
+     "vignette": "An off-site editor needs to review fresh captures quickly; Cull exposes a public or tunnelled stream to the active library and they can approve/reject without local file transfer."
+    }
+   ],
+   "trigger": {
+    "type": "event",
+    "detail": "New batch import or new model/tool output requires immediate review and structured handoff"
+   },
+   "version": 1,
+   "quotes": [],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "No recorded interview transcripts were provided during this conversion",
+    "No direct quotes were available to back every statement",
+    "The output is based on existing internal use-case notes and inferred behavior"
+   ],
+   "open_questions": [
+    "Which switching moment is most expensive for each user segment: first import, first shortlist, or final export?",
+    "What are the required defaults for remote sharing permissions for compliance-sensitive teams?",
+    "Which external workflows most often fail today (Capture One, cloud backups, manual shared folders)?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "cull:o0",
+     "statement": "Minimize the time to locate the right image across mixed directories",
+     "imp": 8.5,
+     "sat": 3,
+     "opp": 14.0,
+     "tier": "prioritize",
+     "stage": "locate",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "cull:o1",
+     "statement": "Minimize the effort to understand how an image was created (provenance)",
+     "imp": 7.5,
+     "sat": 3.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "confirm",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "cull:o2",
+     "statement": "Minimize re-deriving context when returning to a review",
+     "imp": 7,
+     "sat": 3.5,
+     "opp": 10.5,
+     "tier": "marginal",
+     "stage": "prepare",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "cull:o3",
+     "statement": "Minimize the time to rate and shortlist a batch",
+     "imp": 8,
+     "sat": 4.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "execute",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "cull:o4",
+     "statement": "Minimize the risk of losing decision history",
+     "imp": 7,
+     "sat": 3,
+     "opp": 11,
+     "tier": "marginal",
+     "stage": "monitor",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "cull:o5",
+     "statement": "Minimize the effort to hand off approved selections",
+     "imp": 7.5,
+     "sat": 4,
+     "opp": 11.0,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "frame-io",
+   "path": "/Users/glebkalinin/jtbd/frame-io/jtbd.json",
+   "name": "frame-io",
+   "actor": "Video producer / editor в студии или агентстве, ответственный за сбор клиентских правок и финальный аппрув. Клиент-ревьюер и байер — отдельные роли с другими jobs (не разбирались отдельно). [inferred: из должностей ревьюеров Capterra, не из данных о покупках]",
+   "macro": "m-video-approval",
+   "context": "incumbent studied as research input",
+   "depends_on": [],
+   "hook": "Cloud-платформа для видеокоманд: загрузка исходников, покадровое ревью, согласование с клиентами и брендированная презентация работ — в одном месте.",
+   "situation": "Когда видеопродюсер собирает правки по ролику от клиентов, монтажёров и руководителей, разбросанные по почте, чатам и файлообменникам [E1]...",
+   "motivation": "Я хочу собрать файлы, комментарии и статусы согласования в одном месте с привязкой к таймкоду...",
+   "outcome": "Чтобы исключить ручной перенос таймкод-заметок из писем и уточняющие звонки/письма по расплывчатым правкам [E1, E2]. Целевое значение не измерено — unknown.",
+   "what_hurts": "Правки приходят письмами с невнятными таймкодами и расплывчатыми формулировками [E1]; клиент не может указать точный кадр [E2]; монтажёр переносит заметки вручную [E3].",
+   "cost_today": "",
+   "needs": {
+    "functional": [
+     "Получать от клиента правку, привязанную к точному кадру, без обучения клиента [E2, E7]",
+     "Доставлять правки монтажёру в его рабочую среду без ручного переноса [E3]",
+     "Держать все версии одного ролика на одном линке с историей [E5]",
+     "Передавать тяжёлые исходники быстрее, чем через файлообменники [inferred: копирайт]"
+    ],
+    "emotional": [
+     "Уверенность, что ни одна правка не потеряна [E1]"
+    ],
+    "social": [
+     "Выглядеть профессионально перед клиентом (брендированные презентации) [inferred: копирайт + отзыв Zachary W.]"
+    ]
+   },
+   "forces": {
+    "push": "Хаос правок в статус-кво: 'emails back with unclear timecode stamps, vague requests, and just general confusion' [E1]; расплывчатый фидбек клиентов [E2].",
+    "pull": "Прогресс, который покупают (не фичи): правка клиента попадает прямо в таймлайн монтажёра [E3]; инструмент дисциплинирует клиента давать конкретный фидбек [E2]; вся история версий на одном линке [E5].",
+    "habit": "partial — статус-кво: Dropbox/Drive/YouTube/Vimeo/Wipster + email [E4, E5, E6]. Наблюдаемая инерция: уже оплаченный стек ('already paying for a Vimeo pro account' [E6]). Полной картины инерции нет: decision-timeline в отзывах не восстанавливается.",
+    "anxiety": "partial — прямых pre-switch страхов в отзывах мало. Единственный близкий: клиенты не хотят 'yet another log-in' [E7] — риск, который взвешивают до переключения. Остальные жалобы (блокировка у storage-лимита, саппорт, цена) — post-adoption проблемы, см. ongoing_use_problems."
+   },
+   "outputs": [
+    "Согласованные (approved) версии видео",
+    "Брендированные share-ссылки и презентации",
+    "Транскрипты и субтитры",
+    "Библиотека ассетов с метаданными"
+   ],
+   "guardrails": [],
+   "target_users": [],
+   "before_after": {},
+   "scenarios": [],
+   "trigger": {},
+   "version": 4,
+   "quotes": [
+    {
+     "id": "E1",
+     "text": "Before I was using it, I was putting a video online, and then getting emails back with unclear timecode stamps, vague requests, and just general confusion.",
+     "who": "Travis G., Sr. Instructional Multimedia Designer, Higher Ed, 2019-02-15, Capterra"
+    },
+    {
+     "id": "E2",
+     "text": "I can more easily 'force' clients to only give specific, actionable feedback by funneling them to Frame.io as our only place for revision communication.",
+     "who": "Christopher F., Video Producer, Media Production, 2020-04-02, Capterra"
+    },
+    {
+     "id": "E3",
+     "text": "I LOVE that my colleagues can leave comments through the frame.io link and I can then see their comments directly on my Premiere timeline.",
+     "who": "Adri L., Video Producer, Computer Software, 2023-01-11, Capterra"
+    },
+    {
+     "id": "E4",
+     "text": "The ability to create timecoded comments on videos is unique to Frame.io, and a major reason our team made the switch from Dropbox.",
+     "who": "Verified Reviewer, Editor, Media Production, 2022-03-21, Capterra (incentivized)"
+    },
+    {
+     "id": "E5",
+     "text": "The ability to 'stack' or 'layer' updated versions of the same video is useful and unique to Frame.io.",
+     "who": "same as E4"
+    },
+    {
+     "id": "E6",
+     "text": "If Vimeo's review tools continue to improve... I would consider switching to Vimeo since I'm already paying for a pro account.",
+     "who": "Christopher F. (E2) — also switched from Wipster after overnight price hike"
+    },
+    {
+     "id": "E7",
+     "text": "I had about a dozen clients who had a hard time leaving comments... some clients didn't want to create yet another log-in.",
+     "who": "matt A., Video Producer, Media Production, 2019-10-31, Capterra (incentivized)"
+    },
+    {
+     "id": "E8",
+     "text": "What was suppose to save me time from tracking emails of feedback... has moved to me calling the customer and leaving feedback with them.",
+     "who": "Ben A., Business Owner, Marketing and Advertising, 2019-02-12, 3.0/5, Capterra (incentivized)"
+    },
+    {
+     "id": "E9",
+     "text": "They try and upsell everyone by suspended your account if you get close to the storage limits.",
+     "who": "Elie O., VP Marketing, Law Practice, 2024-05-10, Capterra"
+    },
+    {
+     "id": "E10",
+     "text": "Frame.io's cost can be difficult to accept, especially after having some clients not even use the system.",
+     "who": "matt A. (E7)"
+    },
+    {
+     "id": "E11",
+     "text": "Their support and CS isn't prompt and very helpful, have to troubleshoot a lot yourself.",
+     "who": "Zachary W., Enterprise Account Manager, Marketing and Advertising, 2025-03-09, Capterra"
+    }
+   ],
+   "evidence_source": "website copy (frame.io homepage, 2026-07-23) + Capterra reviews page https://www.capterra.com/p/148214/Frame-io/reviews/ (80 отзывов заявлено, вручную прочитано ~15 верхних 'most helpful', срез 2026-07-24)",
+   "evidence_limitation": "Счётчиков по корпусу нет — частотные утверждения запрещены; все 'appears in reviews'. Отзывы Capterra частично incentivized (помечено платформой).",
+   "pages_read": [],
+   "weaknesses": [
+    "Малая прочитанная выборка (~15 из 80), смещённая в 'most helpful'",
+    "Anxiety и Habit — partial: нет decision-timeline данных",
+    "Buyer vs. user не разделены данными о покупках",
+    "Вендорские метрики без методологии"
+   ],
+   "open_questions": [
+    "Кто платит (buyer) и как выглядит decision-timeline переключения? Нужны интервью, не отзывы.",
+    "Реальные pre-switch страхи: отзывы дают post-adoption жалобы, а не то, что останавливало ДО покупки.",
+    "Частоты: какие боли/ценности доминируют по корпусу? Нужен полный проход по 80+ отзывам со счётчиками.",
+    "Экономика хранения на масштабе продакшна; политика при превышении лимита (E9 — одно свидетельство, не проверено).",
+    "Ревью не-видео контента: заявлено сайтом, в прочитанных отзывах почти не встречается.",
+    "Глубина интеграций вне Adobe (DaVinci, Final Cut) — не проверялась.",
+    "Методология вендорских метрик 2.9x/2.7x/31%."
+   ],
+   "links": [
+    "jtbd-graph-tool"
+   ],
+   "outcomes": [
+    {
+     "id": "frame-io:o0",
+     "statement": "Minimize the effort for a client to leave frame-accurate feedback without creating an account",
+     "imp": 8.5,
+     "sat": 3,
+     "opp": 14.0,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Browser",
+     "evidence": [
+      "E2",
+      "E7",
+      "E8"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o1",
+     "statement": "Minimize the time from final cut to sign-off",
+     "imp": 9.5,
+     "sat": 6,
+     "opp": 13.0,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o2",
+     "statement": "Minimize the cost of keeping the tool when only some clients use it",
+     "imp": 7,
+     "sat": 3,
+     "opp": 11,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [
+      "E10",
+      "E6"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o3",
+     "statement": "Minimize the risk of feedback getting lost across email and chat",
+     "imp": 9,
+     "sat": 8,
+     "opp": 10,
+     "tier": "marginal",
+     "stage": "monitor",
+     "touch": "Email",
+     "evidence": [
+      "E1",
+      "E3",
+      "E4"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o4",
+     "statement": "Minimize the time it takes to transfer heavy source files to the editor",
+     "imp": 7.5,
+     "sat": 5,
+     "opp": 10.0,
+     "tier": "marginal",
+     "stage": "prepare",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o5",
+     "statement": "Minimize surprise storage limits at delivery",
+     "imp": 6,
+     "sat": 2.5,
+     "opp": 9.5,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [
+      "E9"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o6",
+     "statement": "Minimize manual transfer of timecoded notes into the editor's timeline",
+     "imp": 8.5,
+     "sat": 8.5,
+     "opp": 8.5,
+     "tier": "marginal",
+     "stage": "modify",
+     "touch": "Browser",
+     "evidence": [
+      "E3",
+      "E4"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o7",
+     "statement": "Minimize the effort to locate the right asset across projects",
+     "imp": 6.5,
+     "sat": 5.5,
+     "opp": 7.5,
+     "tier": "skip",
+     "stage": "locate",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o8",
+     "statement": "Minimize confusion over which version of the cut is current",
+     "imp": 7,
+     "sat": 7.5,
+     "opp": 7,
+     "tier": "skip",
+     "stage": "confirm",
+     "touch": "Browser",
+     "evidence": [
+      "E5"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o9",
+     "statement": "Minimize the time to produce a branded presentation for the client",
+     "imp": 6.5,
+     "sat": 6,
+     "opp": 7.0,
+     "tier": "skip",
+     "stage": "execute",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "frame-io:o10",
+     "statement": "Minimize the time to resolve a tool problem without vendor help mid-review",
+     "imp": 5,
+     "sat": 3,
+     "opp": 7,
+     "tier": "skip",
+     "stage": "execute",
+     "touch": "Support",
+     "evidence": [
+      "E11"
+     ],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "humane-agentic-design",
+   "path": "/Users/glebkalinin/jtbd/humane-agentic-design/jtbd.json",
+   "name": "humane-agentic-design",
+   "actor": "Gleb (author and first user) + three external actors: solo founders shipping products with agents; designers entering the agentic era (AI lab / AGENCY community members); and agents themselves, consulting the method autonomously before UX changes [Q3].",
+   "macro": "m-jtbd-tooling",
+   "context": "meta-project: the set distributes other projects of this corpus (jtbd-skill, layout-rules)",
+   "depends_on": [],
+   "hook": "Humane Agentic Design — a thematic plugin set (Impeccable-style dedicated repo): a human-centric design method cycle for people and agents, from JTBD to design system, installable into any agentic stack with one command.",
+   "situation": "When design skills pile up scattered across a personal folder and a shared repo — «it's just too noisy and hard to maintain» [Q1] — while founders and designers around are shipping interface slop with agents, without a method...",
+   "motivation": "I want to package the proven cycle (jtbd → persona → tokens/brand → layout-rules → nielsen-audit → before-after) into one installable, universally agentic plugin with a short namespace...",
+   "outcome": "So that every project of mine starts with the humane cycle, lab members install it with one command, the set earns its keep in client work, and people outside my circle install it too [Q4]. Numeric targets not set — unknown.",
+   "what_hurts": "Skills are scattered across ~/.claude/skills and the claude-skills repo with no versions and no namespace; duplicates drift apart; sharing the set means 'copy this folder'; Claude-specific bits (paths, tool names) block portability to Codex and other agents [Q1, Q2].",
+   "cost_today": "",
+   "needs": {
+    "functional": [
+     "One-command install: /plugin marketplace add, plus npx skills for non-Claude agents [Q2]",
+     "Short namespace humane:* — the plugin name is the invocation UX",
+     "A coherent cycle in the README, not a folder of skills: every skill knows its place in the method",
+     "Self-contained skills: no absolute paths, no Claude-only tools in the core",
+     "An entry in the agency-plugins marketplace (option 2 — aggregator on top of the dedicated repo)"
+    ],
+    "emotional": [
+     "Order instead of noise: one place, one version, nothing drifts [Q1]"
+    ],
+    "social": [
+     "A showcase of the method: the LinkedIn audience and lab members see a coherent product, not a scatter [Q4]"
+    ]
+   },
+   "forces": {
+    "push": "The noise and unmaintainability of the scatter: «it's just too noisy and hard to maintain» [Q1]; the ~/.claude/skills vs repo duplicates have already drifted once.",
+    "pull": "The Impeccable pattern: one repo = plugin + its own marketplace, a cycle narrative, a namespace, versions; universal agent support widens the audience from 'my Claude skills' to a method for any agent [Q2].",
+    "habit": "partial — the personal skills folder works fine for a single user; the inertia is small but real: familiar short names without a prefix, and instant in-place edits without a commit.",
+    "anxiety": "partial [creator-derived, not interviewed]: one more repo to maintain; risk of breaking working skills during the move (jtbd carries scripts/templates); cross-agent compatibility may drift; the dual channel (plugin + npx skills) means double testing."
+   },
+   "outputs": [
+    "Repo glebis/humane-agentic-design: the humane plugin + its own marketplace.json",
+    "Core (7): jtbd, layout-rules, design-tokens, persona-review, synthetic-respondent (agent), nielsen-heuristics, before-after",
+    "Ring 2 (after the pilot settles): brandkit, brand-guidelines",
+    "README cycle narrative + an agency-plugins entry (git-subdir)",
+    "npx skills channel for Codex and other agents"
+   ],
+   "guardrails": [
+    "Do not duplicate impeccable (audit/polish/harden) — complement it: method + system, not interface QA",
+    "One skill lives in exactly one channel: after the install is verified, duplicates in ~/.claude/skills are removed",
+    "Image generators and infrastructure skills stay out of the set"
+   ],
+   "target_users": [],
+   "before_after": {},
+   "scenarios": [],
+   "trigger": {},
+   "version": 2,
+   "quotes": [
+    {
+     "id": "Q1",
+     "text": "I want this to be a dedicated repo where there is only this plugin, just like Impeccable, because otherwise it's just too noisy and hard to maintain",
+     "who": ""
+    },
+    {
+     "id": "Q2",
+     "text": "I wanted to make it more universally agentic, not focused on [Claude]",
+     "who": ""
+    },
+    {
+     "id": "Q3",
+     "text": "actor selection: solo founders with agents; designers entering the agentic era; agents themselves",
+     "who": ""
+    },
+    {
+     "id": "Q4",
+     "text": "success selection: I use it in every project; course/community material; external installs/stars; client projects",
+     "who": ""
+    }
+   ],
+   "evidence_source": "decisions in chat, 2026-07-29 (structured choices + the user's own words)",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "Anxiety is creator-derived, not validated",
+    "Outcome has no numeric targets (installs, members, projects)",
+    "External actors (founders, designers) not interviewed — their jobs are inferred"
+   ],
+   "open_questions": [
+    "What are the external actors' actual jobs — interview 2-3 lab members after the pilot",
+    "Numeric 3-month targets (installs? homework submitted through the plugin?)",
+    "synthetic-respondent is an agent, not a skill: it moves to the plugin's agents/ — verify the format",
+    "License, and README language (EN for the outside world, a RU version for the lab?)"
+   ],
+   "links": [
+    "jtbd-graph-tool"
+   ],
+   "outcomes": [
+    {
+     "id": "humane-agentic-design:o0",
+     "statement": "Minimize the time from 'I want the method' to a working humane:* for a new user",
+     "imp": 8.5,
+     "sat": 2,
+     "opp": 15.0,
+     "tier": "prioritize",
+     "stage": "prepare",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "humane-agentic-design:o1",
+     "statement": "Minimize drift between copies of a skill",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Terminal",
+     "evidence": [
+      "Q1"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "humane-agentic-design:o2",
+     "statement": "Minimize Claude-specific bits in the core of the set",
+     "imp": 7.5,
+     "sat": 3.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "confirm",
+     "touch": "Terminal",
+     "evidence": [
+      "Q2"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "humane-agentic-design:o3",
+     "statement": "Minimize explaining how the skills relate — the cycle is obvious from the README",
+     "imp": 7.5,
+     "sat": 3,
+     "opp": 12.0,
+     "tier": "prioritize",
+     "stage": "define",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "humane-agentic-design:o4",
+     "statement": "Minimize the effort of releasing a new version of the set",
+     "imp": 7,
+     "sat": 4,
+     "opp": 10,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "imageview",
+   "path": "/Users/glebkalinin/jtbd/imageview/jtbd.json",
+   "name": "imageview",
+   "actor": "",
+   "macro": "m-visual-pipeline",
+   "context": "",
+   "depends_on": [],
+   "hook": "A visual canvas companion for AI agents — lets you review, approve, reject, and direct image regeneration through voice and MCP, so creative decisions happen away from the desk, not buried in Preview windows.",
+   "situation": "When I'm iterating on AI-generated image series across multiple tools (ChatGPT, MidJourney, DALL-E) and the outputs land in scattered folders with dozens of Preview windows piling up...",
+   "motivation": "I want a single grid-based canvas that my agent opens automatically, where I can compare, approve, reject, and redirect generation by voice...",
+   "outcome": "So I can converge on the right images quickly without being chained to a desk or drowning in file management.",
+   "what_hurts": "Images land in unknown folders. Preview.app opens a new window per image — 10 iterations × 10 images = 100 windows. Claude Code's AskUserQuestion shows text labels, not images. Selection becomes 'pick the least bad one' because comparing is too painful.",
+   "cost_today": "Creative quality suffers — settling for 'good enough' because the comparison friction is too high. Time wasted hunting for files. Good images get lost in the noise.",
+   "needs": {
+    "functional": [
+     "Agent-driven image display via MCP — agent calls a tool, images appear in the app",
+     "Grid view with quick approve/reject/delete per image",
+     "Manual review and comparison mode for side-by-side evaluation",
+     "Voice control for hands-free creative direction",
+     "Publish/export selected images in layout combinations",
+     "AI-powered curation — rank and recommend best candidates from a batch"
+    ],
+    "emotional": [
+     "Feel mobile and free — not chained to the desk for creative work",
+     "Feel in control of a large volume of outputs, not overwhelmed",
+     "Feel like the tool is a creative partner, not just a file browser"
+    ],
+    "social": [
+     "Ship a tool other AI artists and designers can use",
+     "Be seen as building genuinely useful creative tooling"
+    ]
+   },
+   "forces": {
+    "push": "Dozens of Preview windows, files in unknown folders, text-only selection UI in Claude Code, can't compare across iterations. Settling for 'good enough' because the comparison friction is too high.",
+    "pull": "Voice-controlled creative direction while mobile. Agent opens the app automatically. Grid-based visual comparison. AI-powered selection assistance. The vision of an AI-first app where the human directs but doesn't operate.",
+    "habit": "Preview.app barely works. The current workflow is tolerable enough that building a replacement keeps getting deferred.",
+    "anxiety": "App Store distribution — Apple Developer account requirement means users either need to build from source or install unsigned. Tauri + notarization may solve this."
+   },
+   "outputs": [
+    "Tauri (Mac) app with HTML/CSS/JS frontend",
+    "MCP server exposing tools for agents to display/control the app",
+    "Voice integration via Pipecat MCP",
+    "Layout/publish export feature"
+   ],
+   "guardrails": [
+    "Must work offline for local files — no cloud dependency for core features",
+    "Must not require Apple Developer account for distribution (Tauri notarization)",
+    "Voice is additive, not required — core app must work without Pipecat"
+   ],
+   "target_users": [
+    "AI artists generating at volume (100+ images per session)",
+    "Designers using multiple AI generation tools",
+    "Prompt engineers iterating on visual output",
+    "Content creators who need to select and publish quickly"
+   ],
+   "before_after": {
+    "before": "Generate 10 images → 10 Preview windows open → can't compare → hunt for files → pick 'good enough' → lose track of good ones → repeat",
+    "after": "Generate 10 images → agent opens ImageView → grid appears → voice: 'keep 3 and 7, delete the rest, regenerate 5 with warmer tones' → done while walking"
+   },
+   "scenarios": [
+    {
+     "title": "Iteration triage",
+     "vignette": "Claude Code generates 10 variants of a hero image. ImageView opens automatically via MCP, showing all 10 in a grid. Gleb says 'reject the first row, keep 4 and 7, make 4 darker.' The agent regenerates and the grid updates."
+    },
+    {
+     "title": "Volume curation",
+     "vignette": "After a MidJourney session with 200+ images, Gleb imports them into ImageView. The AI ranks by aesthetic quality and groups by visual similarity. He reviews the top 20, flags 5 for a project, deletes the rest."
+    },
+    {
+     "title": "Publish layout",
+     "vignette": "Gleb selects 4 images from a series and asks for a 2×2 layout with padding. ImageView generates the composite and exports it for social media."
+    }
+   ],
+   "trigger": {
+    "type": "event",
+    "detail": "Agent generates images and needs to present them for human review"
+   },
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "I would generate one iteration, like 10 different images with the story, and I would need to choose something",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "it generates something in some folder somewhere, I don't know where",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Voice is easier for me to get started because it's just something physical I can do. Right now I'm outside, I'm talking to you, not in front of the computer. This feels much better.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "the idea of any other agent, you just MCP",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "AI powered editorials for cleanup, for selecting best candidates",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "No quantified metrics for 'success' beyond qualitative improvement",
+    "Target user validation is self-referential — no external user interviews yet",
+    "Publishing/layout feature is vague — needs sharper definition of output formats"
+   ],
+   "open_questions": [
+    "iCloud Photos and Google Photos import feasibility (GLE-173)",
+    "Can Tauri apps be notarized and distributed without App Store?",
+    "What layout/publish formats matter most — social media grids, single exports, or something else?",
+    "How does the AI curation ranking work — aesthetic model, prompt similarity, or user-trained preferences?",
+    "Should the MCP server be bundled in the Tauri app or run separately?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "imageview:o0",
+     "statement": "Minimize the time from agent generation to images on screen",
+     "imp": 7.5,
+     "sat": 3.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "prepare",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview:o1",
+     "statement": "Minimize the window clutter needed to compare a generated batch",
+     "imp": 8.5,
+     "sat": 2.5,
+     "opp": 14.5,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview:o2",
+     "statement": "Minimize the effort to approve or reject each image",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview:o3",
+     "statement": "Minimize the effort to redirect regeneration with feedback",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "modify",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview:o4",
+     "statement": "Minimize the effort to export selected images in layouts",
+     "imp": 6.5,
+     "sat": 4,
+     "opp": 9.0,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Desktop app",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "imageview-prompt-pipeline",
+   "path": "/Users/glebkalinin/jtbd/imageview-prompt-pipeline/jtbd.json",
+   "name": "imageview-prompt-pipeline",
+   "actor": "",
+   "macro": "m-visual-pipeline",
+   "context": "extends imageview",
+   "depends_on": [],
+   "hook": "A single app that captures every AI-generated image, lets you explore the prompt space visually on a canvas, and exports platform-ready output — so nothing leaks from the creative pipeline.",
+   "situation": "When a designer is producing visual narratives across multiple AI generation sessions (GPT Image, Midjourney, etc.) and images are scattered across folders, preview windows, and agent sessions...",
+   "motivation": "I want one app that automatically captures all generated images, shows me what prompt/settings made each one, and lets me branch, refine, and iterate on prompts visually...",
+   "outcome": "So I can go from raw generation to premium, platform-ready output (LinkedIn PDFs, social posts) without losing any image or its creative lineage.",
+   "what_hurts": "Generated images leak from the pipeline — scattered across sessions, folders, preview windows. No single history. Fastrow handles culling but is ugly and disconnected from the generation loop. Iterating means switching back to the agent manually. Opening multiple preview windows to compare variants is painful.",
+   "cost_today": "Lost images, broken creative flow, context-switching between agent and viewer, manual prompt recall, no visual evolution history.",
+   "needs": {
+    "functional": [
+     "Auto-capture all generated images into one library with full history",
+     "Display prompt + generation metadata alongside each image",
+     "Prompt refinement on submit — dictate a prompt, immediately see a few AI-improved versions with added detail/role/variation",
+     "Submit multiple prompt variants concurrently with queue management (don't overwhelm the human)",
+     "Canvas-based prompt evolution — sticky columns representing iteration stages",
+     "Drag image variants into columns to build a visual evolution timeline",
+     "Adjustable column width — narrowest becomes a thin card stack showing first-to-last as one smooth line",
+     "Visual prompt exploration — select a phrase, branch it, cycle alternatives (Dream Machine-style)",
+     "Cull and rate variants efficiently",
+     "Polish output: crop, exposure, color correction",
+     "Export to platform-specific formats (LinkedIn PDF, social media)",
+     "Add text overlays and annotations"
+    ],
+    "emotional": [
+     "Feel like a professional producing premium work, not hacking together tools",
+     "Confidence that nothing is lost — every generation is captured",
+     "Creative flow — iterate without leaving the app",
+     "Not overwhelmed — the system manages concurrency and pacing"
+    ],
+    "social": []
+   },
+   "forces": {
+    "push": "Images leak from the pipeline. Fastrow is ugly. Preview windows are useless for comparison. Creative loop is broken between agent and viewer. No visual history of prompt evolution.",
+    "pull": "One app for the full loop: capture → cull → iterate → polish → export. Canvas as a visual evolution workspace. Dream Machine-style prompt brainstorming. AI-suggested prompt improvements on submit. Professional-grade output.",
+    "habit": "Current agent-based workflow actually works — asking Claude to re-prompt is convenient. Fastrow does basic culling. The pieces function, just not together.",
+    "anxiety": "Scope creep — this touches generation, viewing, editing, and export. Risk of building a mediocre version of everything instead of a great version of the core."
+   },
+   "outputs": [
+    "Platform-ready visual narratives (LinkedIn PDFs, social posts)",
+    "Curated image sets with full creative lineage",
+    "Reusable prompt libraries with proven results",
+    "Visual prompt evolution maps on canvas"
+   ],
+   "guardrails": [],
+   "target_users": [],
+   "before_after": {
+    "before": "Images scattered across folders and sessions. Ugly viewer for culling. Agent for iteration. Manual export. Nothing connects. No visual history of how a concept evolved.",
+    "after": "Every AI-generated image automatically captured with its prompt DNA. Canvas columns show the evolution from first draft to final pick. AI suggests prompt improvements before you submit. Queue manages concurrency so you're never overwhelmed. One click to platform-ready export."
+   },
+   "scenarios": [
+    {
+     "title": "Prompt branching session",
+     "vignette": "Designer dictates a rough prompt. The app suggests 3 refined versions. They submit all 3, results queue up and arrive paced. They drag favorites into the next canvas column, tweak one phrase, branch again. After 4 columns, they have the final image."
+    },
+    {
+     "title": "Morning review",
+     "vignette": "Solopreneur opens ImageView and sees everything generated yesterday across all agent sessions. Nothing lost. They cull, rate the best, export a LinkedIn carousel PDF."
+    },
+    {
+     "title": "Evolution timeline",
+     "vignette": "Designer narrows all canvas columns to minimum width. The visual evolution from rough concept to polished final appears as a smooth horizontal line — a visual story of the creative process itself."
+    }
+   ],
+   "trigger": {},
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "I've asked Claude Code to open multiple versions of the preview and it just sucks",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "This is currently leaking from the pipeline and I want to build it in with really high priority",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I want to be really professional about it and show really astonishing results",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I usually don't manually come back to the prompts. I just ask my agent to do that for me",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I dictate a prompt and immediately have a few options: a few versions of this prompt, maybe with some added detail",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "There should be some queue management so that the human is not overwhelmed too quickly",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Columns, into which the elements are organized but user can drag them",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "At the narrowest point they become like a really narrow pack of cards. First and last image of the evolution is like one smooth line",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "measurable_outcome: directional but not quantified"
+   ],
+   "open_questions": [
+    "How should auto-capture work technically — filesystem watcher, MCP hook, or manual import?",
+    "How does the prompt refinement AI work — local LLM, Claude API call, or GPT Image's own system?",
+    "What's the right concurrency limit for generation queue — 2? 4? User-configurable?",
+    "Should canvas columns be a new mode or extend the existing Canvas view?",
+    "How much image editing (exposure/color/crop) belongs in this app vs delegating to external tools?",
+    "RAW file support priority vs prompt pipeline features?",
+    "How does the word-cycling UI (Dream Machine-style) work concretely — inline dropdown, popover, or sidebar?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "imageview-prompt-pipeline:o0",
+     "statement": "Minimize the share of generated images that never reach the library",
+     "imp": 8.5,
+     "sat": 2.5,
+     "opp": 14.5,
+     "tier": "prioritize",
+     "stage": "prepare",
+     "touch": "Canvas/Editor",
+     "evidence": [],
+     "depends_on": [
+      "imageview:o0"
+     ]
+    },
+    {
+     "id": "imageview-prompt-pipeline:o1",
+     "statement": "Minimize the effort to see which prompt and settings produced an image",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "confirm",
+     "touch": "Canvas/Editor",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview-prompt-pipeline:o2",
+     "statement": "Minimize the time to branch a prompt into refined variants",
+     "imp": 7.5,
+     "sat": 3.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "modify",
+     "touch": "Canvas/Editor",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview-prompt-pipeline:o3",
+     "statement": "Minimize idle time while queued variants generate",
+     "imp": 6.5,
+     "sat": 4,
+     "opp": 9.0,
+     "tier": "marginal",
+     "stage": "monitor",
+     "touch": "Canvas/Editor",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "imageview-prompt-pipeline:o4",
+     "statement": "Minimize the effort to export platform-ready output",
+     "imp": 7,
+     "sat": 4,
+     "opp": 10,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "jtbd-graph-tool",
+   "path": "/Users/glebkalinin/jtbd/jtbd-graph-tool/jtbd.json",
+   "name": "jtbd-graph-tool",
+   "actor": "Глеб — service designer / продуктовый консультант, ведущий сервис-дизайн-проекты; вторичные зрители — стейкхолдеры, дизайнеры команды и аудитория LinkedIn. Отдельный класс пользователей — AI-агенты: перед добавлением/изменением чего-то в UX агент сверяется с корпусом JTBD, чтобы понять, какие jobs затрагивает правка [U1].",
+   "macro": "m-jtbd-tooling",
+   "context": "",
+   "depends_on": [],
+   "hook": "Инструмент визуализации графа jobs-to-be-done для сервис-дизайн-проектов с десятками jobs — показывает, что с чем связано и на что повлияет изменение узла.",
+   "situation": "Когда в software-проекте (в первую очередь; сервис-дизайн — частный случай [I6]) jobs становятся десятки и они «quickly became hard to manage and maintain» [I1]...",
+   "motivation": "Я хочу видеть граф связей между jobs — что с чем связано и на какие узлы повлияет изменение одного [I3]...",
+   "outcome": "Чтобы быстрее и увереннее принимать решение «менять или не менять сценарий» [I5]. Количественная цель не задана — unknown.",
+   "what_hurts": "Текущий workaround — статичные схемы в офисном редакторе: «нужно было обновлять вручную, сложно было выработать систему, которой бы все пользовались» [I2]. Две боли: ручная синхронизация картинки с реальностью и отсутствие shared-конвенции для команды. Для агентов такой картинки не существует вовсе — jobs не machine-readable.",
+   "cost_today": "",
+   "needs": {
+    "functional": [
+     "Ответ с первого взгляда: что с чем связано; изменение узла X затрагивает узлы Y, Z (impact analysis) [I3]",
+     "Вторичные view: концентрация боли, разрез по акторам [I3]",
+     "Обновление без ручного перерисовывания — рендер из данных (jtbd.json corpus)",
+     "Конвенция, которую примет команда, а не только автор [I2]",
+     "Шареабельный вид для стейкхолдеров и LinkedIn [I4]",
+     "Machine-readable запросный слой для агентов: «какие jobs затрагивает изменение X в UX» — CLI/MCP-запрос к корпусу, не только картинка [U1]"
+    ],
+    "emotional": [
+     "Уверенность при изменении сценария: видно, что заденет [I5]"
+    ],
+    "social": [
+     "Показывать метод и артефакты публично (LinkedIn-аудитория) [I4]"
+    ]
+   },
+   "forces": {
+    "push": "Ручная поддержка схемы в Pages не масштабируется на десятки jobs; система не приживается у команды [I1, I2].",
+    "pull": "Граф, который рендерится из данных и отвечает на вопрос о зависимостях без ручного труда.",
+    "habit": "unknown — вероятно слабая (Pages-workaround уже признан несостоятельным), но не проверялось.",
+    "anxiety": "unknown — не спрашивалось. Кандидаты: ещё один инструмент, который команда не примет (та же боль, что убила Pages-систему)."
+   },
+   "outputs": [
+    "Интерактивный граф jobs (dependency/impact view)",
+    "Срезы: pain-концентрация, по акторам",
+    "Экспортируемый вид для стейкхолдеров/LinkedIn"
+   ],
+   "guardrails": [],
+   "target_users": [],
+   "before_after": {},
+   "scenarios": [],
+   "trigger": {},
+   "version": 1,
+   "quotes": [
+    {
+     "id": "I1",
+     "text": "service design project, dozens and they quickly became hard to manage and maintain",
+     "who": ""
+    },
+    {
+     "id": "I2",
+     "text": "Pages, рисовали там. нужно было обновлять вручную, сложно было выработать систему, которой бы все пользовались",
+     "who": ""
+    },
+    {
+     "id": "I3",
+     "text": "что с чем связано, изменения в одном узле могут повлиять на какие другие. концентрация супер, акторы тоже",
+     "who": ""
+    },
+    {
+     "id": "I4",
+     "text": "я, стейкхолдеры, дизайнеры, люди в линкедине",
+     "who": ""
+    },
+    {
+     "id": "I5",
+     "text": "менять или не менять сценарий",
+     "who": ""
+    },
+    {
+     "id": "U1",
+     "text": "the tool is also for agents that need to check various jtbds when adding / changing something in ux",
+     "who": "уточнение в чате, 2026-07-27"
+    },
+    {
+     "id": "I6",
+     "text": "в первую очередь это просто software проекты",
+     "who": "чат, 2026-07-28"
+    },
+    {
+     "id": "I7",
+     "text": "оценки importance/satisfaction: из данных опросов, интервью, спрашивать у создателя",
+     "who": "чат, 2026-07-28 — scored scatter возможен; source-поле у оценки: survey | interview | creator-estimate"
+    },
+    {
+     "id": "I8",
+     "text": "выбор варианта «Вторичная линза»: главный экран DAG, scatter — вкладка Приоритеты",
+     "who": "структурированный выбор в чате, 2026-07-28"
+    }
+   ],
+   "evidence_source": "cenno voice interview, 2026-07-27",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "Outcome не квантифицирован («быстрее решать» без метрики)",
+    "Какой конкретно проект — не назван; «dozens» без точного числа",
+    "Habit/anxiety не опрошены"
+   ],
+   "open_questions": [
+    "Что за узлы на самом деле: jobs, шаги сценария (service blueprint?), или и то и другое? «Менять сценарий» намекает на blueprint-слой.",
+    "Что значит ребро: зависимость, декомпозиция, общий актор? (impact analysis требует направленных рёбер)",
+    "Двойная аудитория (рабочий инструмент vs LinkedIn-витрина) — один артефакт или два режима?",
+    "Как команда вносит данные, чтобы система прижилась (провал Pages был про это)?",
+    "Порог: сколько jobs в реальном проекте — 30? 80? 300?",
+    "Агентский интерфейс: как агент адресует изменение UX к графу — по компоненту/экрану/фиче? Нужен маппинг UX-сущностей → jobs, иначе запрос «что затрагивает X» невозможен.",
+    "Один продукт или два: human-visualization и agent-query API поверх общего jtbd.json-корпуса?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "jtbd-graph-tool:o0",
+     "statement": "Минимизировать разногласия о том, что считать узлом и ребром",
+     "imp": 7,
+     "sat": 3,
+     "opp": 11,
+     "tier": "marginal",
+     "stage": "define",
+     "touch": "Browser",
+     "evidence": [
+      "I2"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-graph-tool:o1",
+     "statement": "Минимизировать порог входа команды в общую конвенцию",
+     "imp": 7.5,
+     "sat": 3,
+     "opp": 12.0,
+     "tier": "prioritize",
+     "stage": "prepare",
+     "touch": "Browser",
+     "evidence": [
+      "I2"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-graph-tool:o2",
+     "statement": "Минимизировать время ответа «что заденет изменение узла X»",
+     "imp": 9,
+     "sat": 2.5,
+     "opp": 15.5,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Browser",
+     "evidence": [
+      "I3",
+      "I5"
+     ],
+     "depends_on": [
+      "jtbd-skill:o4"
+     ]
+    },
+    {
+     "id": "jtbd-graph-tool:o3",
+     "statement": "Минимизировать время ответа агента на «какие jobs затрагивает правка UX»",
+     "imp": 8,
+     "sat": 2,
+     "opp": 14,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Terminal",
+     "evidence": [
+      "U1"
+     ],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-graph-tool:o4",
+     "statement": "Минимизировать ручной труд на синхронизацию схемы с реальностью",
+     "imp": 8.5,
+     "sat": 2,
+     "opp": 15.0,
+     "tier": "prioritize",
+     "stage": "modify",
+     "touch": "Browser",
+     "evidence": [
+      "I1",
+      "I2"
+     ],
+     "depends_on": [
+      "jtbd-skill:o4"
+     ]
+    },
+    {
+     "id": "jtbd-graph-tool:o5",
+     "statement": "Минимизировать усилия на шареабельный вид для стейкхолдеров",
+     "imp": 6.5,
+     "sat": 4,
+     "opp": 9.0,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [
+      "I4"
+     ],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "jtbd-skill",
+   "path": "/Users/glebkalinin/jtbd/jtbd-skill/jtbd.json",
+   "name": "jtbd-skill",
+   "actor": "",
+   "macro": "m-jtbd-tooling",
+   "context": "",
+   "depends_on": [],
+   "hook": "Go from a vague product idea to a buildable spec in 30 minutes — by voice, on a bike, in the shower — that feeds directly into downstream agents (brainstorm, plan, code) without re-explaining context.",
+   "situation": "When a founder, PM, or consultant has a product idea, business model question, or process problem and needs to move from intent to a structured spec before the energy fades or the meeting ends",
+   "motivation": "I want to articulate the job clearly enough — through a fast, conversational, voice-friendly interview — that downstream agents can execute without re-explanation",
+   "outcome": "So I can have a concrete, buildable artifact (JSON spec + one-pager + messaging angles) within 30 minutes that chains into brainstorm → plan → code without handoff friction",
+   "what_hurts": "Static tools (Figma, Google Docs, PowerPoint) produce artifacts that don't feed forward — every handoff to a developer, designer, or AI agent requires re-explaining the full context from scratch",
+   "cost_today": "Hours lost per project in re-explanation; ideas that die because the gap between 'I had a thought' and 'I have a spec' takes too long and requires sitting at a desk",
+   "needs": {
+    "functional": [
+     "Conversational interview that works by voice (bike, shower, walk)",
+     "Structured JSON output that downstream agents can consume directly",
+     "Switch forces capture (Push/Pull/Habit/Anxiety) for messaging and positioning",
+     "Granularity Gate that blocks vague specs before they enter the pipeline",
+     "Jargon Kill Switch that demands evidence for every claim"
+    ],
+    "emotional": [
+     "Feel like talking to a sharp product thinker, not filling out a form",
+     "Confidence that the spec is grounded in real user pain, not AI-generated platitudes",
+     "Freedom to capture ideas anywhere — not chained to a desk or a design tool"
+    ],
+    "social": [
+     "Share a one-pager with stakeholders that doesn't look like an AI dump",
+     "Credibility: the spec has evidence hooks, not jargon"
+    ]
+   },
+   "forces": {
+    "push": "Current spec tools are not interactive enough — they require sitting at a desk, opening Figma or Docs, and the gap between having the idea and having the spec kills momentum. 'I want to do it in the shower, on the bike, while chatting to my assistant.'",
+    "pull": "Products and projects designed from real-world scenarios, real plans, real people's pain — not abstract wireframes. A spec that is alive and feeds forward into code, not a PDF that sits in a folder.",
+    "habit": "Familiar design tools, old templates, established workflows. Some people find comfort in the visual, spatial nature of Figma/Sketch even though the output is static. 10 years of muscle memory.",
+    "anxiety": "Getting out of touch with real people's experiences. Trusting an AI-framed spec instead of feeling empathy for actual humans. The risk of producing something that sounds right but misses the human truth."
+   },
+   "outputs": [
+    "jtbd.json — machine-readable spec, directly consumable by brainstorm/planning agents",
+    "one-pager.md — stakeholder-shareable summary with evidence hooks",
+    "messaging-angles.md — copy seeds derived from Switch forces",
+    "gtm-brief.md — positioning, channels, growth experiments"
+   ],
+   "guardrails": [
+    "One project per session — don't let scope creep into Business Canvas or multi-project comparison",
+    "Don't stuff downstream pipeline features (brainstorm, planning, code generation) into the skill itself",
+    "Never fabricate Switch forces — mark unknown and flag for follow-up",
+    "Every claim must have an evidence hook — no jargon in the output"
+   ],
+   "target_users": [],
+   "before_after": {
+    "before": "Idea lives in your head. To spec it, you need a desk, a design tool, and an hour of context-setting. The spec you produce is a static document that doesn't connect to anything downstream.",
+    "after": "You run /jtbd while walking. 7 questions later you have a structured JSON that chains into brainstorm → plan → code. The spec IS the handoff."
+   },
+   "scenarios": [
+    {
+     "title": "Bike commute ideation",
+     "vignette": "Founder has an idea during a bike ride. Speaks to Pipecat voice agent running /jtbd. By the time they park, ~/jtbd/new-project/ has a complete spec."
+    },
+    {
+     "title": "Client discovery session",
+     "vignette": "Consultant runs /jtbd during a client call. Captures the job live. Shares the one-pager before the meeting ends."
+    },
+    {
+     "title": "Lab participant exercise",
+     "vignette": "Claude Code Lab participant runs /jtbd on their own project as a learning exercise. The Granularity Gate teaches them what 'specific enough' means by blocking vague answers."
+    }
+   ],
+   "trigger": {},
+   "version": null,
+   "quotes": [
+    {
+     "id": null,
+     "text": "\"I want to do it on the go. I want to do it when I'm in the shower. I want to do it when I ride the bike while chatting to my assistant.\"",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "\"Getting out of touch with the real people's experiences and requirements and pains, trusting this to be framed by AI instead of feeling empathy for real beings.\"",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "\"I see it as a tool for generating specifications that will be transformed directly into code — maybe complete sites, landing pages, apps. This is like a human layer.\"",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "\"The output is not just documents but the code itself.\"",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [],
+   "open_questions": [
+    "Should Business Canvas be a separate skill or an optional Pass 4 inside /jtbd?",
+    "How to handle the precision vs. speed budget parameter — user-set or auto-detected from context?",
+    "What's the minimum viable pipeline: /jtbd → brainstorm → code, or does /plan need to sit in between?"
+   ],
+   "links": [
+    "jtbd-graph-tool"
+   ],
+   "outcomes": [
+    {
+     "id": "jtbd-skill:o0",
+     "statement": "Minimize the friction of capturing an idea away from the keyboard",
+     "imp": 7.5,
+     "sat": 3.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "prepare",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-skill:o1",
+     "statement": "Minimize vague specs entering the pipeline",
+     "imp": 8,
+     "sat": 4.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "confirm",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-skill:o2",
+     "statement": "Minimize the time from vague idea to buildable spec",
+     "imp": 9,
+     "sat": 4,
+     "opp": 14,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-skill:o3",
+     "statement": "Minimize unsupported claims surviving into the record",
+     "imp": 7.5,
+     "sat": 5,
+     "opp": 10.0,
+     "tier": "marginal",
+     "stage": "monitor",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "jtbd-skill:o4",
+     "statement": "Minimize re-explaining context at every handoff",
+     "imp": 9,
+     "sat": 3,
+     "opp": 15,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "live-companion",
+   "path": "/Users/glebkalinin/jtbd/live-companion/jtbd.json",
+   "name": "live-companion",
+   "actor": "",
+   "macro": "m-knowledge",
+   "context": "",
+   "depends_on": [],
+   "hook": "A real-time knowledge capture platform that turns 2-hour technical sessions into structured, interactive, AI-queryable libraries — replacing slides, manual summaries, and scattered notes.",
+   "situation": "When I run a 2-hour technical session for 10+ community members, covering more material than we can explore live...",
+   "motivation": "I want to automatically capture, structure, and publish everything discussed — ideas, tools, terms, links, prompts, exercises — as interconnected knowledge nodes...",
+   "outcome": "So participants get a browsable knowledge base (not a recording link), can try prompts and produce artifacts during the session, and future members can catch up without watching a 2-hour video.",
+   "what_hurts": "Knowledge dies with the session. A recording exists but nobody scrubs through 120 minutes to find the one tool name mentioned at minute 47. After the session, I manually write summaries (1+ hour), losing participants' perspective on what mattered to them. Presentations are static — participants consume but don't produce.",
+   "cost_today": "1+ hour per session writing summaries. Participants forget 80% within a week. New members have no structured way to catch up. Knowledge lives in 5 disconnected systems (Obsidian, agency-docs, Granola, HTML slides, Live Companion).",
+   "needs": {
+    "functional": [
+     "Extract ideas, tools, terms, links, and concepts from live transcript automatically",
+     "Structure output as interconnected knowledge nodes with typed semantic connections",
+     "Render the same content as presentation, library, homework, or graph",
+     "Let participants interact: bookmark, note, try prompts, add to to-do, ask questions",
+     "Produce shareable artifacts (PDF, video, formatted docs) during the session from embedded prompts",
+     "Full analysis of entire transcript with deduplication",
+     "Search and filter across all sessions and all node types",
+     "AI-queryable: agents can pull 'all tools from Session 3' or 'homework for week 2'"
+    ],
+    "emotional": [
+     "Feel like I'm building something cumulative, not disposable",
+     "Confidence that nothing important was lost",
+     "Pride in giving participants a genuinely useful artifact, not just a recording link"
+    ],
+    "social": [
+     "Participants see me as someone who values their time and learning",
+     "The library itself becomes a reason to join the community"
+    ]
+   },
+   "forces": {
+    "push": "Manual summaries take 1+ hour per session. Ideas evaporate — I say something important, participants nod, no shared record. Can't tell which ideas landed. Presentations are one-way — participants consume but don't produce. Knowledge scattered across 5 systems.",
+    "pull": "Ideas appear in real-time as I speak. Participants star what resonates — I see consensus forming live. Structured artifact (summary + graph + markdown) generated without writing anything. 'Full Analysis' gives complete meeting digest in 2 minutes. Participants leave with artifacts they made, not slides they watched.",
+    "habit": "Granola already records and summarizes. Google Docs exists. 'Just take notes' is the default. Presentations work well enough for most facilitators. Setting up a separate tool adds friction.",
+    "anxiety": "Will participants actually engage or will it distract from the session? Will AI extract garbage that embarrasses me? Will tech break live (it did — 429 errors, analysis stopping, blank screens)? Is this overengineering for a 10-person community?"
+   },
+   "outputs": [
+    "Idea cards with transcript excerpts and timestamps",
+    "Structured summary report (HTML, Tufte-style)",
+    "3D knowledge graph of entities and connections",
+    "Markdown export of all ideas",
+    "Presentation mode for fullscreen review",
+    "Participant interactions (stars, comments, bookmarks)"
+   ],
+   "guardrails": [],
+   "target_users": [],
+   "before_after": {
+    "before": "I present slides. Participants watch. Some take notes. After the session, I spend an hour writing a summary. New members get a recording link and never watch it. Knowledge lives in my head and my Obsidian vault.",
+    "after": "I present from an interactive knowledge document. Participants bookmark, try prompts, produce artifacts during the session. After the session, a structured library exists automatically — searchable, graphed, AI-queryable. New members browse the library and catch up in 15 minutes instead of watching 2 hours of video."
+   },
+   "scenarios": [
+    {
+     "title": "Live session",
+     "vignette": "Gleb presents about AI browser automation. As he speaks, the system extracts ideas, tools, and concepts. Participants star 'Agent Browser replaces Playwright' — 8 stars, it becomes a hero card. Someone selects transcript text and clicks 'Question' — the AI generates a discussion prompt. By minute 90, there are 50 structured nodes with connections."
+    },
+    {
+     "title": "Post-session library",
+     "vignette": "A participant who missed the session opens the library. They search 'Chrome Beta', find the tool node with description, related concepts, the transcript excerpt where it was discussed, and a prompt they can paste into Claude Code to try it themselves. They bookmark it and add to their homework list."
+    },
+    {
+     "title": "Cross-session knowledge",
+     "vignette": "After 5 sessions, the library has 200+ nodes. A new member browses the graph, sees that 'Bypass Permission' connects to 'Agent Autonomy' (Session 3) and 'Safety Controls' (Session 5). They read both nodes and understand the tension without watching either recording."
+    }
+   ],
+   "trigger": {},
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "I really want to get rid of the presentation. A presentation is just a package of certain knowledge, and I want a portable knowledge format.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "By the end of the presentation they get some working result — a PDF, a short video. In just one to two hours they get a few really cool artifacts that are shareable.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I want to structure this output in a very precise way — tools, terms, links, reading material, additional videos. I want to do the library.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "It should be interactive and AI-friendly from the very beginning.",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "no participant interviews yet — all evidence is from the host perspective",
+    "no quantified retention/engagement metrics"
+   ],
+   "open_questions": [
+    "What's the one thing that would make you stop maintaining Obsidian, agency-docs, Granola, HTML slides, and Live Companion as separate systems?",
+    "How do participants currently share what they learned with colleagues who didn't attend?",
+    "What does the 'package manager for knowledge' look like concretely?",
+    "Should the library be public (marketing/recruitment) or private (community-only)?",
+    "How does this relate to the existing agency-docs course site?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "live-companion:o0",
+     "statement": "Minimize prep needed to run a capture-ready session",
+     "imp": 6.5,
+     "sat": 5,
+     "opp": 8.0,
+     "tier": "skip",
+     "stage": "prepare",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "live-companion:o1",
+     "statement": "Minimize the time to find one fact inside a 2-hour recording",
+     "imp": 9,
+     "sat": 2,
+     "opp": 16,
+     "tier": "prioritize",
+     "stage": "locate",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "live-companion:o2",
+     "statement": "Minimize knowledge lost between session and publication",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "live-companion:o3",
+     "statement": "Minimize the effort for participants to act on content during the session",
+     "imp": 7,
+     "sat": 3.5,
+     "opp": 10.5,
+     "tier": "marginal",
+     "stage": "monitor",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "live-companion:o4",
+     "statement": "Minimize manual summary writing after a session",
+     "imp": 8.5,
+     "sat": 3,
+     "opp": 14.0,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "personal-os",
+   "path": "/Users/glebkalinin/jtbd/personal-os/jtbd.json",
+   "name": "personal-os",
+   "actor": "",
+   "macro": "m-self-ops",
+   "context": "",
+   "depends_on": [],
+   "hook": "An executive function prosthetic for solopreneurs with anxiety — absorbs all inputs (messages, tasks, calendar, health), adapts to your current mental state, and surfaces the one thing you can actually do right now, grounded in your values.",
+   "situation": "When I wake up with morning anxiety and face a wall of messages, scattered tasks across 5+ tools, and no clear sense of what matters today...",
+   "motivation": "I want an ambient system that knows my current capacity, my values, and all my commitments, and tells me what to do next...",
+   "outcome": "So I can move from dread to action in minutes instead of hours, and end the day knowing I worked on what actually mattered.",
+   "what_hurts": "Morning anxiety creates a gap between waking up and being productive — sometimes hours. Tasks live in Linear, Obsidian, Claude Code memory, messages, and session transcripts. No single view. Messages from clients and family pile up, each implicitly a to-do. 70+ Claude Code skills exist but aren't connected into coherent flows. Procrastination compounds because there's no system saying 'this is the one thing right now.'",
+   "cost_today": "Hours lost to morning dread without a gentle on-ramp. Important deliverables delayed because messages aren't triaged by urgency. Creative energy spent on deciding what to do instead of doing it. Good work and learnings from Claude Code sessions disappear into memory files nobody reviews.",
+   "needs": {
+    "functional": [
+     "State-aware task surfacing — adapts to current energy/anxiety level",
+     "Unified inbox across all channels (messages, Linear, Obsidian, Claude Code memory)",
+     "Salience filtering — P0/P1 only when capacity is low, full view when strong",
+     "Morning on-ramp flow — gentle activation through exercise + one clear first task",
+     "Evening review — what got done, what shifted, what to carry forward",
+     "Message triage — auto-classify messages by urgency and required action",
+     "Progress visibility — cumulative view of commits, features, sessions completed",
+     "Values alignment — decisions and priorities anchored to personal values, not just deadlines"
+    ],
+    "emotional": [
+     "Feel supported through morning anxiety, not overwhelmed by a task list",
+     "Feel that the chaos is absorbed — someone/something is tracking everything",
+     "Feel that work is meaningful because it connects to values, not just urgency",
+     "Feel momentum building day over day, not just surviving each day"
+    ],
+    "social": [
+     "Be responsive to clients and community members without messages being a full-time job",
+     "Have a system worth sharing with other solopreneurs who struggle with the same thing"
+    ]
+   },
+   "forces": {
+    "push": "Morning anxiety with no on-ramp. Hours lost to dread. Tasks in 5+ places with no unified view. Messages pile up — each one a hidden to-do. 70 skills that don't connect. Procrastination spirals because there's no clear 'do this next.'",
+    "pull": "An executive control layer that adapts to mental state. Voice-first ambient interaction — works while walking. Values-based prioritization, not just deadline-based. The vision of skills flowing together coherently. The robot as physical embodiment of the executive layer.",
+    "habit": "Claude Code already works as a partial OS — it's not the worst setup ever. Perfectionism about architecture keeps preventing the 'just build v1' move. Each skill works individually, so the pain is distributed and tolerable.",
+    "anxiety": "Fear of the unknown — if the system works and creates clarity, then what? The system removes the excuse of chaos, forcing confrontation with deeper questions about what to do with freed-up capacity. Also: is this just another project that drains energy instead of giving it?"
+   },
+   "outputs": [
+    "Connected skill flows (morning → work → evening) built on existing Claude Code infrastructure",
+    "Lot system as the orchestration layer (already partially built)",
+    "State-aware task surfacing via health data + self-report",
+    "Message triage automation",
+    "Daily/weekly progress dashboards in Obsidian"
+   ],
+   "guardrails": [
+    "Must not become another project that drains energy — v1 must be buildable in one session",
+    "Must work with existing tools (Linear, Obsidian, Claude Code) — no new infrastructure",
+    "Must not require screen time for basic operation — voice-first for low-energy states",
+    "Must never show the full task list when capacity is low — salience filtering is non-negotiable",
+    "Values layer is core, not a nice-to-have — without it, this is just another productivity app"
+   ],
+   "target_users": [
+    "Solopreneurs with anxiety or executive function challenges",
+    "Knowledge workers drowning in context-switching across tools",
+    "People who already use Claude Code heavily but lack coherent workflows",
+    "Solo operators who need an 'operations layer' they can't hire for"
+   ],
+   "before_after": {
+    "before": "Wake up anxious → scroll messages → feel overwhelmed → procrastinate → eventually pick something semi-randomly → work in isolation from other tasks → end day unsure what got done → repeat",
+    "after": "Wake up anxious → voice agent: 'hey, your anxiety is high today — let's start with a 10 min walk, then one small task' → exercise → agent shows the one thing that matters most right now → flow → evening: 'today you shipped X, responded to 3 clients, and moved closer to your lab revenue goal' → sleep knowing things are tracked"
+   },
+   "scenarios": [
+    {
+     "title": "Morning dread on-ramp",
+     "vignette": "Gleb wakes up at 8am feeling heavy. The agent (via Pipecat on his phone or robot) says: 'Morning. Anxiety seems high — you went to bed late. How about a 15-minute skate first? After that, there's one client message that needs a reply before noon.' No task list. Just one physical thing and one small obligation."
+    },
+    {
+     "title": "Message triage",
+     "vignette": "12 new messages across Telegram, email, and Linear. The system classifies: 2 are client deliverables (P0), 3 are community questions (P1, agent can draft responses), 4 are informational (P2, can wait), 3 are personal (separate queue). Gleb reviews the P0s first, approves agent-drafted P1 responses, ignores the rest until evening."
+    },
+    {
+     "title": "Evening synthesis",
+     "vignette": "At 9pm, the agent summarizes: '4 Claude Code sessions today. You shipped the ImageView JTBD brief, responded to 8 messages, and generated landing page assets. Linear: 2 tasks completed, 1 created. Your lab revenue goal is at 73%. Tomorrow: the landing page task and a coaching session at 14:00.'"
+    }
+   ],
+   "trigger": {
+    "type": "scheduled",
+    "detail": "Morning activation, message arrival, end-of-day, and on-demand via voice"
+   },
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "I have this anxiety disorder and I feel crappy in the morning. I can feel crappy for a really long time.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Messages are actually to-do items. It takes me a long time to process them.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I need an additional executive control layer from you. When I'm in not my best form, I have adequate tasks for my current state.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I have dozens, like, hundreds of skills and sixty or seventy of them are mine. They are not necessarily combined into something coherent.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "The fear of unknown. Maybe this lack of understanding on where it's moving and how it's gonna end.",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "No clear definition of 'values layer' implementation — how values map to task prioritization",
+    "State-awareness mechanism undefined — self-report vs automated (HRV, sleep data, etc.)",
+    "v1 scope is dangerously broad — needs ruthless scoping to avoid becoming the architect demon"
+   ],
+   "open_questions": [
+    "What is the minimum viable morning flow? Just voice + one task? Or does it need health data?",
+    "How does the values layer actually work — pre-defined value weights? Dynamic assessment?",
+    "Should message triage be automatic (agent responds) or approval-based (agent drafts, you approve)?",
+    "Is Lot the right orchestration layer, or does this need something simpler?",
+    "How does the robot (Pollen Robotics?) fit into the physical interaction model?",
+    "What's the v1 that can be built in one session and used tomorrow morning?"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "personal-os:o0",
+     "statement": "Minimize the time from waking to the first productive action",
+     "imp": 9,
+     "sat": 2.5,
+     "opp": 15.5,
+     "tier": "prioritize",
+     "stage": "prepare",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": [
+      "sound-out:o2"
+     ]
+    },
+    {
+     "id": "personal-os:o1",
+     "statement": "Minimize the effort to see all commitments in one place",
+     "imp": 8.5,
+     "sat": 2.5,
+     "opp": 14.5,
+     "tier": "prioritize",
+     "stage": "locate",
+     "touch": "Calendar",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "personal-os:o2",
+     "statement": "Minimize decisions required when capacity is low",
+     "imp": 9,
+     "sat": 3,
+     "opp": 15,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "personal-os:o3",
+     "statement": "Minimize the anxiety of unanswered messages piling up",
+     "imp": 8,
+     "sat": 3,
+     "opp": 13,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Chat/Telegram",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "personal-os:o4",
+     "statement": "Minimize the effort of the evening review and carry-over",
+     "imp": 7,
+     "sat": 3.5,
+     "opp": 10.5,
+     "tier": "marginal",
+     "stage": "conclude",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "pos-interactive-mode",
+   "path": "/Users/glebkalinin/jtbd/pos-interactive-mode/jtbd.json",
+   "name": "pos-interactive-mode",
+   "actor": "",
+   "macro": "m-self-ops",
+   "context": "",
+   "depends_on": [],
+   "hook": "A full-screen TUI for pos so a power user can browse focuses, projects and live sessions, act on them with one keypress, and reach any of the 24 commands without recalling its name or arguments.",
+   "situation": "When I'm in my cmux cockpit and want to switch focus, open a project, load a preset, or run a less-frequent pos command but can't remember the exact command name or argument order...",
+   "motivation": "I want to browse what exists and pick from a live list with arrow keys, then act with a single keypress...",
+   "outcome": "So I can drive the whole cockpit without breaking flow to run `pos help` and re-type names I just read on screen.",
+   "what_hurts": "pos is 24 flag-driven commands. To act on a focus/project/session I read its name from command output, then re-type it as an argument. For infrequent commands I stop and run `pos help` first. Multi-step intents (create a project = edit focus.toml + new workspace + load) have no single entry point.",
+   "cost_today": "Context-switch tax on every navigation: recall + re-type, or a help detour. The richest part of pos (live workspaces, git status per project) is locked behind commands you must already know.",
+   "needs": {
+    "functional": [
+     "Browse focuses, projects, and live sessions in navigable panes",
+     "Show live git status (dirty markers) inline while browsing",
+     "Act on a selection with a single keypress: open, load, cc, new",
+     "Reach every one of the 24 commands via a command palette (escalation path)",
+     "Confirm before any destructive action (rm, load which closes tabs)"
+    ],
+    "emotional": [
+     "In control of the cockpit without memorizing it",
+     "Confident no stray keypress closes a tab or kills a session"
+    ],
+    "social": []
+   },
+   "forces": {
+    "push": "Re-typing names just read from output; forgetting which of 24 commands exist; a `pos help` detour mid-flow; multi-step flows with no single entry point.",
+    "pull": "Arrow-select from a live list with inline git status, single-keypress actions, and a searchable palette for the long tail — browse instead of memorize.",
+    "habit": "Muscle memory of `pos <cmd> <name>`; the `pos help` → read → re-type loop for anything not memorized.",
+    "anxiety": "An interactive layer could fire a destructive action (close tabs via load/rm) on a mistaken keypress, or break the agent-first JSON contract that other tooling depends on."
+   },
+   "outputs": [
+    "A full-screen curses TUI launched by pos with no/one subcommand on a TTY",
+    "Navigation-first layout (focuses -> projects/sessions -> actions) escalating to a command palette",
+    "Each action dispatches the existing pos command path unchanged"
+   ],
+   "guardrails": [
+    "Never run a destructive action (rm, load) without explicit confirmation",
+    "Engage only on a real TTY; never when piped or invoked by an agent (preserve JSON contract)",
+    "No heavy TUI framework dependency; stdlib curses or already-present tools only",
+    "Additive: every existing `pos <cmd>` keeps working exactly as today"
+   ],
+   "target_users": [],
+   "before_after": {},
+   "scenarios": [],
+   "trigger": {},
+   "version": 1,
+   "quotes": [],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "Actor is the tool's author/sole user (n-of-1); no external validation",
+    "No verbatim quote captured; trigger answers are self-reported multi-select, not a narrated incident"
+   ],
+   "open_questions": [],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "pos-interactive-mode:o0",
+     "statement": "Minimize recall needed to reach an infrequent command",
+     "imp": 7.5,
+     "sat": 3,
+     "opp": 12.0,
+     "tier": "prioritize",
+     "stage": "locate",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "pos-interactive-mode:o1",
+     "statement": "Minimize the risk of destructive actions without confirmation",
+     "imp": 7,
+     "sat": 4,
+     "opp": 10,
+     "tier": "marginal",
+     "stage": "confirm",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "pos-interactive-mode:o2",
+     "statement": "Minimize retyping names printed by a previous command",
+     "imp": 8,
+     "sat": 2.5,
+     "opp": 13.5,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "pos-interactive-mode:o3",
+     "statement": "Minimize the steps of multi-step intents like creating a project",
+     "imp": 7,
+     "sat": 3,
+     "opp": 11,
+     "tier": "marginal",
+     "stage": "modify",
+     "touch": "Terminal",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "sound-out",
+   "path": "/Users/glebkalinin/jtbd/sound-out/jtbd.json",
+   "name": "sound-out",
+   "actor": "",
+   "macro": "m-agent-control",
+   "context": "",
+   "depends_on": [],
+   "hook": "An optional voice layer for cenno's ask_user prompts on the Mac: the agent speaks its question aloud and you answer by voice, so you can step away from the screen and stay in the loop with your agent hands-free.",
+   "situation": "When I'm away from the keyboard during an agent session — in the kitchen, headphones on listening to music — and the agent pops a cenno question that's blocking its work...",
+   "motivation": "I want to hear the question, judge whether it's worth answering now or fine to skip, and answer by voice without walking back to stare at the screen...",
+   "outcome": "So I can keep an agent moving while I'm doing something else, and only get pulled in for things that actually matter.",
+   "what_hurts": "cenno prompts are screen-and-keyboard bound: if I'm not staring at the popup I miss it or it stalls the agent, and even when I see it I have to type/click. I'm tethered to the desk for what should be a quick yes/no. There's also no signal of urgency — a trivial question interrupts the same as a blocking one.",
+   "cost_today": "Lost agent throughput while it waits on me, and the friction of being chained to the screen during long sessions.",
+   "needs": {
+    "functional": [
+     "Read the cenno prompt aloud (TTS) as an opt-in per-prompt or per-session toggle, reusing the existing dictation window",
+     "Process the structured/markdown prompt into speakable text: flatten **bold**, strip markdown, and voice code-ish identifiers (file paths, branch names like refactor/i5ly.4-split-db-rs, db.rs) sensibly rather than reading raw syntax",
+     "Capture the spoken answer via STT (Whisper) — the dictation window already does this",
+     "Pluggable TTS providers via config — Groq, OpenAI, Cartesia, ElevenLabs — switchable without code changes; the agent may configure it",
+     "Support emotional/prosody markup for providers that accept it; degrade gracefully for those that don't",
+     "Support ElevenLabs sound/music generation API: generate arbitrary sounds (earcons, alert tones, ambient) from a text prompt, usable as urgency cues",
+     "Convey priority hands-free — only sound out / interrupt for high-priority or blocking questions; stay quiet for minor ones",
+     "Priority model: 3 levels P0/P1/P2 set per prompt (defaults to P1 when the agent doesn't specify — never silently P0). P0 is always shown and sounded regardless of settings. A user-adjustable threshold (in project config) sets the level at/above which prompts are read aloud; P1/P2 are gated by it plus voice-mode being on."
+    ],
+    "emotional": [
+     "Feel untethered — able to walk away and trust the agent will reach me when it matters",
+     "Feel like a real back-and-forth with the agent, not filling out a form",
+     "Feel in control of when audio is and isn't appropriate (easy to silence in public)"
+    ],
+    "social": []
+   },
+   "forces": {
+    "push": "Being chained to the screen to answer prompts; missing or delaying the agent when I step away (kitchen, headphones); every question interrupts equally regardless of importance.",
+    "pull": "Hands-free hear-and-answer while away or with headphones on; a more conversational, modern feel; the agent reaching me by sound only when it's worth it.",
+    "habit": "The existing dictation window already works 'okay-ish'; reading the popup and typing/clicking is the entrenched path; staring at the screen during sessions.",
+    "anxiety": "TTS mispronouncing critical details or losing information so I can't tell what's going on; contexts where audio is wrong (coffee shop, don't want headphones in public); privacy of spoken prompts/answers."
+   },
+   "outputs": [
+    "Spoken rendering of cenno prompts",
+    "Voice-captured answers fed back to the agent",
+    "Optionally generated audio cues (earcons/alert tones) per priority via ElevenLabs"
+   ],
+   "guardrails": [
+    "Opt-in, not default-on — must be trivially silenceable for public/quiet contexts",
+    "Never lose or distort the substance of a prompt when converting to speech",
+    "v1 is one-shot (speak question, capture one answer), NOT multi-turn dialog",
+    "v1 is Mac cenno only — iOS companion is a later want, not v1 scope"
+   ],
+   "target_users": [],
+   "before_after": {},
+   "scenarios": [],
+   "trigger": {
+    "type": "event",
+    "detail": "Fires when cenno surfaces an ask_user prompt and voice-out is enabled (gated by priority)"
+   },
+   "version": 1,
+   "quotes": [
+    {
+     "id": null,
+     "text": "I was maybe away from the computer and at kitchen and I would have heard and would come faster. And I would have known whether it's a question I need to answer quickly or that it's okay to skip it.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "I don't want to be staring at the screen all the time... I'm wearing my headphones, I'm listening to some music, then I get this message from my agent, and yes, I wanna know what's going on.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "If it's really urgent, if it's blocking something that I have evaluated as high priority... we might need some kind of priorities for all the tasks. I don't wanna be interrupted with questions that are really minor.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "On the Mac only. Let's start with one shot. Technically we already have this window where you can use dictation, so maybe it's okay to reuse it. So we just add an optional voice out.",
+     "who": ""
+    },
+    {
+     "id": null,
+     "text": "Maybe if it pronounces incorrectly some critical stuff or some details are lost for some reason, I cannot understand what is going on.",
+     "who": ""
+    }
+   ],
+   "evidence_source": "interview",
+   "evidence_limitation": "",
+   "pages_read": [],
+   "weaknesses": [
+    "Measurable outcome is directional ('answer without touching keyboard', 'not interrupted by minor questions') rather than quantified."
+   ],
+   "open_questions": [
+    "Text-processing rules: exact normalization for markdown + code identifiers (file paths, branch names, dotted filenames) — a real example prompt was provided (db-refactor commit question) to derive rules from",
+    "Where TTS/STT/provider config and the sound-out threshold live in project config, and how the agent is allowed to set a per-prompt priority + configure providers",
+    "Whether generated ElevenLabs earcons map 1:1 to priority levels, and whether they're pre-generated/cached or generated on demand",
+    "Public-context handling: manual mute vs. context/quiet-hours awareness"
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "sound-out:o0",
+     "statement": "Minimize garbled speech from markdown and code identifiers",
+     "imp": 6.5,
+     "sat": 3,
+     "opp": 10.0,
+     "tier": "marginal",
+     "stage": "prepare",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "sound-out:o1",
+     "statement": "Minimize the effort to judge a prompt's urgency without reading it",
+     "imp": 7,
+     "sat": 2.5,
+     "opp": 11.5,
+     "tier": "marginal",
+     "stage": "confirm",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "sound-out:o2",
+     "statement": "Minimize time tethered to the desk for a yes/no answer",
+     "imp": 8,
+     "sat": 2.5,
+     "opp": 13.5,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "sound-out:o3",
+     "statement": "Minimize prompts missed while away from the screen",
+     "imp": 8.5,
+     "sat": 2,
+     "opp": 15.0,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "sound-out:o4",
+     "statement": "Minimize agent stall time waiting for an answer",
+     "imp": 7.5,
+     "sat": 3,
+     "opp": 12.0,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Voice",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  },
+  {
+   "slug": "vers1-io",
+   "path": "/Users/glebkalinin/jtbd/vers1-io/jtbd.json",
+   "name": "vers1-io",
+   "actor": "",
+   "macro": "m-video-approval",
+   "context": "RU-market, 152-ФЗ",
+   "depends_on": [],
+   "hook": "Рабочее пространство для согласования видео: монтажёр заливает черновой монтаж, заказчик оставляет правки прямо по таймкоду (текстом, голосом, пометкой на кадре) по ссылке без регистрации — вместо голосовых «на 2:34 поправь цвет» в Telegram.",
+   "situation": "Когда я монтажёр или продюсер в студии и веду проект с 3-4 итерациями правок, а файлы и комментарии заказчика расползлись по Telegram-чату и Яндекс.Диску...",
+   "motivation": "...я хочу собрать все правки, версии и статусы в одном месте с привязкой к конкретному кадру...",
+   "outcome": "...чтобы не тратить время на пересборку контекста («какую правку я уже сделал?», «это про вторую или третью версию?») и не находить потерянную правку на этапе сдачи, когда переделывать дороже.",
+   "what_hurts": "Правки живут в чате и теряются в скролле. Таймкод — на словах, «плюс-минус секунда». Голосовое на 40 секунд нужно переслушать, чтобы найти суть. Версии — это файлы вида final_v3_new_2.mp4. Нет статуса «сделано / не сделано» по каждой правке. Telegram пережимает видео, из-за чего по нему нельзя оценивать цвет.",
+   "cost_today": "Заявлено на сайте: 20-30 минут в день на проекте с 3-4 итерациями уходит на «найти и вспомнить». ВНИМАНИЕ: цифра вендорская, источник не указан, замеров нет.",
+   "needs": {
+    "functional": [
+     "Комментарий, привязанный к точной секунде и к кадру (рисунок/пометка поверх)",
+     "Голосовой комментарий с автоматической расшифровкой в текст",
+     "Несколько версий одного ролика со сравнением на сплит-экране",
+     "Статус по каждой правке: открыта / решена; согласовать / вернуть на доработку",
+     "Доступ заказчику по ссылке без регистрации",
+     "Оригинальное качество для оценки цвета и склеек (без пережатия мессенджера)",
+     "Оплата в рублях: карта РФ, ЮMoney, счёт для юрлиц",
+     "Хранение данных в РФ (Yandex Cloud) для 152-ФЗ"
+    ],
+    "emotional": [
+     "Не держать в голове список незакрытых правок",
+     "Не оправдываться перед заказчиком на сдаче за потерянную правку",
+     "Спокойствие за безопасников на стороне корпоративного заказчика"
+    ],
+    "social": [
+     "Выглядеть студией с процессом, а не переписки в чате",
+     "Снимать вопросы юридического отдела заказчика российской юрисдикцией и офертой на русском"
+    ]
+   },
+   "forces": {
+    "push": "Через день-два в чате пять версий файла, три голосовых по 40 секунд и переписка «а это про какую версию было?». Правка всплывает на сдаче, когда переделывать дороже. Для тех, кто был на Frame.io: Adobe не принимает карты РФ и не выставляет счета юрлицам — платить приходится через посредников с риском блокировки аккаунта.",
+    "pull": "Клик по таймлайну вместо переслушивания голосового. Голос сам превращается в текст. Версии — вкладки одного файла. У каждой правки статус. Рублёвый тариф с Free-входом без карты. Данные в РФ — снимает вопрос 152-ФЗ у безопасников заказчика.",
+    "habit": "Telegram + Яндекс.Диск: быстро, привычно, нулевой порог входа, заказчику ничего не надо осваивать. Сайт сам признаёт: если правок мало и участников двое — Telegram отлично справляется.",
+    "anxiety": "Что придётся перестраивать пайплайн: C2C-плагин Frame.io для Premiere Pro не переносится, автоматизации под API Frame.io надо переписывать. Плюс невысказанный на сайте страх: согласится ли заказчик уйти из привычного чата."
+   },
+   "outputs": [
+    "Проект с версиями ролика и лентой таймкод-комментариев",
+    "Канбан-доска задач по правкам",
+    "Ссылка на просмотр/комментирование без регистрации",
+    "AI-сводка комментариев за день, расшифровка голосовых, разделение видео на сцены",
+    "Экспорт в основные монтажные программы",
+    "Webhooks + Partner API (review-sessions) для интеграций"
+   ],
+   "guardrails": [
+    "Не видеохостинг для массового зрителя: стриминг, вебинары и аналитика досмотров — не задача сервиса (это Kinescope и подобные)",
+    "Не заменяет Telegram целиком — общие вопросы могут оставаться там, в vers1.io переезжают конкретные правки к кадру"
+   ],
+   "target_users": [],
+   "before_after": {
+    "before": "Видно: чат с пятью mp4 и голосовыми, отдельный документ со списком правок. Ощущается: постоянный страх, что что-то потеряно.",
+    "after": "Видно: один таймлайн, под ним лента правок со статусами, вкладки версий. Ощущается: список закрывается сам, ничего не надо держать в голове."
+   },
+   "scenarios": [],
+   "trigger": {},
+   "version": 1,
+   "quotes": [],
+   "evidence_source": "website",
+   "evidence_limitation": "",
+   "pages_read": [
+    "https://www.vers1.io/",
+    "https://www.vers1.io/compare/vs-telegram-disk.html",
+    "https://www.vers1.io/compare/frame-io-alternative.html",
+    "https://www.vers1.io/compare/vs-kinescope.html",
+    "https://www.vers1.io/trust",
+    "https://www.vers1.io/developers"
+   ],
+   "weaknesses": [
+    "evidence_quote = 0: на сайте НЕТ ни одной цитаты клиента, отзыва, кейса, логотипа или имени студии. Фразы «на 2:34 поправь цвет», «примерно тут», final_v3_new_2.mp4 написаны маркетингом вендора как иллюстрация, а не собраны у пользователей.",
+    "measurable_outcome = 1: единственная цифра боли (20-30 мин/день) — вендорская оценка без методики и источника.",
+    "actor_specificity = 1: роли названы (монтажёр, фрилансер, студия, агентство, продакшен), но нет ни одного конкретного описанного актора с контекстом.",
+    "ГЕЙТ НЕ ПРОЙДЕН. Это гипотеза JTBD, реконструированная из маркетинговых материалов, а не валидированный JTBD. Все switch forces — то, что вендор ДУМАЕТ про своего пользователя."
+   ],
+   "open_questions": [
+    "Кто уже платит? На сайте ноль отзывов, кейсов, логотипов и цифр вроде «N студий». Непонятно, есть ли traction вообще.",
+    "Откуда 20-30 минут в день? Замеряли на реальных командах или оценили? Без методики цифра не работает в продаже корпоративному клиенту.",
+    "Кто инициатор перехода — монтажёр или заказчик? Habit-сила живёт на стороне заказчика, а платит студия. Сайт нигде не отвечает, что делать, если клиент отказывается уходить из Telegram.",
+    "Free-тариф ставит водяной знак vers1.io на ВСЕ видео. Покажет ли студия заказчику черновик с чужим вотермарком? Если нет — Free не демонстрирует ценность на реальном проекте, а именно это обещает CTA.",
+    "Технические лимиты нигде не указаны: максимальный размер файла, поддерживаемые кодеки и контейнеры, ProRes, 4K, скорость загрузки. Для продакшена это вопрос номер один.",
+    "«Экспорт в основные монтажные программы» — в какие именно и как? Premiere, DaVinci, Final Cut? Через XML/EDL? Прямой замены C2C нет, но чем заменяют — не сказано.",
+    "Лимиты AI: на Team «умные функции без ограничений», значит на Pro ограничения есть — какие? Точность расшифровки русской речи не заявлена.",
+    "AI на YandexGPT упомянут только на сравнительной странице с Frame.io, на главной — просто «ИИ». Для 152-ФЗ-чувствительного клиента это важная деталь, спрятанная не там.",
+    "Заявления о безопасности на /trust (TLS 1.3, AES-128 HLS, форензик-маркировка, SSO/SAML) ничем не подтверждены: нет аттестации, сертификатов, аудита, пентеста. Для Business-тарифа от 14 990 ₽ это будет первым вопросом безопасника.",
+    "Страницы /trust и /developers не видны в верхней навигации (только в подвале) и не отдаются в HTML — рендерятся на клиенте. Ровно те материалы, которые продают дорогие тарифы, хуже всего доступны и не индексируются.",
+    "Documentation для разработчиков — на английском, весь остальной сайт — на русском. Для кого она: для российских интеграторов или это задел под экспорт?",
+    "Что удерживает после проекта? Тарификация от объёма хранилища создаёт давление «удали старое», а сценария архива/ретеншена нет. Не описано, что происходит с проектами и ссылками при отмене подписки.",
+    "Нет мобильного сценария. Заказчик часто смотрит черновик с телефона — работает ли комментирование по таймкоду на мобильном, не сказано.",
+    "Сегмент не выбран: Free/Pro (фрилансер) и Business (продакшен с госзаказчиком и форензик-маркировкой) — это две разные компании с разной продажей. Кто целевой — из сайта не следует.",
+    "Нет ответа, что происходит при отмене санкционных ограничений или возврате Frame.io: половина позиционирования держится на «нельзя заплатить из РФ», это заимствованное преимущество, а не собственное."
+   ],
+   "links": [],
+   "outcomes": [
+    {
+     "id": "vers1-io:o0",
+     "statement": "Минимизировать порог входа заказчика — комментировать по ссылке без регистрации",
+     "imp": 8.5,
+     "sat": 3,
+     "opp": 14.0,
+     "tier": "prioritize",
+     "stage": "prepare",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "vers1-io:o1",
+     "statement": "Минимизировать время поиска сути в голосовых сообщениях",
+     "imp": 7.5,
+     "sat": 2.5,
+     "opp": 12.5,
+     "tier": "prioritize",
+     "stage": "locate",
+     "touch": "Chat/Telegram",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "vers1-io:o2",
+     "statement": "Минимизировать расхождения о том, какая версия финальная",
+     "imp": 8.5,
+     "sat": 2.5,
+     "opp": 14.5,
+     "tier": "prioritize",
+     "stage": "confirm",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "vers1-io:o3",
+     "statement": "Минимизировать неопределённость статуса каждой правки",
+     "imp": 8,
+     "sat": 2,
+     "opp": 14,
+     "tier": "prioritize",
+     "stage": "execute",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "vers1-io:o4",
+     "statement": "Минимизировать потерю правок в скролле чата",
+     "imp": 9,
+     "sat": 2.5,
+     "opp": 15.5,
+     "tier": "prioritize",
+     "stage": "monitor",
+     "touch": "Chat/Telegram",
+     "evidence": [],
+     "depends_on": []
+    },
+    {
+     "id": "vers1-io:o5",
+     "statement": "Минимизировать время до финального согласования",
+     "imp": 9,
+     "sat": 3.5,
+     "opp": 14.5,
+     "tier": "prioritize",
+     "stage": "conclude",
+     "touch": "Browser",
+     "evidence": [],
+     "depends_on": []
+    }
+   ]
+  }
+ ]
+}

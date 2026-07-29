@@ -338,8 +338,8 @@ const STR={
     graph:"What would a change touch?",forces:"Will they actually switch?",record:"What did we actually learn?",
     evidence:"What do we know versus assert?"},
   vSub:{overview:"Every project across all levels — record completeness, forces, scores and evidence health. Click a row to open its record.",
-    jobs:"Every project's job, grouped by the macro it rolls up to. Each card carries the actor, the When / I want / So that triple, worst-outcome tier and quote count. Click a card to open its record.",
-    icicle:"Business outcome ▸ macro ▸ project ▸ stage, laid out as nested rectangles. Width is proportional to outcome count; colour is mean opportunity. Click a project to open its record.",
+    jobs:"Every project's job, grouped by its macro — the larger job several projects serve together, one level above any single project. Each card carries the actor, the When / I want / So that triple, worst-outcome tier and quote count. Click a card to open its record.",
+    icicle:"Business outcome ▸ macro ▸ project ▸ stage, laid out as nested rectangles. Width is proportional to outcome count; colour is mean opportunity. Hover any segment for its counts; click a project to open its record.",
     landscape:"Every scored outcome, placed by importance against satisfaction. Top-left is important and badly served.",
     table:"The same scores as a ranked list — position on a common scale beats a cloud when you are picking what to do next.",
     heatmap:"Mean opportunity per cell, projects ordered worst-served first. Eight fixed stages — corpus growth changes the numbers, never the legibility.",
@@ -437,6 +437,8 @@ const STR={
   noTouchData:"No touchpoint carries data yet.",
   /* — v3: footer audit, clickable metrics, sortable tables — */
   mBiz:"Business", mLinks:"Links",
+  rlBusiness:"Business", rlMacro:"Macro", rlProject:"Project", rlStage:"Stage",
+  tipGoJobs:"click → Jobs filtered to this macro", tipGoRecord:"click → project record", tipGoStage:"click → job map at this stage",
   filterRows:"Filter rows…",
   nOverviewGap:"Some projects carry no verbatim quote — click the quote-less metric below to isolate them, then open each and add evidence.",
   nOverviewOk:"Every project carries at least one quote. Sort any column to surface the thinnest records first.",
@@ -462,8 +464,8 @@ const STR={
     graph:"Что заденет изменение?",forces:"Они правда переключатся?",record:"Что мы на самом деле выяснили?",
     evidence:"Что мы знаем, а что просто утверждаем?"},
   vSub:{overview:"Все проекты на всех уровнях: полнота записи, силы, оценки и здоровье доказательств. Клик по строке открывает запись.",
-    jobs:"Работа каждого проекта, сгруппированная по макро, к которому она относится. На карточке — актор, тройка «Когда / Я хочу / Чтобы», полоса худшего исхода и число цитат. Клик открывает запись.",
-    icicle:"Бизнес-исход ▸ макро ▸ проект ▸ стадия в виде вложенных прямоугольников. Ширина — по числу исходов, цвет — средняя возможность. Клик по проекту открывает запись.",
+    jobs:"Работа каждого проекта, сгруппированная по макро — большой работе, которую несколько проектов закрывают вместе (уровень над отдельными проектами). На карточке — актор, тройка «Когда / Я хочу / Чтобы», полоса худшего исхода и число цитат. Клик открывает запись.",
+    icicle:"Бизнес-исход ▸ макро ▸ проект ▸ стадия в виде вложенных прямоугольников. Ширина — по числу исходов, цвет — средняя возможность. Наведи на сегмент, чтобы увидеть числа; клик по проекту открывает запись.",
     landscape:"Каждый оценённый исход: важность против удовлетворённости. Верхний левый угол — важно и закрыто плохо.",
     table:"Те же оценки списком — когда выбираешь, что делать дальше, позиция на общей шкале читается лучше облака точек.",
     heatmap:"Средний opportunity в ячейке; проекты отсортированы от хуже всего закрытых. Восемь стадий фиксированы — рост корпуса меняет числа, а не читаемость.",
@@ -561,6 +563,8 @@ const STR={
   noTouchData:"Ни у одной точки касания пока нет данных.",
   /* — v3 — */
   mBiz:"Бизнес-исходы", mLinks:"Связей",
+  rlBusiness:"Бизнес", rlMacro:"Макро", rlProject:"Проект", rlStage:"Стадия",
+  tipGoJobs:"клик → Работы с фильтром по этому макро", tipGoRecord:"клик → запись проекта", tipGoStage:"клик → карта работы, эта стадия",
   filterRows:"Фильтр строк…",
   nOverviewGap:"У части проектов нет ни одной дословной цитаты — кликни метрику «без цитат» ниже, чтобы выделить их, открой каждый и добавь доказательства.",
   nOverviewOk:"У каждого проекта есть хотя бы одна цитата. Отсортируй любой столбец, чтобы самые слабые записи всплыли первыми.",
@@ -1188,20 +1192,25 @@ function drawIcicle(root){
   const oppColor=v=>{if(v==null)return css("--faint");
     return v<8?hexLerp(css("--accent"),css("--amber"),Math.max(0,v)/8):hexLerp(css("--amber"),css("--rose"),Math.min(1,(v-8)/8));};
   const meanOpp=arr=>{const s=arr.filter(o=>o.opp!=null);return s.length?s.reduce((a,o)=>a+o.opp,0)/s.length:null;};
-  const W=940,L=0,rowH=52,ROWS=4,gap=2,H=ROWS*rowH+4;
+  const GUT=92,W=940,rowH=52,ROWS=4,gap=2,H=ROWS*rowH+4;
   const s=svg(wrap,W,H);
   const MINW=26;
-  const seg=(x,w,y,h,fill,label,tipHtml,onClick,shortCode)=>{
+  /* effective on-screen colour = fill composited over the ground at its opacity;
+     label colour is chosen against THAT (a .35-opacity rose reads as pale, not dark) */
+  const eff=(fill,op)=>hexLerp(css("--ground"),fill,op);
+  const seg=(x,w,y,h,fill,label,tipHtml,onClick,shortCode,opts)=>{
+    opts=opts||{};const op=opts.opacity==null?.85:opts.opacity;
     const g=el(s,"g",{});g.style.cursor=onClick?"pointer":"default";
-    el(g,"rect",{x:x+.5,y:y+.5,width:Math.max(1,w-1),height:h-1,fill,opacity:.85,stroke:css("--ground"),"stroke-width":1});
+    el(g,"rect",{x:x+.5,y:y+.5,width:Math.max(1,w-1),height:h-1,fill,opacity:op,stroke:css("--ground"),"stroke-width":1});
     if(h>=9){
+      const labelColor=opts.muted?css("--muted"):labelOn(eff(fill,op));
       const per=6, fits=str=>str.length*per+8<=w;
       let show=null,mid=false;
       if(w>=MINW&&fits(label))show=label;                       /* full label */
       else if(shortCode&&fits(shortCode))show=shortCode,mid=true;/* 2-digit stage no. */
       else if(!shortCode&&w>=MINW){                             /* truncate non-stage rows */
         const room=Math.floor((w-10)/6);if(room>=2)show=label.length>room?label.slice(0,room-1)+"…":label;}
-      if(show)txt(g,mid?x+w/2:x+6,y+h/2+3.5,show,"lbl",Object.assign({fill:labelOn(fill)},mid?{"text-anchor":"middle"}:{}));
+      if(show)txt(g,mid?x+w/2:x+6,y+h/2+3.5,show,"lbl",Object.assign({fill:labelColor},mid?{"text-anchor":"middle"}:{}));
     }
     g.addEventListener("mouseenter",e=>showTip(e,tipHtml));
     g.addEventListener("mousemove",moveTip);g.addEventListener("mouseleave",hideTip);
@@ -1209,17 +1218,23 @@ function drawIcicle(root){
     if(onClick)kbdShape(g,plain(tipHtml),tipHtml,onClick);
     return g;
   };
-  const scale=totalOut>0?W/totalOut:0;
+  /* row captions in the left gutter — the four nesting levels name themselves */
+  [T.rlBusiness,T.rlMacro,T.rlProject,T.rlStage].forEach((cap,i)=>{
+    const t=txt(s,8,i*(rowH+gap)+rowH/2+3.5,cap,"lbl",{fill:css("--muted")});t.style.fontSize="10.5px";
+  });
+  const scale=totalOut>0?(W-GUT)/totalOut:0;
   /* row 0 business outcome, row 1 macro, row 2 project, row 3 stage */
-  let bx=0;
+  let bx=GUT;
   for(const [bk,bnode] of bizMap){
     const bProjects=[...bnode.macros.values()].flatMap(m=>m.projects);
     const bCount=bProjects.reduce((a,p)=>a+cnt(p),0);
     const bw=Math.max(MINW,bCount*scale);
     const bMean=meanOpp(bProjects.flatMap(p=>p.outcomes));
     const bName=bnode.bo?bnode.bo.name:T.noBusiness;
+    const bFirstMid=[...bnode.macros.values()].map(m=>m.mid).find(Boolean)||"all";
     seg(bx,bw,0,rowH,oppColor(bMean),bName,
-      `<b>${esc(bName)}</b><span class="m">${bCount} ${T.oCount} · ${T.meanOpp} ${bMean==null?"—":bMean.toFixed(1)}</span>`,null);
+      `<b>${esc(bName)}</b><span class="m">${bCount} ${T.oCount} · ${T.meanOpp} ${bMean==null?"—":bMean.toFixed(1)}</span><span class="m" style="opacity:.65">${T.tipGoJobs}</span>`,
+      ()=>{state.project="all";state.view="jobs";state.jobTier="all";state.jobMacro=bFirstMid;pushNext=true;render();});
     /* macros within */
     let mx=bx;
     for(const [mkk,mnode] of bnode.macros){
@@ -1227,20 +1242,22 @@ function drawIcicle(root){
       const mw=Math.max(MINW,mCount*scale);
       const mMean=meanOpp(mnode.projects.flatMap(p=>p.outcomes));
       const mName=mnode.mid?macroName(mnode.mid):T.noMacro;
+      const mMid=mnode.mid;
       seg(mx,mw,rowH+gap,rowH,oppColor(mMean),mName,
-        `<b>${esc(mName)}</b><span class="m">${mCount} ${T.oCount} · ${T.meanOpp} ${mMean==null?"—":mMean.toFixed(1)}</span>`,null);
+        `<b>${esc(mName)}</b><span class="m">${mCount} ${T.oCount} · ${T.meanOpp} ${mMean==null?"—":mMean.toFixed(1)}</span>${mMid?`<span class="m" style="opacity:.65">${T.tipGoJobs}</span>`:""}`,
+        mMid?()=>{state.project="all";state.view="jobs";state.jobTier="all";state.jobMacro=mMid;pushNext=true;render();}:null);
       /* projects within */
       let px=mx;
       for(const p of mnode.projects){
         const pw=Math.max(MINW,cnt(p)*scale);
         const pMean=oppOf(p);
+        /* de-emphasize non-selected projects by fading the RECT (not the group),
+           so the label stays legible in --muted rather than fading to unreadable */
+        const deEmph=selSlug&&p.slug!==selSlug, dim=deEmph?{opacity:.35,muted:true}:null;
         const pg=seg(px,pw,2*(rowH+gap),rowH,oppColor(pMean),p.name||p.slug,
-          `<b>${esc(p.name||p.slug)}</b><span class="m">${cnt(p)} ${T.oCount} · ${T.meanOpp} ${pMean==null?"—":pMean.toFixed(1)}</span>`,
-          ()=>{state.project=p.slug;state.view="record";render();});
-        if(selSlug){
-          if(p.slug===selSlug){const r=pg.querySelector("rect");r.setAttribute("stroke",css("--ink"));r.setAttribute("stroke-width",2);}
-          else pg.setAttribute("opacity",".45");
-        }
+          `<b>${esc(p.name||p.slug)}</b><span class="m">${cnt(p)} ${T.oCount} · ${T.meanOpp} ${pMean==null?"—":pMean.toFixed(1)}</span><span class="m" style="opacity:.65">${T.tipGoRecord}</span>`,
+          ()=>{state.project=p.slug;state.view="record";pushNext=true;render();},undefined,dim);
+        if(p.slug===selSlug){const r=pg.querySelector("rect");r.setAttribute("stroke",css("--ink"));r.setAttribute("stroke-width",2);}
         /* stages within */
         let sx=px;
         const stgList=STG.map(st=>({st,os:(p.outcomes||[]).filter(o=>o.stage===st)})).filter(x=>x.os.length);
@@ -1251,8 +1268,9 @@ function drawIcicle(root){
           const sw=pw*(c.os.length/pTotal);
           const sMean=meanOpp(c.os);
           const sIdx=STG.indexOf(c.st), sCode=sIdx>=0?String(sIdx+1).padStart(2,"0"):null;
+          const stClick=sIdx>=0?((slug,st)=>()=>{state.project=slug;state.view="jobmap";state.jmStage=st;pushNext=true;render();})(p.slug,c.st):null;
           seg(sx,sw,3*(rowH+gap),rowH,oppColor(sMean),c.st.toUpperCase(),
-            `<b>${esc(p.name||p.slug)} · ${esc(c.st)}</b><span class="m">${c.os.length} ${T.oCount} · ${T.meanOpp} ${sMean==null?"—":sMean.toFixed(1)}</span>`,null,sCode);
+            `<b>${esc(p.name||p.slug)} · ${esc(c.st)}</b><span class="m">${c.os.length} ${T.oCount} · ${T.meanOpp} ${sMean==null?"—":sMean.toFixed(1)}</span>${stClick?`<span class="m" style="opacity:.65">${T.tipGoStage}</span>`:""}`,stClick,sCode,dim);
           sx+=sw;
         }
         px+=pw;

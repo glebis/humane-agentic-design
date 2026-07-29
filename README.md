@@ -56,7 +56,7 @@ python3 <plugin>/skills/jtbd/scripts/report.py exec-summary <slug>   # one-page 
 
 ## Learn the method live
 
-The cycle is taught hands-on at the [Agentic Design Lab](https://ai-design.salient.community/) — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method. Next cohort starts September 7.
+The cycle is taught hands-on at the [Agentic Design Lab](https://ai-design.salient.community/) — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method. Current cohort dates are on the site.
 
 ### Any other agent (Codex, and others) via npx skills
 

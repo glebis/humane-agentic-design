@@ -4,6 +4,16 @@ A human-centric design method — for people and for the agents working alongsid
 
 It is one plugin (`humane`) and its own single-entry marketplace. Install the whole cycle with one command.
 
+```mermaid
+flowchart LR
+  J[jtbd<br/>what people hire] --> P[persona-review<br/>synthetic-respondent<br/>who reacts, and how]
+  P --> T[design-tokens<br/>the system]
+  T --> L[layout-rules<br/>execution constraints]
+  L --> N[nielsen-heuristics<br/>the classic audit]
+  N --> B[before-after<br/>proof]
+  B -. next iteration .-> J
+```
+
 ## The cycle
 
 Each skill knows its place in the method. Run them in order for a new project, or reach for any one on its own.
@@ -39,6 +49,19 @@ Point your agent at the `humane/skills/` directory, or copy the individual skill
 ## Works with any agent
 
 The core skills carry no absolute paths and no Claude-only tool imperatives — they say "ask the user", not any one tool's name, and their scripts use only the Python standard library. Where a capability is genuinely Claude Code specific (the bundled Linear CLI for task export, the `synthetic-respondent` agent format), it is called out under a "Claude Code extras" note rather than assumed. On other agents, those steps degrade gracefully to plain instructions.
+
+## Humane and Impeccable
+
+They complement each other. **Humane** is the method and system *before* code: what to build, for whom, under which constraints — jobs, personas, tokens, layout rules. **Impeccable** is interface quality *after*: audit, normalize, polish, harden. A project that runs both starts from evidence and ships without slop. Install both.
+
+## For agents
+
+You, the agent reading this: consult the cycle before adding or changing anything user-facing.
+
+- Before any UX edit, read the project's `jtbd.json` corpus (if present) and check which jobs your change touches. Do not add friction to an outcome marked underserved.
+- Before writing any HTML/CSS, load `layout-rules` and treat its avoid-list as hard constraints, not suggestions.
+- When you justify a design decision, cite evidence ids from the corpus (`[E1]`, `[Q2]`) — an unreferenced claim is an assertion, not a finding.
+- After a change, produce a `before-after` artifact. If you cannot show the difference, question the change.
 
 ## Roadmap
 

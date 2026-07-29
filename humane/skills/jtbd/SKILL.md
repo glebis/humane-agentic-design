@@ -307,6 +307,32 @@ Per ODI outcome:
 
 ---
 
+## Reports (executive summary)
+
+Trigger on "give me the exec summary", "one-pager for a stakeholder", "summarize this for
+someone with three minutes", or after a bundle is written and the reader needs prose, not a graph.
+Where **Graph Mode** is for interactive review, this writes a static one-page Markdown read.
+
+```bash
+python3 scripts/report.py exec-summary <slug>          # one project → <root>/<slug>/exec-summary.md
+python3 scripts/report.py exec-summary --all           # whole corpus → <root>/exec-summary.md
+python3 scripts/report.py exec-summary <slug> --lang ru # Russian headings
+python3 scripts/report.py exec-summary <slug> --out PATH --root ~/jtbd
+```
+
+Single-project output: title + hook, the job triple as one paragraph, top 3 opportunities
+(imp/sat/opp, tier, evidence ids, one-line "why it matters"), switch forces in two sentences,
+evidence health, the single most load-bearing quote, open-questions count with the top two, and
+a mechanically-derived next move (worst-served outcome + its stage). Corpus mode: one line per
+macro ranked worst-served first, a corpus-wide top-5 outcomes table, evidence-thin projects, and
+the same next move across the portfolio.
+
+Same honesty discipline as the graph: a `creator-estimate` ODI note prints a visible caveat line;
+partial/unknown forces are shown as such; no adjectives that are not in the data. `--lang` sets
+only the report's headings — statements and quotes stay as captured.
+
+---
+
 ## After the interview — Output Bundle
 
 1. Apply Granularity Gate + Jargon Kill Switch.

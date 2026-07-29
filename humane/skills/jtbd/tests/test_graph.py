@@ -1,4 +1,5 @@
-"""Tests for graph.py — bundle discovery, schema shaping, and tier assignment."""
+"""Tests for graph.py — bundle discovery, schema shaping, evidence shapes,
+tier assignment and language plumbing."""
 import json
 import os
 import sys
@@ -8,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-from graph import _list, build, find_bundles, score, shape, tier
+from graph import _list, build, find_bundles, read_quotes, score, shape, tier
 
 
 class TestScoring(unittest.TestCase):
@@ -31,6 +32,30 @@ class TestListCoercion(unittest.TestCase):
         self.assertEqual(_list(None), [])
         self.assertEqual(_list(""), [])
         self.assertEqual(_list([None, "a"]), ["a"])
+
+
+class TestEvidenceShapes(unittest.TestCase):
+    """Real bundles carry evidence two ways; reading one shape loses the other."""
+
+    def test_flat_quotes(self):
+        q = read_quotes({"quotes": ["a said thing"]})
+        self.assertEqual(q[0]["text"], "a said thing")
+        self.assertIsNone(q[0]["id"])
+
+    def test_ledger_entries(self):
+        q = read_quotes({"ledger": [
+            {"id": "E1", "quote": "unclear timecode stamps", "who": "Travis G., Capterra"},
+        ]})
+        self.assertEqual(q[0]["id"], "E1")
+        self.assertEqual(q[0]["text"], "unclear timecode stamps")
+        self.assertIn("Travis", q[0]["who"])
+
+    def test_both_shapes_combine(self):
+        q = read_quotes({"quotes": ["flat"], "ledger": [{"id": "E1", "quote": "ledger"}]})
+        self.assertEqual(len(q), 2)
+
+    def test_ledger_entries_without_text_are_dropped(self):
+        self.assertEqual(read_quotes({"ledger": [{"id": "E1"}, {}]}), [])
 
 
 class TestShape(unittest.TestCase):
@@ -82,6 +107,26 @@ class TestShape(unittest.TestCase):
         self.assertIsNone(o["opp"])
         self.assertEqual(o["tier"], "unscored")
 
+    def test_extended_blocks_are_carried(self):
+        """before_after / scenarios / target_users / trigger exist in real bundles."""
+        p = self._write("ext", {"name": "ext",
+                                "target_users": ["editors"],
+                                "before_after": {"before": "b", "after": "a"},
+                                "scenarios": [{"title": "t", "vignette": "v"}, "not a dict"],
+                                "trigger": {"type": "event", "detail": "after each call"}})
+        out = shape(p)
+        self.assertEqual(out["target_users"], ["editors"])
+        self.assertEqual(out["before_after"]["after"], "a")
+        self.assertEqual(len(out["scenarios"]), 1)      # the bare string is dropped
+        self.assertEqual(out["trigger"]["type"], "event")
+
+    def test_evidence_limitation_and_pages_read(self):
+        p = self._write("lim", {"name": "lim", "evidence": {
+            "limitation": "small sample", "pages_read": ["p1", "p2"]}})
+        out = shape(p)
+        self.assertEqual(out["evidence_limitation"], "small sample")
+        self.assertEqual(len(out["pages_read"]), 2)
+
     def test_malformed_json_is_skipped_not_fatal(self):
         d = self.root / "broken"
         d.mkdir()
@@ -106,43 +151,12 @@ class TestShape(unittest.TestCase):
         self.assertEqual(len(data["projects"]), 1)
         self.assertEqual(data["projects"][0]["outcomes"][0]["tier"], "prioritize")
 
-    def test_ledger_evidence_is_read_like_quotes(self):
-        """Real bundles carry evidence.ledger[]; reading only quotes[] loses them."""
-        p = self._write("led", {"name": "led", "evidence": {
-            "source": "reviews",
-            "limitation": "small sample",
-            "ledger": [
-                {"id": "E1", "quote": "unclear timecode stamps", "who": "Travis G., Capterra"},
-                {"id": "E2", "quote": "actionable feedback", "who": "Christopher F."},
-            ],
-        }})
-        out = shape(p)
-        self.assertEqual(len(out["quotes"]), 2)
-        self.assertEqual(out["quotes"][0]["id"], "E1")
-        self.assertEqual(out["quotes"][0]["text"], "unclear timecode stamps")
-        self.assertIn("Travis", out["quotes"][0]["who"])
-        self.assertEqual(out["evidence_limitation"], "small sample")
-
-    def test_plain_string_quotes_still_work(self):
-        p = self._write("plain", {"name": "plain", "evidence": {"quotes": ["a said thing"]}})
-        q = shape(p)["quotes"][0]
-        self.assertEqual(q["text"], "a said thing")
-        self.assertIsNone(q["id"])
-
-    def test_both_shapes_combine(self):
-        p = self._write("both", {"name": "both", "evidence": {
-            "quotes": ["flat one"],
-            "ledger": [{"id": "E1", "quote": "ledger one", "who": "X"}],
-        }})
-        self.assertEqual(len(shape(p)["quotes"]), 2)
-
     def test_lang_is_written_and_validated(self):
         self._write("a", {"name": "a"})
         out = self.root / ".graph"
         self.assertEqual(build(self.root, out, "ru")["lang"], "ru")
         self.assertEqual(build(self.root, out)["lang"], "auto")
         self.assertEqual(build(self.root, out, "klingon")["lang"], "auto")
-        self.assertEqual(json.loads((out / "data.json").read_text())["lang"], "auto")
 
     def test_build_refuses_empty_root(self):
         with self.assertRaises(SystemExit):

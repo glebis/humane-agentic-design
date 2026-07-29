@@ -267,7 +267,6 @@ thead th.sortable{padding-top:13px;padding-bottom:13px}
         <input type="search" id="search" autocomplete="off" spellcheck="false">
         <span class="chip" id="searchchip" hidden></span>
       </div>
-      <span class="eyebrow" id="scope"></span>
       <div class="settings-wrap">
         <button class="gear" id="gear" aria-haspopup="true" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
@@ -323,7 +322,7 @@ const STR={
     landscape:"Every scored outcome, placed by importance against satisfaction. Top-left is important and badly served.",
     table:"The same scores as a ranked list — position on a common scale beats a cloud when you are picking what to do next.",
     heatmap:"Mean opportunity per cell, projects ordered worst-served first. Eight fixed stages — corpus growth changes the numbers, never the legibility.",
-    jobmap:"One project's outcomes across the eight universal process stages. The detail view you land on.",
+    jobmap:"Outcome-Driven Innovation — Ulwick's method. Any job breaks into the same eight stages (define, locate, prepare, confirm, execute, monitor, modify, conclude); at each you ask what the person is trying to measure, not what they want built. Every outcome sits on its stage, scored importance plus however far importance runs ahead of satisfaction.",
     graph:"Projects as nodes, contributes-to links as edges. Click a node to trace what a change would touch downstream.",
     forces:"What pushes them off today's solution, what pulls them to yours, and what holds them where they are.",
     record:"Situation, motivation, outcome — plus needs, outputs and guardrails as captured.",
@@ -352,6 +351,8 @@ const STR={
   nHeat:(p,st,m)=>`Worst cell: ${p} × ${st} at mean opportunity ${m}.`,
   nJobmap:(st,m)=>`Worst-served stage: ${st}, mean opportunity ${m}.`,
   jmPickProject:"Pick a single project on the left — the job map renders one job at a time.",
+  jmHeader:n=>`${n} — the job across eight stages`,
+  jmEmpty:"no outcomes yet",
   mScored:"Scored outcomes", mPrioritize:"Prioritize", mMarginal:"Marginal", mSkip:"Skip",
   mOutcomes:"Outcomes", mUnscored:"Unscored", mTop:"Top score", mMedian:"Median",
   mProjects:"Projects", mForces:"Forces captured", mFunctional:"Functional needs",
@@ -441,7 +442,7 @@ const STR={
     landscape:"Каждый оценённый исход: важность против удовлетворённости. Верхний левый угол — важно и закрыто плохо.",
     table:"Те же оценки списком — когда выбираешь, что делать дальше, позиция на общей шкале читается лучше облака точек.",
     heatmap:"Средний opportunity в ячейке; проекты отсортированы от хуже всего закрытых. Восемь стадий фиксированы — рост корпуса меняет числа, а не читаемость.",
-    jobmap:"Исходы одного проекта по восьми универсальным стадиям процесса. Детальный вид, в который проваливаешься из остальных.",
+    jobmap:"Outcome-Driven Innovation — метод Ульвика. Любая работа раскладывается на одни и те же восемь стадий (define, locate, prepare, confirm, execute, monitor, modify, conclude); на каждой спрашиваешь, что человек пытается измерить, а не что ему построить. Каждый исход стоит на своей стадии, оценка — важность плюс то, насколько важность обгоняет удовлетворённость.",
     graph:"Проекты — узлы, связи «вносит вклад» — рёбра. Клик по узлу показывает, что изменение заденет ниже по графу.",
     forces:"Что выталкивает из сегодняшнего решения, что притягивает к новому и что держит на месте.",
     record:"Ситуация, мотивация, исход — плюс потребности, результаты и ограничения, как они записаны.",
@@ -470,6 +471,8 @@ const STR={
   nHeat:(p,st,m)=>`Худшая ячейка: ${p} × ${st}, средняя возможность ${m}.`,
   nJobmap:(st,m)=>`Хуже всего закрытая стадия: ${st}, средняя возможность ${m}.`,
   jmPickProject:"Выбери один проект слева — карта работы рисует одну работу за раз.",
+  jmHeader:n=>`${n} — работа по восьми стадиям`,
+  jmEmpty:"исходов пока нет",
   mScored:"Оценено", mPrioritize:"В приоритет", mMarginal:"На грани", mSkip:"Пропустить",
   mOutcomes:"Исходы", mUnscored:"Без оценки", mTop:"Максимум", mMedian:"Медиана",
   mProjects:"Проекты", mForces:"Сил записано", mFunctional:"Функц. потребности",
@@ -861,7 +864,7 @@ function render(){
   chrome();
   $("#v-title").textContent=T.vTitle[state.view];
   $("#v-sub").textContent=T.vQ[state.view]+" — "+T.vSub[state.view];
-  $("#scope").textContent=state.project==="all"?T.allScope:state.project;
+  /* the selected project is already named by the rail and the view itself */
   const body=$("#body");body.innerHTML="";hideTip();
   ({overview:drawOverview,jobs:drawJobs,icicle:drawIcicle,landscape:drawLandscape,table:drawTable,heatmap:drawHeatmap,jobmap:drawJobmap,graph:drawGraph,forces:drawForces,record:drawRecord,evidence:drawEvidence})[state.view](body);
   syncUrl(pushNext);pushNext=false;
@@ -1288,12 +1291,13 @@ function drawJobmap(root){
   const staged=p.outcomes.filter(o=>o.stage), unstaged=p.outcomes.length-staged.length;
   if(!staged.length){stageEmpty(wrap,p.outcomes);return}
   const oppColor=o=>o==null?css("--faint"):o>=12?css("--rose"):o>=8?css("--amber"):css("--accent");
-  const L=24,T2=64,gap=8,W=940,cw=(W-L*2-gap*7)/8,CH=58;
+  const L=24,T2=64,gap=8,W=940,cw=(W-L*2-gap*7)/8,CH=74;
   const perStage=STG.map(st=>staged.filter(o=>o.stage===st));
   const maxN=Math.max(...perStage.map(l=>l.length));
   const H=T2+58+maxN*(CH+6)+40;
   const s=svg(wrap,W,H);
-  txt(s,L,30,(p.name||p.slug).toUpperCase()+"  ·  8 STAGES","lbl",{});
+  const hd=txt(s,L,32,T.jmHeader(p.name||p.slug),"",{fill:css("--ink"),"font-size":"14.5","font-weight":"600"});
+  hd.style.fontFamily='"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif';
   let worst={m:-1};
   STG.forEach((st,i)=>{
     const x=L+i*(cw+gap), list=perStage[i];
@@ -1306,19 +1310,20 @@ function drawJobmap(root){
     txt(s,x+cw/2,T2+27,st.toUpperCase(),"lbl",{"text-anchor":"middle",fill:css("--ink")});
     if(i<7)el(s,"path",{d:`M${x+cw+1},${T2+17} l${gap-2},0`,stroke:css("--faint"),"stroke-width":1});
     if(avg!=null)txt(s,x+cw/2,T2+48,T.avgOpp+" "+avg.toFixed(1),"lbl",{"text-anchor":"middle"});
+    else txt(s,x+cw/2,T2+48,T.jmEmpty,"lbl",{"text-anchor":"middle"});
     let y=T2+58;
     list.forEach(o=>{
       const g=el(s,"g",{});
       el(g,"rect",{x,y,width:cw,height:CH,rx:2,fill:css("--card"),stroke:css("--rule"),"stroke-width":.7});
-      el(g,"rect",{x,y,width:3,height:CH,fill:oppColor(o.opp),opacity:.9});
-      const room=Math.max(8,Math.floor((cw-16)/5.6));
+      el(g,"circle",{cx:x+13,cy:y+10,r:3.5,fill:oppColor(o.opp)});
+      const room=Math.max(8,Math.floor((cw-30)/5.6));
       const words=o.statement.split(" ");let line="",ln=0;
       words.forEach(w=>{
-        if((line+" "+w).trim().length>room&&ln<2){txt(g,x+9,y+13+ln*11,line,"lbl",{fill:css("--ink")});line=w;ln++}
+        if((line+" "+w).trim().length>room&&ln<3){txt(g,x+21,y+13+ln*11,line,"lbl",{fill:css("--ink")});line=w;ln++}
         else line=(line+" "+w).trim();
       });
-      txt(g,x+9,y+13+ln*11,line.length>room?line.slice(0,room-1)+"…":line,"lbl",{fill:css("--ink")});
-      if(o.opp!=null)txt(g,x+9,y+CH-6,`${o.imp} / ${o.sat} → ${o.opp}`,"lbl",{});
+      txt(g,x+21,y+13+ln*11,line.length>room?line.slice(0,room-1)+"…":line,"lbl",{fill:css("--ink")});
+      if(o.opp!=null)txt(g,x+21,y+CH-8,`${o.imp} / ${o.sat} → ${o.opp}`,"lbl",{});
       const jmTip=`<b>${esc(o.statement)}</b><span class="m">${o.stage.toUpperCase()}${o.opp!=null?` · ${T.thImp} ${o.imp} · ${T.thSat} ${o.sat} · ${T.thOpp} ${o.opp}`:""}</span>`;
       g.addEventListener("mouseenter",e=>showTip(e,jmTip));
       g.addEventListener("mousemove",moveTip);g.addEventListener("mouseleave",hideTip);
@@ -1332,8 +1337,9 @@ function drawJobmap(root){
     [T.mUnstaged,unstaged,unstaged?"mid":"ok"],
     [T.mWorst,worst.st||"—",worst.st?"warn":""]
   ]);
-  verdict(worst.st?T.fAct:T.fCaptured,worst.st?"mid":"ok",
-    (state.project==="all"?T.jmPickProject+" ":"")+(worst.st?T.nJobmap(worst.st,worst.m.toFixed(1)):""));
+  if(worst.st)verdictHTML(T.fAct,"mid",
+    (state.project==="all"?esc(T.jmPickProject)+" ":"")+T.nJobmap(jmLink(p.slug,worst.st,worst.st),worst.m.toFixed(1)));
+  else verdict(T.fCaptured,"ok",state.project==="all"?T.jmPickProject:"");
 }
 
 /* ── dependency graph ── */

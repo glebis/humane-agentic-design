@@ -6,9 +6,9 @@
 <title>JTBD Graph</title>
 <style>
 :root{
-  --ground:#E9EDEE; --panel:#DFE5E5; --card:#F4F6F6; --ink:#101A1D; --muted:#5E6E72;
-  --faint:#93A2A5; --rule:#C3CDCE; --accent:#1F8A80; --accent-soft:#1F8A8022;
-  --rose:#B8385A; --amber:#9E7220; --grid:#CBD5D5;
+  --ground:#E9EDEE; --panel:#DFE5E5; --card:#F4F6F6; --ink:#101A1D; --muted:#59696C;
+  --faint:#93A2A5; --rule:#C3CDCE; --accent:#197169; --accent-soft:#19716922;
+  --rose:#B23657; --amber:#835F1B; --grid:#CBD5D5;
   --shadow:0 8px 30px rgba(0,0,0,.14);
 }
 @media (prefers-color-scheme:dark){
@@ -102,16 +102,19 @@ header .src{font-size:11.5px;color:var(--faint);margin:4px 0 0}
 .force p{margin:0;font-size:13px}
 .tier{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
   padding:1px 5px;border-radius:2px;white-space:nowrap}
-.tier.prioritize{background:#B8385A1a;color:var(--rose)}
-.tier.marginal{background:#9E72201a;color:var(--amber)}
+.tier.prioritize{background:color-mix(in srgb,var(--rose) 10%,transparent);color:var(--rose)}
+.tier.marginal{background:color-mix(in srgb,var(--amber) 10%,transparent);color:var(--amber)}
 .tier.skip{background:var(--accent-soft);color:var(--accent)}
 .tier.unscored{background:var(--panel);color:var(--muted)}
 table{border-collapse:collapse;width:100%;font-size:13.5px}
 th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tbody tr:last-child td{border-bottom:0}
 th{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
   color:var(--muted);font-weight:500}
 td.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
 tr.row:hover td{background:var(--accent-soft)}
+tr.row[tabindex]{outline:none}
+tr.row[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .lbl{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;fill:var(--muted)}
 .axis{font-family:ui-monospace,Menlo,monospace;font-size:10px;fill:var(--muted);letter-spacing:.1em;text-transform:uppercase}
 #tip{position:fixed;pointer-events:none;z-index:50;opacity:0;transition:opacity .1s;background:var(--ink);
@@ -201,11 +204,16 @@ header .subtitle{font-size:12px;color:var(--muted);margin:5px 0 0}
 .mini-grid .cell p{margin:0;font-size:12.5px}
 .matrix{overflow-x:auto;padding:4px 20px 8px}
 .matrix table{font-size:12px}
-.matrix th.rot{white-space:nowrap;font-size:9.5px}
-.matrix td.mx,.matrix th.mx{text-align:center;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+/* diagonal column headers so long source/ledger names don't overlap the 44px cells */
+.matrix th.rot{width:44px;min-width:44px;max-width:44px;box-sizing:border-box;height:112px;
+  vertical-align:bottom;padding:0 0 6px;border-right:1px solid var(--rule);text-align:center}
+.matrix th.rot:last-child{border-right:0}
+.matrix th.rot>span{display:inline-block;width:16px;font-size:10px;color:var(--muted);white-space:nowrap;
+  transform:rotate(-52deg);transform-origin:center bottom;text-align:left}
+.matrix td.mx{text-align:center;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
   border-right:1px solid var(--rule);width:44px;min-width:44px;max-width:44px;padding:8px 0;box-sizing:border-box}
-.matrix td.mx:last-child,.matrix th.mx:last-child{border-right:0}
-.matrix th:first-child,.matrix td:first-child{min-width:180px}
+.matrix td.mx:last-child{border-right:0}
+.matrix th:first-child,.matrix td:first-child{min-width:180px;text-align:left}
 
 /* v3: clickable metrics, sortable tables, filter-apply flash */
 .metrics button.mfilter{display:flex;align-items:baseline;gap:7px;border:0;background:none;padding:0;margin:0;
@@ -237,6 +245,17 @@ th[aria-sort="ascending"] .arrow,th[aria-sort="descending"] .arrow{opacity:1;col
 /* H4: visible focus for keyboard-reachable SVG shapes */
 .plot [tabindex]{outline:none}
 .plot [tabindex]:focus-visible{outline:2.5px solid var(--accent);outline-offset:1px}
+
+/* zoomable/pannable graph canvas: svg is drawn at natural size, transformed in JS */
+.plot.zoomable{position:relative;overflow:hidden;height:min(64vh,600px);cursor:grab;touch-action:none}
+.plot.zoomable.grabbing{cursor:grabbing}
+.plot.zoomable svg{position:absolute;top:0;left:0;transform-origin:0 0}
+.zoomctl{position:absolute;top:10px;right:10px;z-index:6;display:flex;flex-direction:column;gap:5px}
+.zoomctl button{width:32px;height:32px;border:1px solid var(--rule);background:var(--card);color:var(--muted);
+  border-radius:3px;cursor:pointer;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;
+  box-shadow:var(--shadow)}
+.zoomctl button:hover{color:var(--ink)}
+.zoomctl button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 /* H5: ≥40px hit areas via ::after expansion, visuals unchanged */
 .gear,.langs button,.chips button,.vlink{position:relative}
@@ -396,7 +415,7 @@ const STR={
   noOutcomes:"No outcomes captured yet.",
   /* — v2 chrome, jobs, icicle, evidence matrix, outcome graph, dashboard — */
   settings:"Settings", searchPh:"Search everything…  /",
-  searchMatches:n=>`${n} match${n===1?"":"es"}`, searchClear:"clear",
+  searchMatches:n=>`${n} match${n===1?"":"es"}`, searchClear:"clear", openRecord:"Open record:",
   whoLabel:"Actor", macroLabel:"Macro", contextLabel:"Context",
   noMacro:"No macro yet", byMacro:"Macro", byWorstTier:"Worst tier", allFilter:"All",
   jobsSuggest:n=>`${n} jobs, no macro level yet. Ask Claude:`,
@@ -520,7 +539,7 @@ const STR={
   noOutcomes:"Исходы пока не записаны.",
   /* — v2 — */
   settings:"Настройки", searchPh:"Искать везде…  /",
-  searchMatches:n=>`совпадений: ${n}`, searchClear:"сбросить",
+  searchMatches:n=>`совпадений: ${n}`, searchClear:"сбросить", openRecord:"Открыть запись:",
   whoLabel:"Кто", macroLabel:"Макро", contextLabel:"Контекст",
   noMacro:"Пока без макро", byMacro:"Макро", byWorstTier:"Худшая полоса", allFilter:"Все",
   jobsSuggest:n=>`Работ: ${n}, макро-уровня ещё нет. Скажи Claude:`,
@@ -631,6 +650,59 @@ function labelOn(hex){
   const[r,g,b]=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
   const lum=.2126*r+.7152*g+.0722*b;
   return lum>.55?"#20272C":"#FFFFFF";
+}
+/* ── makeZoomable: draw the svg at natural W×H px and wheel-zoom / drag-pan it.
+   transform (translate+scale) is applied inline; nothing persists to the url.
+   node clicks keep working because panning only starts on empty canvas. */
+function makeZoomable(wrap,s,W,H){
+  wrap.classList.add("zoomable");
+  s.style.width=W+"px";s.style.height=H+"px";s.style.maxWidth="none";
+  let k=1,tx=0,ty=0;
+  const MIN=.2,MAX=4;
+  const apply=()=>{s.style.transform=`translate(${tx}px,${ty}px) scale(${k})`;};
+  const box=()=>wrap.getBoundingClientRect();
+  function reset(){const r=box();k=1;
+    tx=W<r.width?(r.width-W)/2:16; ty=H<r.height?(r.height-H)/2:16; apply();}
+  function fit(){const r=box(),pad=24;
+    k=Math.max(MIN,Math.min((r.width-pad*2)/W,(r.height-pad*2)/H,MAX));
+    tx=(r.width-W*k)/2; ty=(r.height-H*k)/2; apply();}
+  function zoomAt(cx,cy,factor){
+    const nk=Math.min(MAX,Math.max(MIN,k*factor));
+    tx=cx-(cx-tx)*(nk/k); ty=cy-(cy-ty)*(nk/k); k=nk; apply();}
+  wrap.addEventListener("wheel",e=>{e.preventDefault();const r=box();
+    zoomAt(e.clientX-r.left,e.clientY-r.top,Math.exp(-e.deltaY*0.0015));},{passive:false});
+  /* pointer pan + two-finger pinch */
+  const pts=new Map();let panning=false,px=0,py=0,pinch=0;
+  const two=()=>{const v=[...pts.values()];return Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);};
+  wrap.addEventListener("pointerdown",e=>{
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){panning=false;pinch=two();return;}
+    if(e.target.closest("g[role=button]"))return;   /* let the node take the click */
+    panning=true;px=e.clientX;py=e.clientY;wrap.classList.add("grabbing");
+    try{wrap.setPointerCapture(e.pointerId);}catch{}
+  });
+  wrap.addEventListener("pointermove",e=>{
+    if(pts.has(e.pointerId))pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){const nd=two();if(pinch){const v=[...pts.values()],r=box();
+      zoomAt((v[0].x+v[1].x)/2-r.left,(v[0].y+v[1].y)/2-r.top,nd/pinch);}pinch=nd;return;}
+    if(!panning)return;
+    tx+=e.clientX-px;ty+=e.clientY-py;px=e.clientX;py=e.clientY;apply();
+  });
+  const end=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=0;
+    if(pts.size===0){panning=false;wrap.classList.remove("grabbing");}};
+  wrap.addEventListener("pointerup",end);
+  wrap.addEventListener("pointercancel",end);
+  const ctl=document.createElement("div");ctl.className="zoomctl";
+  ctl.innerHTML=`<button type="button" data-zoom="in" aria-label="${esc(T.zoomIn)}">+</button>
+    <button type="button" data-zoom="out" aria-label="${esc(T.zoomOut)}">−</button>
+    <button type="button" data-zoom="fit" aria-label="${esc(T.zoomFit)}">⤢</button>`;
+  ctl.addEventListener("click",e=>{const b=e.target.closest("[data-zoom]");if(!b)return;
+    const r=box();
+    if(b.dataset.zoom==="in")zoomAt(r.width/2,r.height/2,1.3);
+    else if(b.dataset.zoom==="out")zoomAt(r.width/2,r.height/2,1/1.3);
+    else fit();});
+  wrap.appendChild(ctl);
+  reset();
 }
 
 const VIEW_IDS=["overview","jobs","icicle","landscape","table","heatmap","jobmap","graph","forces","record","evidence"];
@@ -867,6 +939,9 @@ function bindTableFilter(input,which,tbody){
 }
 document.addEventListener("keydown",e=>{
   if(e.key==="Escape"&&state.settingsOpen){state.settingsOpen=false;render();return}
+  /* Enter/Space activates a focused keyboard-operable row (e.g. Overview corpus rows) */
+  if((e.key==="Enter"||e.key===" ")){const o=e.target.closest&&e.target.closest("tr[data-open]");
+    if(o&&document.activeElement===o){e.preventDefault();o.click();return}}
   if(e.key==="/"&&!/^(input|textarea|select)$/i.test((e.target.tagName||""))&&!e.target.isContentEditable){
     e.preventDefault();$("#search").focus();}
 });
@@ -912,7 +987,7 @@ function drawOverview(root){
   sec.innerHTML=`<table><thead><tr>
       ${sortTh("name",T.thProject,"text",' style="width:44%"')}${sortTh("record",T.thRecord,"num")}${sortTh("forces",T.thForces4,"num")}
       ${sortTh("scored",T.thScoredCol,"num")}${sortTh("quotes",T.thQuotesCol,"num")}${sortTh("thin",T.thThin,"num")}
-    </tr></thead><tbody>${vis.map(({p,f,scored,triple})=>`<tr class="row" data-open="${esc(p.slug)}" style="cursor:pointer">
+    </tr></thead><tbody>${vis.map(({p,f,scored,triple})=>`<tr class="row" data-open="${esc(p.slug)}" tabindex="0" role="button" aria-label="${esc(T.openRecord)} ${esc(p.name||p.slug)}" style="cursor:pointer">
       <td><b>${esc(p.name||p.slug)}</b>${p.hook?`<br><span style="font-size:12px;color:var(--muted)">${esc(p.hook.length>110?p.hook.slice(0,110)+"…":p.hook)}</span>`:""}</td>
       <td class="num ${triple===3?"ok":"mid"}">${triple}/3</td>
       <td class="num ${f===4?"ok":"mid"}">${f}/4</td>
@@ -1455,6 +1530,7 @@ function drawGraphProjects(root){
     g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();sel()}});
     return {slug:p.slug,g,rect:r};
   });
+  makeZoomable(wrap,s,W,H);
   const iso=ps.length-inGraph.length;
   metrics([[T.mProjects,inGraph.length],[T.mLinks,edges.length]]);
   verdict(T.fCaptured,"ok",T.gPick+(iso?" "+T.gIsolated(iso):""));
@@ -1546,6 +1622,7 @@ function drawGraphOutcomes(root){
     g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();sel()}});
     return {id,g,rect:r};
   });
+  makeZoomable(wrap,svgRoot,W,H);
   metrics([[T.mOutcomes,nodeIds.length],[T.mLinks,edges.length],[T.mProjects,colSlugs.length]]);
   verdict(T.fCaptured,"ok",T.odPick);
 }
@@ -1731,6 +1808,8 @@ function drawRecord(root){
 /* ── evidence ── */
 const srcOf=who=>{const w=(who||"").trim();if(!w)return T.sourceUnknown;
   return (w.split("·")[0]||w).trim()||T.sourceUnknown;};
+/* diagonal matrix column header; full text in title, truncated visually */
+const rotHead=t=>`<th class="rot"><span title="${esc(t)}">${esc(t.length>20?t.slice(0,19)+"…":t)}</span></th>`;
 function evidenceMatrix(root,ps){
   const mx=document.createElement("div");mx.className="matrix";
   if(state.project!=="all"&&ps.length===1){
@@ -1738,7 +1817,7 @@ function evidenceMatrix(root,ps){
     const p=ps[0], ledger=[...new Set((p.quotes||[]).map(q=>q.id).filter(Boolean))];
     if(!ledger.length||!(p.outcomes||[]).length)return;
     mx.innerHTML=`<table><thead><tr><th style="min-width:200px">${T.thOutcome}</th>${
-      ledger.map(id=>`<th class="rot mx">${esc(id)}</th>`).join("")}</tr></thead><tbody>${
+      ledger.map(id=>rotHead(id)).join("")}</tr></thead><tbody>${
       p.outcomes.map(o=>{const ev=o.evidence||[];
         return `<tr class="row"><td>${esc(o.statement)}</td>${
           ledger.map(id=>`<td class="mx">${ev.includes(id)?`<span style="color:var(--accent)">●</span>`:`<span style="color:var(--faint)">·</span>`}</td>`).join("")}</tr>`;}).join("")}</tbody></table>`;
@@ -1758,7 +1837,7 @@ function evidenceMatrix(root,ps){
   const maxCell=Math.max(1,...perProj.flatMap(r=>[...r.m.values()]));
   const paintCell=n=>n?hexLerp(css("--panel"),css("--accent"),Math.min(1,n/maxCell)):null;
   mx.innerHTML=`<table><thead><tr><th style="min-width:160px">${T.thProject}</th>${
-    sources.map(s=>`<th class="rot mx">${esc(s)}</th>`).join("")}${overflow?`<th class="rot mx">${esc(T.moreN(overflow))}</th>`:""}</tr></thead><tbody>${
+    sources.map(s=>rotHead(s)).join("")}${overflow?rotHead(T.moreN(overflow)):""}</tr></thead><tbody>${
     perProj.map(({p,m})=>{
       const over=overflow?[...m.entries()].filter(([s])=>!sources.includes(s)).reduce((a,[,n])=>a+n,0):0;
       return `<tr class="row"><td>${esc(p.name||p.slug)}</td>${

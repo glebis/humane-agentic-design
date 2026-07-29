@@ -1,8 +1,8 @@
 # Humane Agentic Design
 
-A human-centric design method — for people and for the agents working alongside them. Most agent-built interfaces skip the thinking and jump to pixels, producing slop. This plugin packages a proven cycle so every project starts from what people actually need and ends with proof it got better.
+Agent-produced interface slop is a method problem, not a model problem. A capable model still ships generic UI when it jumps straight to pixels with no idea who it is building for or under which constraints. The fix is not a better model — it is the method, installed next to the agent: what to build, for whom, under which constraints, then proof it got better. This plugin packages that method as a cycle, for people and for the agents working alongside them.
 
-It is one plugin (`humane`) and its own single-entry marketplace. Install the whole cycle with one command.
+It is one plugin (`humane`) and its own single-entry marketplace.
 
 ```mermaid
 flowchart LR

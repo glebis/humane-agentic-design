@@ -7,7 +7,5 @@
     "url": "https://github.com/glebis"
   },
   "homepage": "https://github.com/glebis/humane-agentic-design",
-  "repository": "https://github.com/glebis/humane-agentic-design",
-  "skills": "./skills",
-  "agents": "./agents"
+  "repository": "https://github.com/glebis/humane-agentic-design"
 }

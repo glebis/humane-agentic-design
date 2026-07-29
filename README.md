@@ -36,6 +36,16 @@ Each skill knows its place in the method. Run them in order for a new project, o
 
 The skills then activate on their triggers; the `synthetic-respondent` agent becomes available to launch.
 
+### Any other agent (Codex, and others) via npx skills
+
+The skills are stdlib-only and self-contained. Add them to any agent that reads the `skills` convention:
+
+```
+npx skills add glebis/humane-agentic-design
+```
+
+Point your agent at the `humane/skills/` directory, or copy the individual skill folders into wherever your agent loads skills from.
+
 ## How to use it
 
 Start a new product idea and let the cycle carry it end to end:
@@ -57,16 +67,6 @@ python3 <plugin>/skills/jtbd/scripts/report.py exec-summary <slug>   # one-page 
 ## Learn the method live
 
 The cycle is taught hands-on at the [Agentic Design Lab](https://ai-design.salient.community/) — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method. Current cohort dates are on the site.
-
-### Any other agent (Codex, and others) via npx skills
-
-The skills are stdlib-only and self-contained. Add them to any agent that reads the `skills` convention:
-
-```
-npx skills add glebis/humane-agentic-design
-```
-
-Point your agent at the `humane/skills/` directory, or copy the individual skill folders into wherever your agent loads skills from.
 
 ## Works with any agent
 

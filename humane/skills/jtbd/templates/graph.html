@@ -151,6 +151,7 @@ header .subtitle{font-size:12px;color:var(--muted);margin:5px 0 0}
 
 /* jobs view */
 .jobs-group{padding:0 20px}
+.jobs-group:last-of-type{padding-bottom:22px}
 .jobs-group h3.grp{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:14.5px;
   letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600;margin:22px 0 11px;
   padding-bottom:7px;border-bottom:1px solid var(--rule)}
@@ -186,7 +187,7 @@ header .subtitle{font-size:12px;color:var(--muted);margin:5px 0 0}
   cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 .vlink:hover{color:var(--ink)}
 .vlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
-.toggle{display:inline-flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;margin:14px 20px 0}
+.toggle{display:inline-flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;margin:16px 20px 12px}
 .toggle button{border:0;border-right:1px solid var(--rule);background:var(--card);color:var(--muted);
   font-family:ui-monospace,Menlo,monospace;font-size:11px;padding:4px 11px;cursor:pointer}
 .toggle button:last-child{border-right:0}
@@ -202,8 +203,9 @@ header .subtitle{font-size:12px;color:var(--muted);margin:5px 0 0}
 .matrix table{font-size:12px}
 .matrix th.rot{white-space:nowrap;font-size:9.5px}
 .matrix td.mx,.matrix th.mx{text-align:center;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
-  border-right:1px solid var(--rule)}
+  border-right:1px solid var(--rule);width:44px;min-width:44px;max-width:44px;padding:8px 0;box-sizing:border-box}
 .matrix td.mx:last-child,.matrix th.mx:last-child{border-right:0}
+.matrix th:first-child,.matrix td:first-child{min-width:180px}
 
 /* v3: clickable metrics, sortable tables, filter-apply flash */
 .metrics button.mfilter{display:flex;align-items:baseline;gap:7px;border:0;background:none;padding:0;margin:0;
@@ -310,7 +312,7 @@ const STR={
   view:"View", project:"Project", allProjects:n=>`All ${n} projects`, allScope:"all projects",
   vName:{overview:"Overview",jobs:"Jobs",icicle:"Icicle",landscape:"Opportunity",table:"Outcomes",heatmap:"Heatmap",jobmap:"Job map",graph:"Graph",forces:"Switch forces",record:"Record",evidence:"Evidence"},
   vTitle:{overview:"Corpus overview",jobs:"Jobs by macro",icicle:"Space-filling map",landscape:"Opportunity landscape",table:"Outcomes, worst served first",
-    heatmap:"Project × stage",jobmap:"ODI job map",
+    heatmap:"Project × stage",jobmap:"Job map (ODI)",
     graph:"Dependency graph",forces:"Switch forces",record:"The job",evidence:"Evidence"},
   vQ:{overview:"Where does each project stand?",jobs:"What is every project hired to do?",icicle:"How does the corpus nest?",landscape:"Which outcomes are worth building for?",table:"What is the shortlist?",
     heatmap:"Where in the process is it worst?",jobmap:"Where in the job's process are they unserved?",
@@ -353,6 +355,9 @@ const STR={
   jmPickProject:"Pick a single project on the left — the job map renders one job at a time.",
   jmHeader:n=>`${n} — the job across eight stages`,
   jmEmpty:"no outcomes yet",
+  jmScoreKey:"imp / sat → opp",
+  jmStageChip:s=>`stage: ${s}`,
+  jmStageClear:"clear stage highlight",
   mScored:"Scored outcomes", mPrioritize:"Prioritize", mMarginal:"Marginal", mSkip:"Skip",
   mOutcomes:"Outcomes", mUnscored:"Unscored", mTop:"Top score", mMedian:"Median",
   mProjects:"Projects", mForces:"Forces captured", mFunctional:"Functional needs",
@@ -398,6 +403,7 @@ const STR={
   cmdMacro:"/jtbd — propose a corpus macro level", dismiss:"dismiss",
   noBusiness:"—", oCount:"outcomes", meanOpp:"mean opp",
   toggleProjects:"Projects", toggleOutcomes:"Outcomes",
+  zoomIn:"Zoom in", zoomOut:"Zoom out", zoomFit:"Fit whole graph",
   noOutcomeDeps:"No outcome-level dependencies yet.",
   noOutcomeDepsHint:"Cross-link outcomes by adding depends_on to an outcome — the outcomes it builds on:",
   odDown:(s,n)=>`Changing ${s} touches ${n} outcome${n===1?"":"s"} downstream.`,
@@ -473,6 +479,9 @@ const STR={
   jmPickProject:"Выбери один проект слева — карта работы рисует одну работу за раз.",
   jmHeader:n=>`${n} — работа по восьми стадиям`,
   jmEmpty:"исходов пока нет",
+  jmScoreKey:"важн. / удовл. → возм.",
+  jmStageChip:s=>`стадия: ${s}`,
+  jmStageClear:"снять подсветку стадии",
   mScored:"Оценено", mPrioritize:"В приоритет", mMarginal:"На грани", mSkip:"Пропустить",
   mOutcomes:"Исходы", mUnscored:"Без оценки", mTop:"Максимум", mMedian:"Медиана",
   mProjects:"Проекты", mForces:"Сил записано", mFunctional:"Функц. потребности",
@@ -518,6 +527,7 @@ const STR={
   cmdMacro:"/jtbd — предложи макро-уровень корпуса", dismiss:"скрыть",
   noBusiness:"—", oCount:"исходов", meanOpp:"ср. возможность",
   toggleProjects:"Проекты", toggleOutcomes:"Исходы",
+  zoomIn:"Приблизить", zoomOut:"Отдалить", zoomFit:"Показать весь граф",
   noOutcomeDeps:"Зависимостей между исходами пока нет.",
   noOutcomeDepsHint:"Свяжи исходы между проектами: добавь в исход depends_on — исходы, на которые он опирается:",
   odDown:(s,n)=>`Изменение ${s} заденет исходов ниже по графу: ${n}.`,
@@ -810,6 +820,7 @@ document.addEventListener("click",e=>{
   if(gear){state.settingsOpen=!state.settingsOpen;render();return}
   if(l){setLang(l.dataset.lang);return}
   if(jmp){state.project=jmp.dataset.jobmap;state.view="jobmap";state.jmStage=jmp.dataset.stage||null;pushNext=true;render();return}
+  if(e.target.closest("[data-clearstage]")){state.jmStage=null;render();return}
   if(o){state.project=o.dataset.open;state.view="record";pushNext=true;render();return}
   if(mjump){state.project="all";state.view="jobs";state.jobMacro=mjump.dataset.macrojump;state.jobTier="all";pushNext=true;render();return}
   if(jm){state.jobMacro=jm.dataset.jobmacro;render();return}
@@ -1065,7 +1076,14 @@ function drawJobs(root){
 
 /* ── icicle: business outcome ▸ macro ▸ project ▸ stage ── */
 function drawIcicle(root){
-  const ps=projectsInScope();
+  /* corpus view: always render every project (search still narrows);
+     a selected project is emphasized, not isolated */
+  let ps=DATA.projects;
+  if(searchActive()){
+    const q=state.search.trim();
+    ps=ps.filter(p=>fuzzy(q,projectText(p))||(p.outcomes||[]).some(o=>fuzzy(q,outcomeText(o)+" "+projectText(p))));
+  }
+  const selSlug=state.project!=="all"?state.project:null;
   const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
   const withOut=ps.filter(p=>(p.outcomes||[]).length);
   if(!withOut.length){
@@ -1141,9 +1159,13 @@ function drawIcicle(root){
       for(const p of mnode.projects){
         const pw=Math.max(MINW,cnt(p)*scale);
         const pMean=oppOf(p);
-        seg(px,pw,2*(rowH+gap),rowH,oppColor(pMean),p.name||p.slug,
+        const pg=seg(px,pw,2*(rowH+gap),rowH,oppColor(pMean),p.name||p.slug,
           `<b>${esc(p.name||p.slug)}</b><span class="m">${cnt(p)} ${T.oCount} · ${T.meanOpp} ${pMean==null?"—":pMean.toFixed(1)}</span>`,
           ()=>{state.project=p.slug;state.view="record";render();});
+        if(selSlug){
+          if(p.slug===selSlug){const r=pg.querySelector("rect");r.setAttribute("stroke",css("--ink"));r.setAttribute("stroke-width",2);}
+          else pg.setAttribute("opacity",".45");
+        }
         /* stages within */
         let sx=px;
         const stgList=STG.map(st=>({st,os:(p.outcomes||[]).filter(o=>o.stage===st)})).filter(x=>x.os.length);
@@ -1205,6 +1227,7 @@ function drawHeatmap(root){
   }
   const dim=hasTouch&&state.heatDim==="touch"?"touch":"project";
   const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  wrap.style.padding="12px 16px 16px";
   const mean=l=>l.length?l.reduce((a,o)=>a+o.opp,0)/l.length:null;
   const allStaged=ps.flatMap(p=>p.outcomes.filter(o=>o.stage&&o.opp!=null).map(o=>({...o,project:p.slug,pname:p.name||p.slug})));
   const staged=dim==="touch"?allStaged.filter(o=>o.touch):allStaged;
@@ -1239,10 +1262,14 @@ function drawHeatmap(root){
         txt(s,x+cw/2,y+ch/2+4,"·","lbl",{"text-anchor":"middle"});return}
       cells++;if(m>worst.m)worst={m,p:r.label,key:r.key,st};
       const g=el(s,"g",{});
-      el(g,"rect",{x:x+1,y:y+1,width:cw-2,height:ch-2,fill:paint(m),opacity:.18+.6*((m-lo)/Math.max(.001,hi-lo))});
-      const t1=txt(g,x+cw/2,y+ch/2+1,m.toFixed(1),"lbl",{"text-anchor":"middle",fill:css("--ink")});
-      t1.setAttribute("style","font-size:14px");
-      txt(g,x+cw/2,y+ch/2+15,String(list.length),"lbl",{"text-anchor":"middle"});
+      const alpha=.18+.6*((m-lo)/Math.max(.001,hi-lo));
+      el(g,"rect",{x:x+1,y:y+1,width:cw-2,height:ch-2,fill:paint(m),opacity:alpha});
+      /* label colour against the EFFECTIVE cell colour (fill blended over ground by alpha) */
+      const eff=hexLerp(css("--ground"),paint(m),alpha), labC=labelOn(eff);
+      const t1=txt(g,x+cw/2,y+ch/2+1,m.toFixed(1),"lbl",{"text-anchor":"middle",fill:labC});
+      t1.style.fontSize="14px";
+      const t2=txt(g,x+cw/2,y+ch/2+15,String(list.length),"lbl",{"text-anchor":"middle",fill:labC});
+      t2.setAttribute("opacity",".72");
       g.style.cursor="crosshair";
       const cellTip=`<b>${esc(lab)} · ${st}</b>`+
         list.map(o=>`<span class="m">${esc(o.statement.length>70?o.statement.slice(0,70)+"…":o.statement)} — ${o.opp}</span>`).join("");
@@ -1298,6 +1325,23 @@ function drawJobmap(root){
   const s=svg(wrap,W,H);
   const hd=txt(s,L,32,T.jmHeader(p.name||p.slug),"",{fill:css("--ink"),"font-size":"14.5","font-weight":"600"});
   hd.style.fontFamily='"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif';
+  /* one quiet key line: tier colours + score syntax (H2/H6 findings) */
+  let kx=W-L;
+  const key=[["prioritize","--rose"],["marginal","--amber"],["skip","--accent"]];
+  const kt=txt(s,kx,32,T.jmScoreKey,"lbl",{"text-anchor":"end"});
+  kx-=(kt.getComputedTextLength?kt.getComputedTextLength():70)+18;
+  key.reverse().forEach(([tier,c])=>{
+    const t=txt(s,kx,32,T.tier[tier],"lbl",{"text-anchor":"end"});
+    const w=t.getComputedTextLength?t.getComputedTextLength():40;
+    el(s,"circle",{cx:kx-w-8,cy:28.5,r:3.5,fill:css(c)});
+    kx-=w+22;
+  });
+  if(state.jmStage){
+    const chip=document.createElement("div");chip.className="chips";chip.style.padding="10px 20px 0";
+    chip.innerHTML=`<span class="cl">${esc(T.jmStageChip(state.jmStage))}</span>
+      <button data-clearstage aria-label="${esc(T.jmStageClear)}" aria-pressed="true">×</button>`;
+    root.insertBefore(chip,wrap);
+  }
   let worst={m:-1};
   STG.forEach((st,i)=>{
     const x=L+i*(cw+gap), list=perStage[i];

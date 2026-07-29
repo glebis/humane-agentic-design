@@ -1,0 +1,25 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "humane-agentic-design",
+  "metadata": {
+    "description": "Humane Agentic Design — a human-centric design method cycle for people and agents, from jobs-to-be-done to a working design system."
+  },
+  "owner": {
+    "name": "Gleb Kalinin",
+    "url": "https://github.com/glebis"
+  },
+  "plugins": [
+    {
+      "name": "humane",
+      "description": "A human-centric design method cycle for people and agents: jtbd, persona-review, synthetic-respondent, design-tokens, layout-rules, nielsen-heuristics, before-after. Portable across agentic stacks.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Gleb Kalinin",
+        "url": "https://github.com/glebis"
+      },
+      "source": "./humane",
+      "category": "design",
+      "tags": ["design", "jtbd", "ux", "design-system", "tokens", "heuristics", "skills"]
+    }
+  ]
+}

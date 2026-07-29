@@ -1,0 +1,1765 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JTBD Graph</title>
+<style>
+:root{
+  --ground:#E9EDEE; --panel:#DFE5E5; --card:#F4F6F6; --ink:#101A1D; --muted:#5E6E72;
+  --faint:#93A2A5; --rule:#C3CDCE; --accent:#1F8A80; --accent-soft:#1F8A8022;
+  --rose:#B8385A; --amber:#9E7220; --grid:#CBD5D5;
+  --shadow:0 8px 30px rgba(0,0,0,.14);
+}
+@media (prefers-color-scheme:dark){
+  :root{--ground:#0E1417;--panel:#131C1F;--card:#161F22;--ink:#E4EBEB;--muted:#8B9C9F;
+    --faint:#5A6B6E;--rule:#263437;--accent:#3FB3A6;--accent-soft:#3FB3A61f;
+    --rose:#E8677F;--amber:#D9A343;--grid:#1E2B2E;
+    --shadow:0 12px 36px rgba(0,0,0,.55);}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:15px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-weight:600;margin:0;text-wrap:balance}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:10.5px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--muted)}
+.wrap{max-width:1280px;margin:0 auto;padding:0 22px 80px}
+
+header{padding:36px 0 20px;border-bottom:1px solid var(--rule);margin-bottom:24px;
+  display:flex;align-items:baseline;justify-content:space-between;gap:20px;flex-wrap:wrap}
+header h1{font-size:29px;letter-spacing:-.02em}
+header .src{font-size:11.5px;color:var(--faint);margin:4px 0 0}
+.headright{display:flex;align-items:center;gap:14px}
+.langs{display:flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden}
+.langs button{border:0;border-right:1px solid var(--rule);background:var(--card);color:var(--muted);
+  font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.06em;padding:4px 9px;cursor:pointer}
+.langs button:last-child{border-right:0}
+.langs button[aria-pressed="true"]{background:var(--accent);color:var(--ground);font-weight:600}
+.langs button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+
+.lab{display:grid;grid-template-columns:210px 1fr;gap:40px;align-items:start}
+@media (max-width:900px){.lab{grid-template-columns:1fr;gap:24px}}
+.rail{position:sticky;top:22px;display:flex;flex-direction:column;gap:28px}
+@media (max-width:900px){.rail{position:static;flex-direction:row;flex-wrap:wrap;gap:22px}}
+.rail .eyebrow{display:block;margin-bottom:9px}
+.list{display:flex;flex-direction:column;gap:1px;margin-left:-9px}
+@media (max-width:900px){.list{flex-direction:row;flex-wrap:wrap;margin-left:0}}
+.list button{width:100%;text-align:left;background:none;border:0;padding:6px 9px;color:var(--muted);
+  cursor:pointer;font:inherit;font-size:14px;border-radius:2px;line-height:1.35}
+.list button:hover{color:var(--ink)}
+.list button[aria-pressed="true"]{color:var(--ink);font-weight:600;background:var(--accent-soft)}
+.list button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+@media (max-width:900px){.list button{width:auto}}
+
+.stage{background:var(--card);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.stage-head{padding:20px 20px 16px;border-bottom:1px solid var(--rule)}
+.stage-head h2{font-size:22px;letter-spacing:-.012em}
+.stage-head p{margin:6px 0 0;color:var(--muted);font-size:13.5px;max-width:70ch}
+.plot{background:var(--ground)}
+.plot svg{display:block;width:100%;height:auto}
+@media (max-width:640px){.plot{overflow-x:auto}.plot svg{min-width:640px}}
+.metrics{display:flex;flex-wrap:wrap;gap:0 32px;padding:11px 20px;border-top:1px solid var(--rule);background:var(--panel)}
+.metrics div{display:flex;align-items:baseline;gap:7px}
+.metrics span{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.metrics b{font-family:ui-monospace,Menlo,monospace;font-size:14px;font-weight:600;font-variant-numeric:tabular-nums}
+.warn{color:var(--rose)} .ok{color:var(--accent)} .mid{color:var(--amber)}
+.verdict{display:flex;gap:12px;align-items:baseline;padding:13px 20px 15px;border-top:1px solid var(--rule)}
+.verdict p{margin:0;font-size:13.5px;color:var(--muted);max-width:92ch}
+.flag{flex:none;font-family:ui-monospace,Menlo,monospace;font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;font-weight:600;padding:2px 7px;border-radius:2px;background:var(--accent-soft);color:var(--accent)}
+
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0;border-top:1px solid var(--rule)}
+.cols section{padding:18px 20px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+/* level-3 heading: serif semibold, sentence case (retires the mono-caps heading) */
+.cols h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:14.5px;
+  letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600;margin-bottom:9px}
+.cols p{margin:0 0 8px;font-size:13.5px}
+.cols ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:5px}
+.cols li{font-size:13px;padding-left:12px;position:relative;line-height:1.45}
+.cols li::before{content:"";position:absolute;left:2px;top:8px;width:3px;height:3px;border-radius:50%;background:var(--accent)}
+.cols .empty{font-size:12.5px;color:var(--muted);font-style:italic}
+/* quote: card block with a hanging typographic quotation mark (no left rail) */
+.quote{background:var(--card);border-radius:3px;padding:9px 12px 9px 28px;margin:0 0 11px;
+  font-size:12.8px;color:var(--muted);position:relative}
+.quote::before{content:"\201C";position:absolute;left:8px;top:5px;line-height:1;
+  font-family:"Iowan Old Style",Georgia,serif;font-size:22px;color:var(--faint)}
+.quote .eid{font-family:ui-monospace,Menlo,monospace;font-size:10px;color:var(--accent);font-weight:600}
+.quote .who{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+/* limitation: amber-tinted block (no left rail) */
+.limitation{background:color-mix(in srgb,var(--amber) 14%,transparent);border-radius:3px;
+  padding:8px 11px;margin:0 0 12px;font-size:12px;color:var(--amber)}
+/* force: colour carried by a leading dot marker, not a left rail */
+.force{margin-bottom:12px}
+.force b{display:flex;align-items:center;gap:6px;font-family:ui-monospace,Menlo,monospace;font-size:9.5px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:3px}
+.force b::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--rule)}
+.force.push b::before{background:var(--rose)}
+.force.pull b::before{background:var(--accent)}
+.force.habit b::before{background:var(--amber)}
+.force.anxiety b::before{background:var(--muted)}
+.force p{margin:0;font-size:13px}
+.tier{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:1px 5px;border-radius:2px;white-space:nowrap}
+.tier.prioritize{background:#B8385A1a;color:var(--rose)}
+.tier.marginal{background:#9E72201a;color:var(--amber)}
+.tier.skip{background:var(--accent-soft);color:var(--accent)}
+.tier.unscored{background:var(--panel);color:var(--muted)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);font-weight:500}
+td.num{font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.row:hover td{background:var(--accent-soft)}
+.lbl{font-family:ui-monospace,Menlo,monospace;font-size:9.5px;fill:var(--muted)}
+.axis{font-family:ui-monospace,Menlo,monospace;font-size:10px;fill:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+#tip{position:fixed;pointer-events:none;z-index:50;opacity:0;transition:opacity .1s;background:var(--ink);
+  color:var(--ground);padding:8px 10px;border-radius:2px;font-size:12px;max-width:300px;line-height:1.45}
+#tip b{display:block;margin-bottom:3px}
+#tip .m{display:block;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;opacity:.75}
+.empty-state{padding:40px 20px;text-align:center;color:var(--muted);font-size:14px;line-height:2}
+.empty-state code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;color:var(--ink);
+  background:var(--panel);border:1px solid var(--rule);border-radius:2px;padding:3px 8px;user-select:all}
+.filterbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 20px 2px}
+.filterbar input{flex:1;min-width:200px;background:var(--ground);border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink);font:inherit;font-size:13px;padding:6px 10px}
+.filterbar input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.cols section > h3{cursor:pointer}
+.cols section > h3::before{content:"▾ "}
+.cols section.collapsed > h3::before{content:"▸ "}
+.cols section.collapsed > *:not(h3){display:none}
+
+/* v2 chrome */
+header .subtitle{font-size:12px;color:var(--muted);margin:5px 0 0}
+.searchbox{position:relative;display:flex;align-items:center;gap:8px}
+.searchbox input{background:var(--card);border:1px solid var(--rule);border-radius:2px;color:var(--ink);
+  font:inherit;font-size:12.5px;padding:5px 10px;width:210px}
+@media (max-width:640px){.searchbox input{width:130px}}
+.searchbox input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.searchbox .chip{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted);white-space:nowrap}
+.searchbox .chip button{border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;
+  font-size:10.5px;text-decoration:underline;padding:0 0 0 6px}
+.settings-wrap{position:relative}
+.gear{border:1px solid var(--rule);background:var(--card);color:var(--muted);border-radius:2px;
+  width:30px;height:28px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.gear:hover{color:var(--ink)} .gear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.popover{position:absolute;right:0;top:34px;z-index:60;background:var(--card);border:1px solid var(--rule);
+  border-radius:3px;padding:12px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;min-width:150px}
+.popover[hidden]{display:none}
+.popover .eyebrow{display:block}
+
+/* jobs view */
+.jobs-group{padding:0 20px}
+.jobs-group h3.grp{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:14.5px;
+  letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600;margin:22px 0 11px;
+  padding-bottom:7px;border-bottom:1px solid var(--rule)}
+.jobcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.jobcard{background:var(--card);border:1px solid var(--rule);border-radius:3px;padding:13px 14px;cursor:pointer;
+  display:flex;flex-direction:column;gap:6px;text-align:left;color:inherit;font:inherit}
+.jobcard:hover{border-color:var(--accent)} .jobcard:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.jobcard .jc-name{font-weight:600;font-size:14px}
+.jobcard .jc-actor{font-size:11px;color:var(--muted)}
+.jobcard .jc-triple{font-size:12px;color:var(--muted);line-height:1.4}
+.jobcard .jc-triple span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.jobcard .jc-triple b{color:var(--muted);font-weight:600;font-family:ui-monospace,Menlo,monospace;font-size:9px;
+  letter-spacing:.08em;text-transform:uppercase;margin-right:4px}
+.jobcard .jc-foot{display:flex;justify-content:space-between;align-items:center;margin-top:2px;gap:8px}
+.jobcard .jc-q{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:14px 20px 4px}
+.chips button{border:1px solid var(--rule);background:var(--card);color:var(--muted);border-radius:2px;
+  font-family:ui-monospace,Menlo,monospace;font-size:10.5px;letter-spacing:.04em;padding:3px 9px;cursor:pointer}
+.chips button[aria-pressed="true"]{background:var(--accent);color:var(--ground);border-color:var(--accent);font-weight:600}
+.chips button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chips .cl{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);align-self:center;
+  border:0;background:none;padding:3px 2px 3px 6px;cursor:default}
+.banner{margin:14px 20px 2px;padding:11px 14px;background:var(--accent-soft);border:1px solid var(--rule);
+  border-radius:3px;font-size:13px;color:var(--muted);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.banner code{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--ink);background:var(--panel);
+  border:1px solid var(--rule);border-radius:2px;padding:2px 7px;user-select:all}
+.banner button{margin-left:auto;border:0;background:none;color:var(--accent);cursor:pointer;font:inherit;
+  font-size:11.5px;text-decoration:underline}
+.linkchip{display:inline-block;border:1px solid var(--rule);background:var(--card);color:var(--accent);
+  border-radius:2px;font-family:ui-monospace,Menlo,monospace;font-size:11px;padding:2px 8px;cursor:pointer;text-decoration:none}
+.linkchip:hover{border-color:var(--accent)}
+.vlink{display:inline;border:0;background:none;padding:0;margin:0;font:inherit;color:var(--accent);
+  cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.vlink:hover{color:var(--ink)}
+.vlink:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.toggle{display:inline-flex;border:1px solid var(--rule);border-radius:2px;overflow:hidden;margin:14px 20px 0}
+.toggle button{border:0;border-right:1px solid var(--rule);background:var(--card);color:var(--muted);
+  font-family:ui-monospace,Menlo,monospace;font-size:11px;padding:4px 11px;cursor:pointer}
+.toggle button:last-child{border-right:0}
+.toggle button[aria-pressed="true"]{background:var(--accent);color:var(--ground);font-weight:600}
+.toggle button:focus-visible{outline:2px solid var(--accent);outline-offset:-3px}
+.mini-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:3px;overflow:hidden}
+.mini-grid .cell{background:var(--card);padding:9px 11px;min-height:52px}
+.mini-grid .cell b{display:block;font-family:ui-monospace,Menlo,monospace;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;margin-bottom:4px}
+.mini-grid .cell.miss{opacity:.5}
+.mini-grid .cell p{margin:0;font-size:12.5px}
+.matrix{overflow-x:auto;padding:4px 20px 8px}
+.matrix table{font-size:12px}
+.matrix th.rot{white-space:nowrap;font-size:9.5px}
+.matrix td.mx,.matrix th.mx{text-align:center;font-family:ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums;
+  border-right:1px solid var(--rule)}
+.matrix td.mx:last-child,.matrix th.mx:last-child{border-right:0}
+
+/* v3: clickable metrics, sortable tables, filter-apply flash */
+.metrics button.mfilter{display:flex;align-items:baseline;gap:7px;border:0;background:none;padding:0;margin:0;
+  font:inherit;cursor:pointer;border-bottom:1px dashed transparent;line-height:inherit}
+.metrics button.mfilter:hover{border-bottom-color:var(--faint)}
+.metrics button.mfilter[aria-pressed="true"]{border-bottom-color:var(--accent)}
+.metrics button.mfilter[aria-pressed="true"] b{color:var(--accent)}
+.metrics button.mfilter:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}
+th.sortable:hover{color:var(--ink)}
+th .arrow{opacity:.35;margin-left:3px;font-size:9px}
+th[aria-sort="ascending"] .arrow,th[aria-sort="descending"] .arrow{opacity:1;color:var(--accent)}
+.tblbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 20px 0}
+.tblbar input{flex:1;min-width:180px;max-width:340px;background:var(--ground);border:1px solid var(--rule);
+  border-radius:2px;color:var(--ink);font:inherit;font-size:13px;padding:6px 10px}
+.tblbar input:focus-visible{outline:2px solid var(--accent);outline-offset:-1px}
+.tblbar .cnt{font-family:ui-monospace,Menlo,monospace;font-size:10.5px;color:var(--muted)}
+.unstaged-list{padding:6px 20px 12px}
+.unstaged-list h3{font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:14.5px;
+  letter-spacing:0;text-transform:none;color:var(--ink);font-weight:600;margin:10px 0 8px}
+@keyframes flashrow{from{background:var(--accent-soft)}to{background:transparent}}
+@keyframes flashpt{from{opacity:1;transform:scale(1.25)}to{opacity:.82;transform:scale(1)}}
+#body.flashing tbody tr.row td{animation:flashrow .3s ease}
+#body.flashing .plot circle{animation:flashpt .3s ease;transform-box:fill-box;transform-origin:center}
+#body.flashing .jobcard{animation:flashrow .3s ease}
+@media (prefers-reduced-motion:reduce){#body.flashing tbody tr.row td,
+  #body.flashing .plot circle,#body.flashing .jobcard{animation:none}}
+
+/* H4: visible focus for keyboard-reachable SVG shapes */
+.plot [tabindex]{outline:none}
+.plot [tabindex]:focus-visible{outline:2.5px solid var(--accent);outline-offset:1px}
+
+/* H5: ≥40px hit areas via ::after expansion, visuals unchanged */
+.gear,.langs button,.chips button,.vlink{position:relative}
+.gear::after{content:"";position:absolute;inset:-7px}
+.langs button::after{content:"";position:absolute;inset:-9px -3px}
+.chips button::after{content:"";position:absolute;inset:-9px -4px}
+.vlink::after{content:"";position:absolute;inset:-9px -5px}
+thead th.sortable{padding-top:13px;padding-bottom:13px}
+
+/* L3: on narrow screens the rail button lists collapse into native selects */
+.railsel{display:none;width:100%;background:var(--card);border:1px solid var(--rule);border-radius:2px;
+  color:var(--ink);font:inherit;font-size:14px;padding:8px 9px}
+.railsel:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (max-width:900px){
+  .rail .list{display:none}
+  .railsel{display:block}
+  .rail{gap:12px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>JTBD Graph</h1>
+      <p class="subtitle mono" id="subtitle" hidden></p>
+    </div>
+    <div class="headright">
+      <div class="searchbox">
+        <input type="search" id="search" autocomplete="off" spellcheck="false">
+        <span class="chip" id="searchchip" hidden></span>
+      </div>
+      <span class="eyebrow" id="scope"></span>
+      <div class="settings-wrap">
+        <button class="gear" id="gear" aria-haspopup="true" aria-expanded="false">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.2"/>
+            <path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2l1.9 1.9M16.9 16.9l1.9 1.9M18.8 5.2l-1.9 1.9M7.1 16.9l-1.9 1.9"/>
+          </svg>
+        </button>
+        <div class="popover" id="settings" role="dialog" hidden>
+          <span class="eyebrow" id="lbl-settings">Settings</span>
+          <div class="langs" id="langs"></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="lab">
+    <aside class="rail">
+      <div class="list" id="views"></div>
+      <select class="railsel" id="view-select" aria-label="View"></select>
+      <div class="list" id="projects"></div>
+      <select class="railsel" id="project-select" aria-label="Project"></select>
+    </aside>
+    <main class="stage">
+      <div class="stage-head"><h2 id="v-title">—</h2><p id="v-sub">—</p></div>
+      <div id="body"></div>
+      <div class="metrics" id="metrics"></div>
+      <div class="verdict"><span class="flag" id="flag">—</span><p id="note">—</p></div>
+    </main>
+  </div>
+</div>
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+/* ─────────── i18n ───────────
+   Only the chrome is translated. The record itself — statements, quotes,
+   forces — is shown in whatever language the corpus was captured in, because
+   translating a verbatim quote would destroy the thing that makes it evidence. */
+const STR={
+ en:{
+  code:"EN", htmlLang:"en",
+  view:"View", project:"Project", allProjects:n=>`All ${n} projects`, allScope:"all projects",
+  vName:{overview:"Overview",jobs:"Jobs",icicle:"Icicle",landscape:"Opportunity",table:"Outcomes",heatmap:"Heatmap",jobmap:"Job map",graph:"Graph",forces:"Switch forces",record:"Record",evidence:"Evidence"},
+  vTitle:{overview:"Corpus overview",jobs:"Jobs by macro",icicle:"Space-filling map",landscape:"Opportunity landscape",table:"Outcomes, worst served first",
+    heatmap:"Project × stage",jobmap:"ODI job map",
+    graph:"Dependency graph",forces:"Switch forces",record:"The job",evidence:"Evidence"},
+  vQ:{overview:"Where does each project stand?",jobs:"What is every project hired to do?",icicle:"How does the corpus nest?",landscape:"Which outcomes are worth building for?",table:"What is the shortlist?",
+    heatmap:"Where in the process is it worst?",jobmap:"Where in the job's process are they unserved?",
+    graph:"What would a change touch?",forces:"Will they actually switch?",record:"What did we actually learn?",
+    evidence:"What do we know versus assert?"},
+  vSub:{overview:"Every project across all levels — record completeness, forces, scores and evidence health. Click a row to open its record.",
+    jobs:"Every project's job, grouped by the macro it rolls up to. Each card carries the actor, the When / I want / So that triple, worst-outcome tier and quote count. Click a card to open its record.",
+    icicle:"Business outcome ▸ macro ▸ project ▸ stage, laid out as nested rectangles. Width is proportional to outcome count; colour is mean opportunity. Click a project to open its record.",
+    landscape:"Every scored outcome, placed by importance against satisfaction. Top-left is important and badly served.",
+    table:"The same scores as a ranked list — position on a common scale beats a cloud when you are picking what to do next.",
+    heatmap:"Mean opportunity per cell, projects ordered worst-served first. Eight fixed stages — corpus growth changes the numbers, never the legibility.",
+    jobmap:"One project's outcomes across the eight universal process stages. The detail view you land on.",
+    graph:"Projects as nodes, contributes-to links as edges. Click a node to trace what a change would touch downstream.",
+    forces:"What pushes them off today's solution, what pulls them to yours, and what holds them where they are.",
+    record:"Situation, motivation, outcome — plus needs, outputs and guardrails as captured.",
+    evidence:"The verbatim quotes behind the record, and the dimensions the granularity gate flagged as thin."},
+  tier:{prioritize:"prioritize",marginal:"marginal",skip:"skip",unscored:"unscored"},
+  axisX:"Satisfaction with today's solution →", axisY:"Importance →",
+  underserved:"UNDERSERVED — important, badly served", diagonal:"imp = sat",
+  noScores:"No scored outcomes yet.", noScoresHint:"Ask Claude:",
+  noScoresHint2:"— it rates each outcome for importance and satisfaction with you.",
+  cmdOdi:s=>`/jtbd — score the outcomes for ${s} (ODI)`,
+  restWorks:"The other views work without this.",
+  noLinks:"No links between projects yet.",
+  noLinksHint:"To draw the graph, add a links array to a project's jtbd.json — the slugs it contributes to:",
+  gPick:"Click a node to trace impact.",
+  gDown:(s,n)=>`A change in ${s} touches ${n} project${n===1?"":"s"} downstream.`,
+  gNone:s=>`${s} has nothing downstream — it is a leaf.`,
+  gIsolated:n=>`${n} project${n===1?"":"s"} without links are not drawn.`,
+  thProject:"Project", thRecord:"Record", thForces4:"Forces", thScoredCol:"Scored", thQuotesCol:"Quotes", thThin:"Thin",
+  fOverview:"Corpus",
+  filterPh:"Filter lists — needs, outputs, questions…",
+  filterHint:"Click a section title to collapse it.",
+  noStages:"No outcome carries a stage yet.",
+  noStagesHint:"Tag each outcome in odi.outcomes[] with one of the eight ODI stages:",
+  mStaged:"Staged", mCells:"Filled cells", mWorst:"Worst", mHere:"Outcomes here", mUnstaged:"Unstaged",
+  rowMean:"row mean", colMean:"column mean", avgOpp:"avg opp",
+  nHeat:(p,st,m)=>`Worst cell: ${p} × ${st} at mean opportunity ${m}.`,
+  nJobmap:(st,m)=>`Worst-served stage: ${st}, mean opportunity ${m}.`,
+  jmPickProject:"Pick a single project on the left — the job map renders one job at a time.",
+  mScored:"Scored outcomes", mPrioritize:"Prioritize", mMarginal:"Marginal", mSkip:"Skip",
+  mOutcomes:"Outcomes", mUnscored:"Unscored", mTop:"Top score", mMedian:"Median",
+  mProjects:"Projects", mForces:"Forces captured", mFunctional:"Functional needs",
+  mOutputs:"Outputs", mOpen:"Open questions", mQuotes:"Quotes", mNoQuotes:"Projects with none",
+  mWeak:"Flagged weaknesses",
+  fAct:"Act on these", fNothing:"Nothing urgent", fNoPlot:"Nothing to plot", fShortlist:"Shortlist",
+  fComplete:"Complete", fGaps:"Gaps", fCaptured:"Captured", fIncomplete:"Incomplete",
+  fThin:"Thin", fEvidenced:"Evidenced", fEmpty:"Empty",
+  nAct:(n,s,o)=>`${n} outcome${n===1?"":"s"} score 12 or above — the band the skill calls prioritize. Worst served: ${s} at ${o}.`,
+  nNothing:(s,o,t)=>`Nothing reaches 12. The highest is ${s} at ${o}, which the skill would call ${t}.`,
+  nNoPlot:"The landscape needs importance and satisfaction on each outcome. Everything else in this viewer still works.",
+  nShortlist:"Ranked by opportunity. The skill's tiers: 12 and above prioritize, 8 and below skip, between them marginal.",
+  nShortlistTop:(s,o)=>`Ranked by opportunity — highest is ${s} at ${o}. The skill's bands: 12 and above prioritize, 8 and below skip.`,
+  nShortlistNone:"No scores yet — the list is in capture order.",
+  nForcesOk:"All four forces captured for every project in scope. Push and pull sell the switch; habit and anxiety are what actually block it.",
+  nForcesGap:n=>`${n} force${n===1?"":"s"} missing. The skill treats this pass as required — the blockers are usually in habit and anxiety.`,
+  nRecordOk:q=>`Situation, motivation and outcome are present${q?`, with ${q} open question${q===1?"":"s"} still unresolved`:""}.`,
+  nRecordGap:n=>`${n} project${n===1?"":"s"} missing part of the situation / motivation / outcome triple — the granularity gate would flag that.`,
+  nEvidenceThin:(n,t)=>`${n} of ${t} project${t===1?"":"s"} carry no verbatim quote at all. A record with no quotes is a hypothesis wearing the costume of a finding.`,
+  nEvidenceOk:(q,p,w)=>`${q} verbatim quote${q===1?"":"s"} behind ${p} project${p===1?"":"s"}${w?`, with ${w} dimension${w===1?"":"s"} flagged thin by the granularity gate`:""}.`,
+  nEmptyTable:"Run the outcome decomposition pass in the skill.",
+  thOutcome:"Outcome", thTier:"Tier", thImp:"Imp", thSat:"Sat", thOpp:"Opp",
+  push:"Push — what hurts today", pull:"Pull — what attracts",
+  habit:"Habit — what holds them", anxiety:"Anxiety — what they fear",
+  notCaptured:"not captured", theJob:"the job",
+  when:"When", iWant:"I want to", soThat:"So I can",
+  hurts:"What hurts today", cost:"Cost today", functional:"Functional needs",
+  emotional:"Emotional needs", social:"Social needs", outputs:"Outputs",
+  guardrails:"Guardrails", openQ:"Open questions",
+  targetUsers:"Target users", beforeAfter:"Before → after", before:"Before", after:"After",
+  scenarios:"Scenarios", trigger:"Trigger", mScenarios:"Scenarios",
+  sourceUnknown:"source not stated", quotes:n=>`${n} quote${n===1?"":"s"}`,
+  noQuotes:"No verbatim quotes. Everything in this record is assertion, not evidence.",
+  flaggedThin:"Flagged thin", noProjects:"No projects found.", pagesRead:"Pages read",
+  loadFail:"could not load data.json — serve this folder over http",
+  noOutcomes:"No outcomes captured yet.",
+  /* — v2 chrome, jobs, icicle, evidence matrix, outcome graph, dashboard — */
+  settings:"Settings", searchPh:"Search everything…  /",
+  searchMatches:n=>`${n} match${n===1?"":"es"}`, searchClear:"clear",
+  whoLabel:"Actor", macroLabel:"Macro", contextLabel:"Context",
+  noMacro:"No macro yet", byMacro:"Macro", byWorstTier:"Worst tier", allFilter:"All",
+  jobsSuggest:n=>`${n} jobs, no macro level yet. Ask Claude:`,
+  cmdMacro:"/jtbd — propose a corpus macro level", dismiss:"dismiss",
+  noBusiness:"—", oCount:"outcomes", meanOpp:"mean opp",
+  toggleProjects:"Projects", toggleOutcomes:"Outcomes",
+  noOutcomeDeps:"No outcome-level dependencies yet.",
+  noOutcomeDepsHint:"Cross-link outcomes by adding depends_on to an outcome — the outcomes it builds on:",
+  odDown:(s,n)=>`Changing ${s} touches ${n} outcome${n===1?"":"s"} downstream.`,
+  odNone:s=>`${s} has nothing downstream — it is a leaf.`,
+  odPick:"Click an outcome to trace impact.",
+  moreN:n=>`+${n} more`,
+  dimStageProject:"Stage × Project", dimStageTouch:"Stage × Touchpoint",
+  contributesTo:"Contributes to", fedBy:"Fed by",
+  showAll:"show all", showLess:"show less",
+  evidenceHealth:"Evidence health", topOutcomes:"Top outcomes by opportunity",
+  forcesGrid:"Forces", noneOutcome:"no outcomes", noSources:"No sources yet.",
+  noTouchData:"No touchpoint carries data yet.",
+  /* — v3: footer audit, clickable metrics, sortable tables — */
+  mBiz:"Business", mLinks:"Links",
+  filterRows:"Filter rows…",
+  nOverviewGap:"Some projects carry no verbatim quote — click the quote-less metric below to isolate them, then open each and add evidence.",
+  nOverviewOk:"Every project carries at least one quote. Sort any column to surface the thinnest records first.",
+  nJobsWorst:(name,opp)=>`Most underserved macro: ${name} at mean opportunity ${opp} — start the next build there.`,
+  nJobsFlat:"No macro is scored yet, so the groups are unranked. Score the outcomes to see which macro is worst served.",
+  jobsGroupHead:(n,name,opp)=>`${n} project${n===1?"":"s"} hire this job: ${name} — mean opp ${opp}`,
+  jobsGroupNoMacro:n=>`${n} project${n===1?"":"s"} with no macro yet`,
+  nIcicleWidest:(name,n)=>`The “${name}” branch is the widest at ${n} outcome${n===1?"":"s"} — the corpus is concentrated there.`,
+  nIcicleFlat:"No business outcomes or macros yet, so every project sits at the top level. Add them to see the corpus nest.",
+  unstagedHead:"Unstaged outcomes",
+  filterActive:"filtered",
+  sortBy:"Sort by"
+ },
+ ru:{
+  code:"RU", htmlLang:"ru",
+  view:"Вид", project:"Проект", allProjects:n=>`Все проекты (${n})`, allScope:"все проекты",
+  vName:{overview:"Обзор",jobs:"Работы",icicle:"Слои",landscape:"Возможности",table:"Исходы",heatmap:"Теплокарта",jobmap:"Карта работы",graph:"Граф",forces:"Силы перехода",record:"Запись",evidence:"Доказательства"},
+  vTitle:{overview:"Обзор корпуса",jobs:"Работы по макро",icicle:"Карта-заливка",landscape:"Карта возможностей",table:"Исходы: хуже всего закрытые сверху",
+    heatmap:"Проект × стадия",jobmap:"Карта работы (ODI)",
+    graph:"Граф зависимостей",forces:"Силы перехода",record:"Работа",evidence:"Доказательства"},
+  vQ:{overview:"Где сейчас каждый проект?",jobs:"На какую работу нанят каждый проект?",icicle:"Как вложен корпус?",landscape:"Какие исходы стоит закрывать?",table:"Что в коротком списке?",
+    heatmap:"Где в процессе хуже всего?",jobmap:"Где в процессе клиент недообслужен?",
+    graph:"Что заденет изменение?",forces:"Они правда переключатся?",record:"Что мы на самом деле выяснили?",
+    evidence:"Что мы знаем, а что просто утверждаем?"},
+  vSub:{overview:"Все проекты на всех уровнях: полнота записи, силы, оценки и здоровье доказательств. Клик по строке открывает запись.",
+    jobs:"Работа каждого проекта, сгруппированная по макро, к которому она относится. На карточке — актор, тройка «Когда / Я хочу / Чтобы», полоса худшего исхода и число цитат. Клик открывает запись.",
+    icicle:"Бизнес-исход ▸ макро ▸ проект ▸ стадия в виде вложенных прямоугольников. Ширина — по числу исходов, цвет — средняя возможность. Клик по проекту открывает запись.",
+    landscape:"Каждый оценённый исход: важность против удовлетворённости. Верхний левый угол — важно и закрыто плохо.",
+    table:"Те же оценки списком — когда выбираешь, что делать дальше, позиция на общей шкале читается лучше облака точек.",
+    heatmap:"Средний opportunity в ячейке; проекты отсортированы от хуже всего закрытых. Восемь стадий фиксированы — рост корпуса меняет числа, а не читаемость.",
+    jobmap:"Исходы одного проекта по восьми универсальным стадиям процесса. Детальный вид, в который проваливаешься из остальных.",
+    graph:"Проекты — узлы, связи «вносит вклад» — рёбра. Клик по узлу показывает, что изменение заденет ниже по графу.",
+    forces:"Что выталкивает из сегодняшнего решения, что притягивает к новому и что держит на месте.",
+    record:"Ситуация, мотивация, исход — плюс потребности, результаты и ограничения, как они записаны.",
+    evidence:"Дословные цитаты за записью и измерения, которые гранулярный гейт пометил как слабые."},
+  tier:{prioritize:"в приоритет",marginal:"на грани",skip:"пропустить",unscored:"без оценки"},
+  axisX:"Удовлетворённость сегодняшним решением →", axisY:"Важность →",
+  underserved:"НЕДООБСЛУЖЕНО — важно, закрыто плохо", diagonal:"важн. = удовл.",
+  noScores:"Оценённых исходов пока нет.", noScoresHint:"Скажи Claude:",
+  noScoresHint2:"— он вместе с тобой оценит каждый исход по важности и удовлетворённости.",
+  cmdOdi:s=>`/jtbd — оцени исходы ${s} (ODI)`,
+  restWorks:"Остальные виды работают и без этого.",
+  noLinks:"Связей между проектами пока нет.",
+  noLinksHint:"Чтобы нарисовать граф, добавь в jtbd.json проекта массив links — слаги проектов, в которые он вносит вклад:",
+  gPick:"Кликни узел, чтобы проследить импакт.",
+  gDown:(s,n)=>`Изменение в ${s} заденет проектов ниже по графу: ${n}.`,
+  gNone:s=>`У ${s} ничего ниже по графу — это лист.`,
+  gIsolated:n=>`Проектов без связей (не нарисованы): ${n}.`,
+  thProject:"Проект", thRecord:"Запись", thForces4:"Силы", thScoredCol:"Оценено", thQuotesCol:"Цитаты", thThin:"Слабое",
+  fOverview:"Корпус",
+  filterPh:"Фильтр по спискам — потребности, результаты, вопросы…",
+  filterHint:"Клик по заголовку секции сворачивает её.",
+  noStages:"Ни у одного исхода пока нет стадии.",
+  noStagesHint:"Пометь исходы в odi.outcomes[] одной из восьми стадий ODI:",
+  mStaged:"Со стадией", mCells:"Ячеек заполнено", mWorst:"Хуже всего", mHere:"Исходов здесь", mUnstaged:"Без стадии",
+  rowMean:"среднее по строке", colMean:"среднее по столбцу", avgOpp:"ср. возм.",
+  nHeat:(p,st,m)=>`Худшая ячейка: ${p} × ${st}, средняя возможность ${m}.`,
+  nJobmap:(st,m)=>`Хуже всего закрытая стадия: ${st}, средняя возможность ${m}.`,
+  jmPickProject:"Выбери один проект слева — карта работы рисует одну работу за раз.",
+  mScored:"Оценено", mPrioritize:"В приоритет", mMarginal:"На грани", mSkip:"Пропустить",
+  mOutcomes:"Исходы", mUnscored:"Без оценки", mTop:"Максимум", mMedian:"Медиана",
+  mProjects:"Проекты", mForces:"Сил записано", mFunctional:"Функц. потребности",
+  mOutputs:"Результаты", mOpen:"Открытые вопросы", mQuotes:"Цитаты", mNoQuotes:"Проектов без цитат",
+  mWeak:"Помечено слабым",
+  fAct:"Брать в работу", fNothing:"Срочного нет", fNoPlot:"Нечего рисовать", fShortlist:"Короткий список",
+  fComplete:"Полно", fGaps:"Пробелы", fCaptured:"Записано", fIncomplete:"Неполно",
+  fThin:"Тонко", fEvidenced:"Подтверждено", fEmpty:"Пусто",
+  nAct:(n,s,o)=>`${n} исход${n===1?"":"ов"} набрали 12 и выше — полосу, которую скилл называет «в приоритет». Хуже всего закрыт: ${s} — ${o}.`,
+  nNothing:(s,o,t)=>`До 12 не дотягивает никто. Максимум — ${s} (${o}), скилл отнёс бы это к «${t}».`,
+  nNoPlot:"Карте нужны важность и удовлетворённость по каждому исходу. Всё остальное в этом просмотрщике работает.",
+  nShortlist:"Отсортировано по возможности. Полосы скилла: 12 и выше — в приоритет, 8 и ниже — пропустить, между ними — на грани.",
+  nShortlistTop:(s,o)=>`Отсортировано по возможности — максимум у ${s}: ${o}. Полосы скилла: 12 и выше — в приоритет, 8 и ниже — пропустить.`,
+  nShortlistNone:"Оценок пока нет — список в порядке записи.",
+  nForcesOk:"Все четыре силы записаны для каждого проекта в фокусе. Push и pull продают переход; habit и anxiety — то, что его реально блокирует.",
+  nForcesGap:n=>`Не хватает ${n} сил${n===1?"ы":""}. Скилл считает этот проход обязательным — блокеры обычно сидят в habit и anxiety.`,
+  nRecordOk:q=>`Ситуация, мотивация и исход на месте${q?`, открытых вопросов — ${q}`:""}.`,
+  nRecordGap:n=>`В ${n} проект${n===1?"е":"ах"} не хватает части тройки «ситуация / мотивация / исход» — гранулярный гейт это бы пометил.`,
+  nEvidenceThin:(n,t)=>`${n} из ${t} проект${t===1?"а":"ов"} не имеют ни одной дословной цитаты. Запись без цитат — гипотеза в костюме находки.`,
+  nEvidenceOk:(q,p,w)=>`${q} дословны${q===1?"я цитата":"х цитат"} за ${p} проект${p===1?"ом":"ами"}${w?`, слабыми помечено измерений: ${w}`:""}.`,
+  nEmptyTable:"Прогони проход декомпозиции исходов в скилле.",
+  thOutcome:"Исход", thTier:"Полоса", thImp:"Важн.", thSat:"Удовл.", thOpp:"Возм.",
+  push:"Push — что болит сегодня", pull:"Pull — что притягивает",
+  habit:"Habit — что держит", anxiety:"Anxiety — чего боятся",
+  notCaptured:"не записано", theJob:"работа",
+  when:"Когда", iWant:"Я хочу", soThat:"Чтобы",
+  hurts:"Что болит сегодня", cost:"Чего это стоит", functional:"Функциональные потребности",
+  emotional:"Эмоциональные потребности", social:"Социальные потребности", outputs:"Результаты",
+  guardrails:"Ограничения", openQ:"Открытые вопросы",
+  targetUsers:"Для кого", beforeAfter:"Было → стало", before:"Было", after:"Стало",
+  scenarios:"Сценарии", trigger:"Триггер", mScenarios:"Сценарии",
+  sourceUnknown:"источник не указан", quotes:n=>`цитат: ${n}`,
+  noQuotes:"Дословных цитат нет. Всё в этой записи — утверждение, а не доказательство.",
+  flaggedThin:"Помечено как слабое", noProjects:"Проектов не найдено.", pagesRead:"Прочитанные страницы",
+  loadFail:"не удалось загрузить data.json — раздай папку по http",
+  noOutcomes:"Исходы пока не записаны.",
+  /* — v2 — */
+  settings:"Настройки", searchPh:"Искать везде…  /",
+  searchMatches:n=>`совпадений: ${n}`, searchClear:"сбросить",
+  whoLabel:"Кто", macroLabel:"Макро", contextLabel:"Контекст",
+  noMacro:"Пока без макро", byMacro:"Макро", byWorstTier:"Худшая полоса", allFilter:"Все",
+  jobsSuggest:n=>`Работ: ${n}, макро-уровня ещё нет. Скажи Claude:`,
+  cmdMacro:"/jtbd — предложи макро-уровень корпуса", dismiss:"скрыть",
+  noBusiness:"—", oCount:"исходов", meanOpp:"ср. возможность",
+  toggleProjects:"Проекты", toggleOutcomes:"Исходы",
+  noOutcomeDeps:"Зависимостей между исходами пока нет.",
+  noOutcomeDepsHint:"Свяжи исходы между проектами: добавь в исход depends_on — исходы, на которые он опирается:",
+  odDown:(s,n)=>`Изменение ${s} заденет исходов ниже по графу: ${n}.`,
+  odNone:s=>`У ${s} ничего ниже по графу — это лист.`,
+  odPick:"Кликни исход, чтобы проследить импакт.",
+  moreN:n=>`ещё ${n}`,
+  dimStageProject:"Стадия × Проект", dimStageTouch:"Стадия × Точка касания",
+  contributesTo:"Вносит вклад в", fedBy:"Опирается на",
+  showAll:"показать все", showLess:"свернуть",
+  evidenceHealth:"Здоровье доказательств", topOutcomes:"Топ исходов по возможности",
+  forcesGrid:"Силы", noneOutcome:"без исходов", noSources:"Источников пока нет.",
+  noTouchData:"Ни у одной точки касания пока нет данных.",
+  /* — v3 — */
+  mBiz:"Бизнес-исходы", mLinks:"Связей",
+  filterRows:"Фильтр строк…",
+  nOverviewGap:"У части проектов нет ни одной дословной цитаты — кликни метрику «без цитат» ниже, чтобы выделить их, открой каждый и добавь доказательства.",
+  nOverviewOk:"У каждого проекта есть хотя бы одна цитата. Отсортируй любой столбец, чтобы самые слабые записи всплыли первыми.",
+  nJobsWorst:(name,opp)=>`Хуже всего закрытый макро: ${name}, средняя возможность ${opp} — следующую сборку начинай отсюда.`,
+  nJobsFlat:"Ни один макро пока не оценён, поэтому группы без ранга. Оцени исходы, чтобы увидеть, какой макро закрыт хуже всех.",
+  jobsGroupHead:(n,name,opp)=>`${n===1?"Эту работу нанимает":"Эту работу нанимают"} ${n} ${ruProj(n)}: ${name} — ср. возможность ${opp}`,
+  jobsGroupNoMacro:n=>`${n} ${ruProj(n)} пока без макро`,
+  nIcicleWidest:(name,n)=>`Ветка «${name}» самая широкая — исходов: ${n}. Корпус сосредоточен здесь.`,
+  nIcicleFlat:"Бизнес-исходов и макро пока нет, поэтому все проекты на верхнем уровне. Добавь их, чтобы увидеть вложенность корпуса.",
+  unstagedHead:"Исходы без стадии",
+  filterActive:"отфильтровано",
+  sortBy:"Сортировка"
+ }
+};
+
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const css=v=>getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+let LANG="en", T=STR.en;
+function setLang(code,persist=true){
+  if(!STR[code])code="en";
+  LANG=code;T=STR[code];
+  document.documentElement.lang=T.htmlLang;
+  if(persist){try{localStorage.setItem("jtbd-graph-lang",code)}catch{}}
+  render();
+}
+
+const tip=$("#tip");
+function showTip(e,h){tip.innerHTML=h;tip.style.opacity="1";moveTip(e)}
+function moveTip(e){const p=12,r=tip.getBoundingClientRect();
+  let x=e.clientX+p,y=e.clientY+p;
+  if(x+r.width>innerWidth-8)x=e.clientX-r.width-p;
+  if(y+r.height>innerHeight-8)y=e.clientY-r.height-p;
+  tip.style.left=x+"px";tip.style.top=y+"px"}
+const hideTip=()=>tip.style.opacity="0";
+/* position the tip over an element's centre (keyboard focus / touch tap) */
+function showTipAt(el,h){tip.innerHTML=h;tip.style.opacity="1";
+  const r=el.getBoundingClientRect();moveTip({clientX:r.left+r.width/2,clientY:r.top+r.height/2});}
+/* strip markup for an aria-label from a tip's html */
+const plain=h=>String(h).replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+
+/* ── shared interaction helpers for SVG shapes ─────────────────────────
+   ptrType lets a click distinguish finger from mouse; tappedEl holds the
+   element whose tip is currently pinned open on touch. */
+let ptrType="mouse", tappedEl=null;
+addEventListener("pointerdown",e=>{ptrType=e.pointerType||"mouse";},true);
+function clearTap(){if(tappedEl){hideTip();tappedEl=null;}}
+addEventListener("pointerdown",e=>{if(tappedEl&&!tappedEl.contains(e.target))clearTap();},true);
+addEventListener("keydown",e=>{if(e.key==="Escape")clearTap();});
+/* make a shape keyboard-operable: focus shows the tip, Enter/Space activates */
+function kbdShape(el,ariaLabel,tipHtml,onActivate){
+  el.setAttribute("tabindex","0");el.setAttribute("role","button");
+  el.setAttribute("aria-label",ariaLabel);
+  el.addEventListener("focus",()=>showTipAt(el,tipHtml));
+  el.addEventListener("blur",hideTip);
+  el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();
+    if(onActivate)onActivate();else showTipAt(el,tipHtml);}});
+}
+/* touch tap-to-toggle: 1st tap pins the tip, 2nd tap runs the action (if any).
+   desktop (mouse/pen-as-mouse) keeps click === activate. */
+function tapClick(el,tipHtml,onActivate){
+  el.addEventListener("click",e=>{
+    if(ptrType==="touch"){
+      if(tappedEl===el){if(onActivate){clearTap();onActivate();}}
+      else{tappedEl=el;showTipAt(el,tipHtml);e.stopPropagation();}
+      return;
+    }
+    if(onActivate)onActivate();
+  });
+}
+
+const NS="http://www.w3.org/2000/svg";
+function svg(p,w,h){const s=document.createElementNS(NS,"svg");
+  s.setAttribute("viewBox",`0 0 ${w} ${h}`);s.setAttribute("preserveAspectRatio","xMidYMid meet");
+  s.setAttribute("role","img");p.appendChild(s);return s}
+function el(p,t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e}
+function txt(p,x,y,s,cls,a={}){
+  /* an explicit fill must win over the class default (.lbl sets fill in CSS,
+     which beats presentation attributes) — promote it to an inline style */
+  const{fill,...rest}=a;
+  const e=el(p,"text",Object.assign({x,y,class:cls},rest));
+  if(fill)e.style.fill=fill;
+  e.textContent=s;return e}
+/* readable label colour for an arbitrary hex fill */
+function labelOn(hex){
+  if(!/^#[0-9a-fA-F]{6}$/.test(hex))return css("--ink");
+  const[r,g,b]=[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255);
+  const lum=.2126*r+.7152*g+.0722*b;
+  return lum>.55?"#20272C":"#FFFFFF";
+}
+
+const VIEW_IDS=["overview","jobs","icicle","landscape","table","heatmap","jobmap","graph","forces","record","evidence"];
+const STG=["define","locate","prepare","confirm","execute","monitor","modify","conclude"];
+let DATA=null, state={view:"overview", project:"all", search:"", jobMacro:"all", jobTier:"all", graphMode:"projects", heatDim:"project", settingsOpen:false,
+  ovq:false, tier:"all", heatList:false, ovSort:null, tblSort:null, ovText:"", tblText:"", jmStage:null, _flash:false};
+/* ── shareable urls: ?view=jobs&p=frame-io&jm=m-video-approval ──
+   unknown or malformed values fall back to defaults rather than erroring */
+let pushNext=false;
+function readUrl(){
+  const q=new URLSearchParams(location.search);
+  const v=q.get("view"); if(v&&VIEW_IDS.includes(v))state.view=v;
+  const p=q.get("p"); if(p)state.project=p;
+  const jm=q.get("jm"); if(jm)state.jobMacro=jm;
+  const jt=q.get("jt"); if(["all","prioritize","marginal","skip","unscored"].includes(q.get("jt")))state.jobTier=jt;
+  const g=q.get("g"); if(g==="outcomes"||g==="projects")state.graphMode=g;
+  const h=q.get("h"); if(h==="project"||h==="touch")state.heatDim=h;
+  const s=q.get("q"); if(s!=null)state.search=s;
+  state.ovq=q.get("ovq")==="1";
+  const tr=q.get("tr"); if(["prioritize","marginal","skip","unscored"].includes(tr))state.tier=tr;
+  state.heatList=q.get("hl")==="1";
+  const os=q.get("os"); if(os&&/^[a-z]+\.[ad]$/.test(os)){const[k,d]=os.split(".");state.ovSort={k,dir:d==="a"?1:-1};}
+  const ts=q.get("ts"); if(ts&&/^[a-z]+\.[ad]$/.test(ts)){const[k,d]=ts.split(".");state.tblSort={k,dir:d==="a"?1:-1};}
+  const of=q.get("of"); if(of!=null)state.ovText=of;
+  const tf=q.get("tf"); if(tf!=null)state.tblText=tf;
+}
+function urlFor(){
+  const q=new URLSearchParams();
+  q.set("view",state.view);
+  if(state.project!=="all")q.set("p",state.project);
+  if(state.view==="jobs"&&state.jobMacro!=="all")q.set("jm",state.jobMacro);
+  if(state.view==="jobs"&&state.jobTier!=="all")q.set("jt",state.jobTier);
+  if(state.view==="graph"&&state.graphMode!=="projects")q.set("g",state.graphMode);
+  if(state.view==="heatmap"&&state.heatDim!=="project")q.set("h",state.heatDim);
+  if(state.search)q.set("q",state.search);
+  if(state.view==="overview"&&state.project==="all"&&state.ovq)q.set("ovq","1");
+  if((state.view==="landscape"||state.view==="table")&&state.tier!=="all")q.set("tr",state.tier);
+  if(state.view==="heatmap"&&state.heatList)q.set("hl","1");
+  if(state.view==="overview"&&state.ovSort)q.set("os",`${state.ovSort.k}.${state.ovSort.dir===1?"a":"d"}`);
+  if(state.view==="table"&&state.tblSort)q.set("ts",`${state.tblSort.k}.${state.tblSort.dir===1?"a":"d"}`);
+  if(state.view==="overview"&&state.ovText)q.set("of",state.ovText);
+  if(state.view==="table"&&state.tblText)q.set("tf",state.tblText);
+  return location.pathname+"?"+q.toString();
+}
+function syncUrl(push){
+  if(!DATA)return;
+  const u=urlFor();
+  if(u===location.pathname+location.search)return;
+  history[push?"pushState":"replaceState"]({},"",u);
+}
+addEventListener("popstate",()=>{
+  Object.assign(state,{view:"overview",project:"all",jobMacro:"all",jobTier:"all",
+    graphMode:"projects",heatDim:"project",search:"",
+    ovq:false,tier:"all",heatList:false,ovSort:null,tblSort:null,ovText:"",tblText:""});
+  readUrl();
+  if(DATA&&state.project!=="all"&&!DATA.projects.some(x=>x.slug===state.project))state.project="all";
+  const si=$("#search");if(si)si.value=state.search;
+  render();
+});
+const TIER_COLOR={prioritize:"--rose",marginal:"--amber",skip:"--accent",unscored:"--faint"};
+
+/* ── corpus accessors (contract may be absent — degrade gracefully) ── */
+const corpus=()=>DATA.corpus||{business_outcomes:[],macros:[],touchpoints:[]};
+const macroName=id=>{const m=(corpus().macros||[]).find(x=>x.id===id);return m?m.name:id;};
+const projMacro=p=>p.macro||null;
+/* russian plural of «проект» for 1 / 2-4 / 5+ */
+const ruProj=n=>{const a=Math.abs(n)%100,b=a%10;
+  return a>10&&a<20?"проектов":b>1&&b<5?"проекта":b===1?"проект":"проектов";};
+
+/* ── global fuzzy search: subsequence match, case-insensitive ── */
+function fuzzy(q,hay){
+  if(!q)return true;
+  hay=(hay||"").toLowerCase();let i=0;
+  for(const c of q.toLowerCase()){i=hay.indexOf(c,i);if(i<0)return false;i++;}
+  return true;
+}
+function outcomeText(o){return [o.statement,o.stage,o.touch].filter(Boolean).join(" ");}
+function projectText(p){
+  return [p.name,p.slug,p.hook,p.situation,p.motivation,p.outcome,p.actor,p.context,
+    p.macro&&macroName(p.macro),
+    ...(p.needs?[].concat(p.needs.functional||[],p.needs.emotional||[],p.needs.social||[]):[]),
+    ...(p.outputs||[]),...(p.open_questions||[]),
+    ...Object.values(p.forces||{}),
+    ...(p.quotes||[]).map(q=>q.text),
+    ...(p.outcomes||[]).map(outcomeText)
+  ].filter(Boolean).join(" ");
+}
+const searchActive=()=>!!state.search.trim();
+const projMatches=p=>!searchActive()||fuzzy(state.search.trim(),projectText(p));
+/* scope after search: projects that match, or that contain a matching outcome */
+function scopedProjects(){
+  const base=state.project==="all"?DATA.projects:DATA.projects.filter(p=>p.slug===state.project);
+  if(!searchActive())return base;
+  const q=state.search.trim();
+  return base.filter(p=>fuzzy(q,projectText(p))||(p.outcomes||[]).some(o=>fuzzy(q,outcomeText(o)+" "+projectText(p))));
+}
+function scopedOutcomes(){
+  const q=state.search.trim();
+  return scopedProjects().flatMap(p=>p.outcomes
+    .filter(o=>!searchActive()||fuzzy(q,outcomeText(o))||fuzzy(q,projectText(p)))
+    .map(o=>({...o,project:p.slug})));
+}
+function searchCount(){
+  return {p:scopedProjects().length,o:scopedOutcomes().length};
+}
+const projectsInScope=()=>scopedProjects();
+const outcomesInScope=()=>scopedOutcomes();
+
+const tierRank={prioritize:3,marginal:2,skip:1,unscored:0};
+function worstOutcome(p){
+  const scored=(p.outcomes||[]).filter(o=>o.opp!=null);
+  if(scored.length)return scored.reduce((a,b)=>b.opp>a.opp?b:a);
+  return (p.outcomes||[])[0]||null;
+}
+const worstTier=p=>{const o=worstOutcome(p);return o?(o.tier||"unscored"):"unscored";};
+
+/* metric entry: [label, value, tone] or [label, value, tone, {id, on}] to make it a filter toggle */
+function metrics(list){
+  $("#metrics").innerHTML=list.filter(Boolean).map(([l,v,t,f])=>
+    f?`<button class="mfilter" type="button" data-mfilter="${esc(f.id)}" aria-pressed="${!!f.on}"><span>${l}</span><b class="${t||""}">${v}</b></button>`
+     :`<div><span>${l}</span><b class="${t||""}">${v}</b></div>`).join("");
+}
+function verdict(flag,tone,note){
+  const f=$("#flag");f.textContent=flag;
+  const c=tone==="bad"?css("--rose"):tone==="mid"?css("--amber"):css("--accent");
+  f.style.color=c;f.style.background=c+"1f";
+  $("#note").textContent=note;
+}
+/* html-capable verdict: note is trusted markup — every data value inside MUST
+   pass through esc()/recLink()/jmLink(), which escape their arguments */
+function verdictHTML(flag,tone,html){
+  const f=$("#flag");f.textContent=flag;
+  const c=tone==="bad"?css("--rose"):tone==="mid"?css("--amber"):css("--accent");
+  f.style.color=c;f.style.background=c+"1f";
+  $("#note").innerHTML=html;
+}
+/* clickable entities inside a verdict: open a project's Record, or its Job map */
+const recLink=(slug,label)=>`<button class="vlink" type="button" data-open="${esc(slug)}">${esc(label)}</button>`;
+const jmLink=(slug,stage,label)=>`<button class="vlink" type="button" data-jobmap="${esc(slug)}"${stage?` data-stage="${esc(stage)}"`:""}>${esc(label)}</button>`;
+const jmacLink=(id,label)=>`<button class="vlink" type="button" data-jobmacro="${esc(id)}">${esc(label)}</button>`;
+function chrome(){
+  $("#lbl-settings").textContent=T.settings;
+  $("#gear").setAttribute("aria-label",T.settings);
+  const sIn=$("#search");
+  sIn.placeholder=T.searchPh;
+  if(document.activeElement!==sIn && sIn.value!==state.search)sIn.value=state.search;
+  $("#langs").innerHTML=Object.keys(STR).map(k=>
+    `<button data-lang="${k}" aria-pressed="${k===LANG}" aria-label="${STR[k].htmlLang}">${STR[k].code}</button>`).join("");
+  $("#views").innerHTML=VIEW_IDS.map(v=>
+    `<button data-v="${v}" aria-pressed="${v===state.view}">${T.vName[v]}</button>`).join("");
+  const ps=[{slug:"all",name:T.allProjects(DATA.projects.length)}].concat(DATA.projects);
+  const projList=DATA.projects.length>1?ps:DATA.projects;
+  $("#projects").innerHTML=projList.map(p=>
+    `<button data-p="${esc(p.slug)}" aria-pressed="${p.slug===state.project}">${esc(p.name||p.slug)}</button>`).join("");
+  /* mobile-rail selects mirror the same lists / state */
+  const vSel=$("#view-select");vSel.setAttribute("aria-label",T.view);
+  vSel.innerHTML=VIEW_IDS.map(v=>`<option value="${v}"${v===state.view?" selected":""}>${esc(T.vName[v])}</option>`).join("");
+  const pSel=$("#project-select");pSel.setAttribute("aria-label",T.project);
+  pSel.innerHTML=projList.map(p=>`<option value="${esc(p.slug)}"${p.slug===state.project?" selected":""}>${esc(p.name||p.slug)}</option>`).join("");
+  /* subtitle: name of the single selected project */
+  const sub=$("#subtitle");
+  if(state.project!=="all"){const pr=DATA.projects.find(p=>p.slug===state.project);
+    sub.hidden=false;sub.textContent=pr?(pr.name||pr.slug):state.project;}
+  else sub.hidden=true;
+  /* search matches chip */
+  const chip=$("#searchchip");
+  if(searchActive()){const c=searchCount();
+    chip.hidden=false;
+    chip.innerHTML=`${esc(T.searchMatches(c.p))} · <button data-search-clear>${esc(T.searchClear)}</button>`;}
+  else chip.hidden=true;
+  /* settings popover open state */
+  const pop=$("#settings");pop.hidden=!state.settingsOpen;
+  $("#gear").setAttribute("aria-expanded",state.settingsOpen?"true":"false");
+}
+document.addEventListener("click",e=>{
+  const v=e.target.closest("[data-v]"), p=e.target.closest("[data-p]"), l=e.target.closest("[data-lang]"),
+        o=e.target.closest("[data-open]"), h=e.target.closest(".cols section > h3"),
+        gear=e.target.closest("#gear"), sc=e.target.closest("[data-search-clear]"),
+        jm=e.target.closest("[data-jobmacro]"), jt=e.target.closest("[data-jobtier]"),
+        mjump=e.target.closest("[data-macrojump]"),
+        gm=e.target.closest("[data-graphmode]"), hd=e.target.closest("[data-heatdim]"),
+        mf=e.target.closest("[data-mfilter]"), so=e.target.closest("[data-sort]"),
+        jmp=e.target.closest("[data-jobmap]");
+  /* settings close must run first: later branches return early */
+  if(state.settingsOpen && !gear && !e.target.closest("#settings")){state.settingsOpen=false;}
+  if(sc){state.search="";$("#search").value="";render();return}
+  if(gear){state.settingsOpen=!state.settingsOpen;render();return}
+  if(l){setLang(l.dataset.lang);return}
+  if(jmp){state.project=jmp.dataset.jobmap;state.view="jobmap";state.jmStage=jmp.dataset.stage||null;pushNext=true;render();return}
+  if(o){state.project=o.dataset.open;state.view="record";pushNext=true;render();return}
+  if(mjump){state.project="all";state.view="jobs";state.jobMacro=mjump.dataset.macrojump;state.jobTier="all";pushNext=true;render();return}
+  if(jm){state.jobMacro=jm.dataset.jobmacro;render();return}
+  if(jt){state.jobTier=jt.dataset.jobtier;render();return}
+  if(gm){state.graphMode=gm.dataset.graphmode;render();return}
+  if(hd){state.heatDim=hd.dataset.heatdim;render();return}
+  if(mf){applyMetricFilter(mf.dataset.mfilter);state._flash=true;render();return}
+  if(so){applySort(so.dataset.sort);state._flash=true;render();return}
+  if(h){h.parentElement.classList.toggle("collapsed");return}
+  /* close settings on outside click */
+  if(state.settingsOpen && !e.target.closest("#settings")){state.settingsOpen=false;render();}
+  if(v){state.view=v.dataset.v;state.jmStage=null;pushNext=true;render()}
+  if(p){state.project=p.dataset.p;state.jmStage=null;pushNext=true;render()}
+});
+function applyMetricFilter(id){
+  if(id==="ovq")state.ovq=!state.ovq;
+  else if(id==="heatList")state.heatList=!state.heatList;
+  else if(id.startsWith("tier:")){const t=id.slice(5);state.tier=state.tier===t?"all":t;}
+}
+/* toggle sort key: same key flips direction, new key starts descending (numeric) / ascending (text) */
+function applySort(spec){
+  const[which,key,type]=spec.split(":");
+  const cur=which==="ov"?state.ovSort:state.tblSort;
+  let next;
+  if(cur&&cur.k===key)next={k:key,dir:-cur.dir};
+  else next={k:key,dir:type==="text"?1:-1};
+  if(which==="ov")state.ovSort=next;else state.tblSort=next;
+}
+$("#search").addEventListener("input",e=>{state.search=e.target.value;render();});
+$("#view-select").addEventListener("change",e=>{state.view=e.target.value;state.jmStage=null;pushNext=true;render();});
+$("#project-select").addEventListener("change",e=>{state.project=e.target.value;state.jmStage=null;pushNext=true;render();});
+/* in-place row filter: keeps input focus (no re-render), still persists to the url */
+function bindTableFilter(input,which,tbody){
+  input.addEventListener("input",()=>{
+    const q=input.value.trim();
+    if(which==="ov")state.ovText=input.value;else state.tblText=input.value;
+    let shown=0;
+    tbody.querySelectorAll("tr.row").forEach(tr=>{
+      const hit=!q||fuzzy(q,tr.textContent);tr.style.display=hit?"":"none";if(hit)shown++;});
+    const cnt=input.parentElement.querySelector(".cnt");
+    if(cnt)cnt.textContent=q?`${shown}`:"";
+    syncUrl(false);
+  });
+}
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&state.settingsOpen){state.settingsOpen=false;render();return}
+  if(e.key==="/"&&!/^(input|textarea|select)$/i.test((e.target.tagName||""))&&!e.target.isContentEditable){
+    e.preventDefault();$("#search").focus();}
+});
+
+function render(){
+  chrome();
+  $("#v-title").textContent=T.vTitle[state.view];
+  $("#v-sub").textContent=T.vQ[state.view]+" — "+T.vSub[state.view];
+  $("#scope").textContent=state.project==="all"?T.allScope:state.project;
+  const body=$("#body");body.innerHTML="";hideTip();
+  ({overview:drawOverview,jobs:drawJobs,icicle:drawIcicle,landscape:drawLandscape,table:drawTable,heatmap:drawHeatmap,jobmap:drawJobmap,graph:drawGraph,forces:drawForces,record:drawRecord,evidence:drawEvidence})[state.view](body);
+  syncUrl(pushNext);pushNext=false;
+  if(state._flash){state._flash=false;
+    body.classList.add("flashing");
+    setTimeout(()=>body.classList.remove("flashing"),350);}
+}
+
+/* ── corpus overview / single-project dashboard ── */
+function drawOverview(root){
+  if(state.project!=="all"){const one=DATA.projects.find(p=>p.slug===state.project);
+    if(one){drawDashboard(root,one);return}}
+  const ps=projectsInScope();
+  const rows=ps.map(p=>({p,
+    f:["push","pull","habit","anxiety"].filter(k=>p.forces[k]).length,
+    scored:p.outcomes.filter(o=>o.opp!=null).length,
+    triple:(p.situation?1:0)+(p.motivation?1:0)+(p.outcome?1:0)}));
+  const scoredAll=rows.reduce((a,r)=>a+r.scored,0), noQ=ps.filter(p=>!p.quotes.length).length;
+  /* metric filter: quote-less projects only */
+  let vis=state.ovq?rows.filter(r=>!r.p.quotes.length):rows.slice();
+  /* column sort */
+  if(state.ovSort){const{k,dir}=state.ovSort;
+    const val={name:r=>(r.p.name||r.p.slug).toLowerCase(),record:r=>r.triple,forces:r=>r.f,
+      scored:r=>r.scored,quotes:r=>r.p.quotes.length,thin:r=>r.p.weaknesses.length}[k];
+    if(val)vis.sort((a,b)=>{const x=val(a),y=val(b);return(x<y?-1:x>y?1:0)*dir;});}
+  const sortTh=(key,label,type,extra="")=>{
+    const on=state.ovSort&&state.ovSort.k===key;
+    const dir=on?(state.ovSort.dir===1?"ascending":"descending"):"none";
+    return `<th class="sortable" data-sort="ov:${key}:${type}" aria-sort="${dir}"${extra}>${label}<span class="arrow">${on?(state.ovSort.dir===1?"▲":"▼"):""}</span></th>`;};
+  const bar=document.createElement("div");bar.className="tblbar";
+  bar.innerHTML=`<input type="search" data-tfilter="ov" autocomplete="off" placeholder="${esc(T.filterRows)}" aria-label="${esc(T.filterRows)}"><span class="cnt"></span>`;
+  root.appendChild(bar);
+  const sec=document.createElement("div");sec.style.padding="4px 20px 8px";root.appendChild(sec);
+  sec.innerHTML=`<table><thead><tr>
+      ${sortTh("name",T.thProject,"text",' style="width:44%"')}${sortTh("record",T.thRecord,"num")}${sortTh("forces",T.thForces4,"num")}
+      ${sortTh("scored",T.thScoredCol,"num")}${sortTh("quotes",T.thQuotesCol,"num")}${sortTh("thin",T.thThin,"num")}
+    </tr></thead><tbody>${vis.map(({p,f,scored,triple})=>`<tr class="row" data-open="${esc(p.slug)}" style="cursor:pointer">
+      <td><b>${esc(p.name||p.slug)}</b>${p.hook?`<br><span style="font-size:12px;color:var(--muted)">${esc(p.hook.length>110?p.hook.slice(0,110)+"…":p.hook)}</span>`:""}</td>
+      <td class="num ${triple===3?"ok":"mid"}">${triple}/3</td>
+      <td class="num ${f===4?"ok":"mid"}">${f}/4</td>
+      <td class="num ${scored?"ok":""}">${scored}/${p.outcomes.length}</td>
+      <td class="num ${p.quotes.length?"":"warn"}">${p.quotes.length}</td>
+      <td class="num ${p.weaknesses.length?"mid":"ok"}">${p.weaknesses.length}</td>
+    </tr>`).join("")}</tbody></table>`;
+  const input=bar.querySelector("input"),tbody=sec.querySelector("tbody");
+  bindTableFilter(input,"ov",tbody);
+  if(state.ovText){input.value=state.ovText;
+    tbody.querySelectorAll("tr.row").forEach(tr=>{tr.style.display=fuzzy(state.ovText.trim(),tr.textContent)?"":"none";});}
+  metrics([
+    [T.mScored,scoredAll,scoredAll?"ok":"mid"],
+    [T.mNoQuotes,noQ,noQ?"warn":"ok",{id:"ovq",on:state.ovq}],
+    [T.mForces,`${rows.reduce((a,r)=>a+r.f,0)}/${ps.length*4}`]
+  ]);
+  verdict(T.fOverview,scoredAll?"ok":"mid",noQ?T.nOverviewGap:T.nOverviewOk);
+}
+
+/* ── single-project dashboard ── */
+function drawDashboard(root,p){
+  const grid=document.createElement("div");grid.className="cols";root.appendChild(grid);
+  const empty=`<span class="empty">${T.notCaptured}</span>`;
+  const scored=(p.outcomes||[]).filter(o=>o.opp!=null).sort((a,b)=>b.opp-a.opp);
+  const top=scored.slice(0,3);
+  const f=p.forces||{};
+  const fcell=k=>`<div class="cell ${f[k]?"":"miss"}"><b>${T[k]}</b><p>${f[k]?esc(f[k]):empty}</p></div>`;
+  const oq=p.open_questions||[];
+  const outLinks=(p.links||[]).filter(s=>DATA.projects.some(x=>x.slug===s));
+  const inLinks=DATA.projects.filter(x=>(x.links||[]).includes(p.slug)).map(x=>x.slug);
+  const chip=s=>{const pr=DATA.projects.find(x=>x.slug===s);
+    return `<a class="linkchip" data-p="${esc(s)}">${esc(pr?(pr.name||pr.slug):s)}</a>`;};
+  const macroChip=p.macro
+    ? `<a class="linkchip" data-macrojump="${esc(p.macro)}">${esc(macroName(p.macro))}</a>`
+    : `<span class="empty">${T.notCaptured}</span>`;
+  grid.innerHTML=`
+    <section style="grid-column:1/-1;border-right:0">
+      <h3>${esc(p.slug)} · ${T.theJob}</h3>
+      ${p.hook?`<p style="font-size:15px">${esc(p.hook)}</p>`:""}
+      <p><b>${T.when}</b> ${esc(p.situation)||empty}</p>
+      <p><b>${T.iWant}</b> ${esc(p.motivation)||empty}</p>
+      <p><b>${T.soThat}</b> ${esc(p.outcome)||empty}</p>
+      <p style="margin-top:8px"><b>${T.whoLabel}</b> ${esc(p.actor)||empty}
+         &nbsp;·&nbsp; <b>${T.macroLabel}</b> ${macroChip}</p>
+      ${p.context?`<p><b>${T.contextLabel}</b> ${esc(p.context)}</p>`:""}
+    </section>
+    <section style="grid-column:1/-1"><h3>${T.topOutcomes}</h3>
+      ${top.length?`<table><tbody>${top.map(o=>`<tr class="row">
+          <td>${esc(o.statement)}</td>
+          <td style="width:110px"><span class="tier ${o.tier}">${T.tier[o.tier]}</span></td>
+          <td class="num" style="width:44px;font-weight:600">${o.opp}</td></tr>`).join("")}</tbody></table>`
+        :`<div class="empty">${T.noScores}</div>`}</section>
+    <section style="grid-column:1/-1;border-right:0"><h3>${T.forcesGrid}</h3>
+      <div class="mini-grid">${fcell("push")}${fcell("pull")}${fcell("habit")}${fcell("anxiety")}</div></section>
+    <section><h3>${T.evidenceHealth}</h3>
+      <p class="mono" style="font-size:12.5px">${T.mQuotes}: <b>${(p.quotes||[]).length}</b> ·
+         ${T.mWeak}: <b>${(p.weaknesses||[]).length}</b></p>
+      ${p.evidence_limitation?`<p class="limitation">${esc(p.evidence_limitation)}</p>`:""}</section>
+    <section><h3>${T.openQ}</h3>
+      ${oq.length?`<ul>${oq.slice(0,3).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>${
+        oq.length>3?`<details><summary style="cursor:pointer;font-size:12px;color:var(--accent)">${T.showAll} (${oq.length})</summary>
+          <ul style="margin-top:6px">${oq.slice(3).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></details>`:""}`
+        :`<div class="empty">${T.notCaptured}</div>`}</section>
+    <section><h3>${T.contributesTo}</h3>
+      ${outLinks.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${outLinks.map(chip).join("")}</div>`:`<div class="empty">${T.notCaptured}</div>`}</section>
+    <section><h3>${T.fedBy}</h3>
+      ${inLinks.length?`<div style="display:flex;flex-wrap:wrap;gap:6px">${inLinks.map(chip).join("")}</div>`:`<div class="empty">${T.notCaptured}</div>`}</section>`;
+  const triple=(p.situation?1:0)+(p.motivation?1:0)+(p.outcome?1:0);
+  const forcesN=["push","pull","habit","anxiety"].filter(k=>f[k]).length;
+  metrics([
+    [T.mScored,scored.length,scored.length?"ok":"mid"],
+    [T.mForces,`${forcesN}/4`,forcesN===4?"ok":"mid"],
+    [T.mQuotes,(p.quotes||[]).length,(p.quotes||[]).length?"ok":"warn"],
+    [T.mOpen,oq.length]
+  ]);
+  const gaps=triple<3;
+  verdict(gaps?T.fIncomplete:T.fCaptured,gaps?"mid":"ok",
+    gaps?T.nRecordGap(1):T.nRecordOk(oq.length));
+}
+
+/* ── jobs by macro ── */
+function drawJobs(root){
+  const ps=projectsInScope();
+  const macros=corpus().macros||[];
+  const noMacroCount=ps.filter(p=>!projMacro(p)).length;
+  /* suggestion banner */
+  const dismissed=(()=>{try{return sessionStorage.getItem("jtbd-jobs-macro-banner")==="1"}catch{return false}})();
+  if(noMacroCount>=6 && !macros.length && !dismissed){
+    const b=document.createElement("div");b.className="banner";
+    b.innerHTML=`${esc(T.jobsSuggest(noMacroCount))} <code>${esc(T.cmdMacro)}</code>
+      <button id="dismiss-macro">${esc(T.dismiss)}</button>`;
+    root.appendChild(b);
+    b.querySelector("#dismiss-macro").addEventListener("click",()=>{
+      try{sessionStorage.setItem("jtbd-jobs-macro-banner","1")}catch{}
+      b.remove();});
+  }
+  /* filters */
+  const tiers=["prioritize","marginal","skip","unscored"];
+  const macroChips=[["all",T.allFilter]].concat(macros.map(m=>[m.id,m.name]));
+  if(noMacroCount)macroChips.push(["__none__",T.noMacro]);
+  const filt=document.createElement("div");
+  filt.innerHTML=`<div class="chips"><span class="cl">${T.byMacro}</span>`+
+    macroChips.map(([id,n])=>`<button data-jobmacro="${esc(id)}" aria-pressed="${state.jobMacro===id}">${esc(n)}</button>`).join("")+
+    `</div><div class="chips"><span class="cl">${T.byWorstTier}</span>`+
+    [["all",T.allFilter]].concat(tiers.map(t=>[t,T.tier[t]]))
+      .map(([id,n])=>`<button data-jobtier="${esc(id)}" aria-pressed="${state.jobTier===id}">${esc(n)}</button>`).join("")+
+    `</div>`;
+  root.appendChild(filt);
+  /* apply filters */
+  let list=ps.filter(p=>{
+    if(state.jobMacro==="__none__" && projMacro(p))return false;
+    if(state.jobMacro!=="all" && state.jobMacro!=="__none__" && projMacro(p)!==state.jobMacro)return false;
+    if(state.jobTier!=="all" && worstTier(p)!==state.jobTier)return false;
+    return true;});
+  /* group by macro */
+  const groups=new Map();
+  macros.forEach(m=>groups.set(m.id,[]));
+  list.forEach(p=>{const k=projMacro(p)||"__none__";if(!groups.has(k))groups.set(k,[]);groups.get(k).push(p);});
+  const wrap=document.createElement("div");wrap.className="jobs-group";root.appendChild(wrap);
+  const order=[...groups.keys()].filter(k=>k!=="__none__").concat(groups.has("__none__")?["__none__"]:[]);
+  let any=false;
+  order.forEach(k=>{
+    const items=groups.get(k);if(!items.length)return;any=true;
+    const scored=items.flatMap(p=>p.outcomes.filter(o=>o.opp!=null).map(o=>o.opp));
+    const meanOpp=scored.length?(scored.reduce((a,b)=>a+b,0)/scored.length).toFixed(1):"—";
+    const h=document.createElement("h3");h.className="grp";
+    h.textContent=k==="__none__"?T.jobsGroupNoMacro(items.length):T.jobsGroupHead(items.length,macroName(k),meanOpp);
+    wrap.appendChild(h);
+    const cards=document.createElement("div");cards.className="jobcards";wrap.appendChild(cards);
+    items.forEach(p=>{
+      const wt=worstTier(p),c=document.createElement("button");c.className="jobcard";
+      c.setAttribute("data-open",p.slug);
+      c.innerHTML=`<span class="jc-name">${esc(p.name||p.slug)}</span>
+        ${p.actor?`<span class="jc-actor">${esc(p.actor)}</span>`:""}
+        <span class="jc-triple"><span><b>${T.when}</b>${esc(p.situation)||"—"}</span>
+          <span><b>${T.iWant}</b>${esc(p.motivation)||"—"}</span>
+          <span><b>${T.soThat}</b>${esc(p.outcome)||"—"}</span></span>
+        <span class="jc-foot"><span class="tier ${wt}">${T.tier[wt]}</span>
+          <span class="jc-q">${T.quotes((p.quotes||[]).length)}</span></span>`;
+      cards.appendChild(c);
+    });
+  });
+  if(!any){const e=document.createElement("div");e.className="empty-state";
+    e.innerHTML=`${T.noProjects}`;wrap.appendChild(e);}
+  const withMacro=ps.filter(p=>projMacro(p)).length;
+  metrics([
+    [T.mProjects,list.length],
+    [T.macroLabel,`${withMacro}/${ps.length}`,withMacro===ps.length&&ps.length?"ok":"mid"]
+  ]);
+  /* footer: name the most underserved macro group (highest mean opportunity) */
+  let worstMacro=null;
+  groups.forEach((items,k)=>{
+    const opps=items.flatMap(p=>p.outcomes.filter(o=>o.opp!=null).map(o=>o.opp));
+    if(!opps.length)return;
+    const m=opps.reduce((a,b)=>a+b,0)/opps.length;
+    if(!worstMacro||m>worstMacro.m)worstMacro={m,key:k,name:k==="__none__"?T.noMacro:macroName(k)};
+  });
+  if(worstMacro)verdictHTML(T.fCaptured,"ok",T.nJobsWorst(jmacLink(worstMacro.key,worstMacro.name),worstMacro.m.toFixed(1)));
+  else verdict(T.fCaptured,"ok",T.nJobsFlat);
+}
+
+/* ── icicle: business outcome ▸ macro ▸ project ▸ stage ── */
+function drawIcicle(root){
+  const ps=projectsInScope();
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  const withOut=ps.filter(p=>(p.outcomes||[]).length);
+  if(!withOut.length){
+    wrap.innerHTML=`<div class="empty-state">${T.noOutcomes}<br>
+      <span style="color:var(--muted)">${T.restWorks}</span></div>`;
+    metrics([[T.mProjects,ps.length]]);verdict(T.fNoPlot,"mid",T.restWorks);return;}
+  const oppOf=p=>{const s=(p.outcomes||[]).filter(o=>o.opp!=null);return s.length?s.reduce((a,o)=>a+o.opp,0)/s.length:null;};
+  const cnt=p=>(p.outcomes||[]).length;
+  const co=corpus();
+  /* build macro → business-outcome map */
+  const bizOfMacro={};
+  (co.business_outcomes||[]).forEach(bo=>(bo.macros||[]).forEach(mid=>{bizOfMacro[mid]=bo;}));
+  /* rows: {biz, macro, projects[]} nesting via nested maps */
+  const bizMap=new Map();
+  const bizKey=bo=>bo?bo.id:"__nobiz__", macroKey=m=>m||"__nomacro__";
+  withOut.forEach(p=>{
+    const mk=projMacro(p);
+    const bo=mk?bizOfMacro[mk]:null;
+    const bk=bizKey(bo);
+    if(!bizMap.has(bk))bizMap.set(bk,{bo,macros:new Map()});
+    const mm=bizMap.get(bk).macros, mkk=macroKey(mk);
+    if(!mm.has(mkk))mm.set(mkk,{mid:mk,projects:[]});
+    mm.get(mkk).projects.push(p);
+  });
+  const totalOut=withOut.reduce((a,p)=>a+cnt(p),0);
+  /* colour ramp by mean opp */
+  const oppColor=v=>{if(v==null)return css("--faint");
+    return v<8?hexLerp(css("--accent"),css("--amber"),Math.max(0,v)/8):hexLerp(css("--amber"),css("--rose"),Math.min(1,(v-8)/8));};
+  const meanOpp=arr=>{const s=arr.filter(o=>o.opp!=null);return s.length?s.reduce((a,o)=>a+o.opp,0)/s.length:null;};
+  const W=940,L=0,rowH=52,ROWS=4,gap=2,H=ROWS*rowH+4;
+  const s=svg(wrap,W,H);
+  const MINW=26;
+  const seg=(x,w,y,h,fill,label,tipHtml,onClick,shortCode)=>{
+    const g=el(s,"g",{});g.style.cursor=onClick?"pointer":"default";
+    el(g,"rect",{x:x+.5,y:y+.5,width:Math.max(1,w-1),height:h-1,fill,opacity:.85,stroke:css("--ground"),"stroke-width":1});
+    if(h>=9){
+      const per=6, fits=str=>str.length*per+8<=w;
+      let show=null,mid=false;
+      if(w>=MINW&&fits(label))show=label;                       /* full label */
+      else if(shortCode&&fits(shortCode))show=shortCode,mid=true;/* 2-digit stage no. */
+      else if(!shortCode&&w>=MINW){                             /* truncate non-stage rows */
+        const room=Math.floor((w-10)/6);if(room>=2)show=label.length>room?label.slice(0,room-1)+"…":label;}
+      if(show)txt(g,mid?x+w/2:x+6,y+h/2+3.5,show,"lbl",Object.assign({fill:labelOn(fill)},mid?{"text-anchor":"middle"}:{}));
+    }
+    g.addEventListener("mouseenter",e=>showTip(e,tipHtml));
+    g.addEventListener("mousemove",moveTip);g.addEventListener("mouseleave",hideTip);
+    tapClick(g,tipHtml,onClick||null);
+    if(onClick)kbdShape(g,plain(tipHtml),tipHtml,onClick);
+    return g;
+  };
+  const scale=totalOut>0?W/totalOut:0;
+  /* row 0 business outcome, row 1 macro, row 2 project, row 3 stage */
+  let bx=0;
+  for(const [bk,bnode] of bizMap){
+    const bProjects=[...bnode.macros.values()].flatMap(m=>m.projects);
+    const bCount=bProjects.reduce((a,p)=>a+cnt(p),0);
+    const bw=Math.max(MINW,bCount*scale);
+    const bMean=meanOpp(bProjects.flatMap(p=>p.outcomes));
+    const bName=bnode.bo?bnode.bo.name:T.noBusiness;
+    seg(bx,bw,0,rowH,oppColor(bMean),bName,
+      `<b>${esc(bName)}</b><span class="m">${bCount} ${T.oCount} · ${T.meanOpp} ${bMean==null?"—":bMean.toFixed(1)}</span>`,null);
+    /* macros within */
+    let mx=bx;
+    for(const [mkk,mnode] of bnode.macros){
+      const mCount=mnode.projects.reduce((a,p)=>a+cnt(p),0);
+      const mw=Math.max(MINW,mCount*scale);
+      const mMean=meanOpp(mnode.projects.flatMap(p=>p.outcomes));
+      const mName=mnode.mid?macroName(mnode.mid):T.noMacro;
+      seg(mx,mw,rowH+gap,rowH,oppColor(mMean),mName,
+        `<b>${esc(mName)}</b><span class="m">${mCount} ${T.oCount} · ${T.meanOpp} ${mMean==null?"—":mMean.toFixed(1)}</span>`,null);
+      /* projects within */
+      let px=mx;
+      for(const p of mnode.projects){
+        const pw=Math.max(MINW,cnt(p)*scale);
+        const pMean=oppOf(p);
+        seg(px,pw,2*(rowH+gap),rowH,oppColor(pMean),p.name||p.slug,
+          `<b>${esc(p.name||p.slug)}</b><span class="m">${cnt(p)} ${T.oCount} · ${T.meanOpp} ${pMean==null?"—":pMean.toFixed(1)}</span>`,
+          ()=>{state.project=p.slug;state.view="record";render();});
+        /* stages within */
+        let sx=px;
+        const stgList=STG.map(st=>({st,os:(p.outcomes||[]).filter(o=>o.stage===st)})).filter(x=>x.os.length);
+        const unstaged=(p.outcomes||[]).filter(o=>!o.stage);
+        const cells=stgList.concat(unstaged.length?[{st:"—",os:unstaged}]:[]);
+        const pTotal=cells.reduce((a,c)=>a+c.os.length,0)||1;
+        for(const c of cells){
+          const sw=pw*(c.os.length/pTotal);
+          const sMean=meanOpp(c.os);
+          const sIdx=STG.indexOf(c.st), sCode=sIdx>=0?String(sIdx+1).padStart(2,"0"):null;
+          seg(sx,sw,3*(rowH+gap),rowH,oppColor(sMean),c.st.toUpperCase(),
+            `<b>${esc(p.name||p.slug)} · ${esc(c.st)}</b><span class="m">${c.os.length} ${T.oCount} · ${T.meanOpp} ${sMean==null?"—":sMean.toFixed(1)}</span>`,null,sCode);
+          sx+=sw;
+        }
+        px+=pw;
+      }
+      mx+=mw;
+    }
+    bx+=bw;
+  }
+  metrics([
+    [T.mOutcomes,totalOut],
+    [T.macroLabel,(co.macros||[]).length],
+    [T.mBiz,(co.business_outcomes||[]).length]
+  ]);
+  /* footer: name the widest business-outcome branch (most outcomes) */
+  let widest=null;
+  for(const [bk,bnode] of bizMap){
+    if(!bnode.bo)continue;
+    const n=[...bnode.macros.values()].flatMap(m=>m.projects).reduce((a,p)=>a+cnt(p),0);
+    if(!widest||n>widest.n)widest={n,name:bnode.bo.name};
+  }
+  verdict(T.fCaptured,"ok",widest?T.nIcicleWidest(widest.name,widest.n):T.nIcicleFlat);
+}
+
+/* ── project × stage heatmap (ported from the Scale Lab) ── */
+function hexLerp(a,b,t){
+  const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+  const [r1,g1,b1]=p(a),[r2,g2,b2]=p(b);
+  const c=v=>Math.round(v).toString(16).padStart(2,"0");
+  return "#"+c(r1+(r2-r1)*t)+c(g1+(g2-g1)*t)+c(b1+(b2-b1)*t);
+}
+function stageEmpty(wrap,all){
+  wrap.innerHTML=`<div class="empty-state">${T.noStages}<br>${T.noStagesHint}<br>
+    <code>"stage": "prepare"</code><br>
+    <span class="mono" style="font-size:11px;color:var(--muted)">${STG.join(" · ")}</span><br>
+    <span style="color:var(--muted)">${T.restWorks}</span></div>`;
+  metrics([[T.mOutcomes,all.length],[T.mStaged,0,"mid"]]);
+  verdict(T.fNoPlot,"mid",T.restWorks);
+}
+function drawHeatmap(root){
+  const ps=projectsInScope();
+  const hasTouch=ps.some(p=>p.outcomes.some(o=>o.touch));
+  if(hasTouch){
+    const tg=document.createElement("div");tg.className="toggle";
+    tg.innerHTML=[["project",T.dimStageProject],["touch",T.dimStageTouch]]
+      .map(([id,n])=>`<button data-heatdim="${id}" aria-pressed="${state.heatDim===id}">${esc(n)}</button>`).join("");
+    root.appendChild(tg);
+  }
+  const dim=hasTouch&&state.heatDim==="touch"?"touch":"project";
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  const mean=l=>l.length?l.reduce((a,o)=>a+o.opp,0)/l.length:null;
+  const allStaged=ps.flatMap(p=>p.outcomes.filter(o=>o.stage&&o.opp!=null).map(o=>({...o,project:p.slug,pname:p.name||p.slug})));
+  const staged=dim==="touch"?allStaged.filter(o=>o.touch):allStaged;
+  if(!staged.length){stageEmpty(wrap,ps.flatMap(p=>p.outcomes));return}
+  let rowDefs;
+  if(dim==="touch"){
+    rowDefs=[...new Set(staged.map(o=>o.touch))].map(k=>({label:k,key:k,outs:staged.filter(o=>o.touch===k)}));
+  }else{
+    rowDefs=ps.filter(p=>p.outcomes.some(o=>o.stage&&o.opp!=null))
+      .map(p=>({label:p.name||p.slug,key:p.slug,outs:p.outcomes.filter(o=>o.stage&&o.opp!=null)}));
+  }
+  const rows=rowDefs.map(r=>Object.assign(r,{m:mean(r.outs)})).sort((a,b)=>b.m-a.m);
+  const L=170,T2=58,R=80,B=48,ch=44,W=940,cw=(W-L-R)/8,H=T2+rows.length*ch+B;
+  const s=svg(wrap,W,H);
+  const cell=(r,st)=>r.outs.filter(o=>o.stage===st);
+  const vals=[];rows.forEach(r=>STG.forEach(st=>{const m=mean(cell(r,st));if(m!=null)vals.push(m)}));
+  const lo=Math.min(...vals),hi=Math.max(...vals);
+  const paint=v=>{const t=(v-lo)/Math.max(.001,hi-lo);
+    return t<.5?hexLerp(css("--accent"),css("--amber"),t*2):hexLerp(css("--amber"),css("--rose"),(t-.5)*2)};
+  STG.forEach((st,i)=>{
+    txt(s,L+i*cw+cw/2,T2-24,String(i+1).padStart(2,"0"),"lbl",{"text-anchor":"middle"});
+    txt(s,L+i*cw+cw/2,T2-10,st.toUpperCase(),"lbl",{"text-anchor":"middle",fill:css("--ink")});
+  });
+  txt(s,W-R+10,T2-10,T.rowMean.toUpperCase(),"lbl",{});
+  let cells=0,worst={m:-1};
+  rows.forEach((r,ri)=>{
+    const y=T2+ri*ch, lab=r.label||"—";
+    txt(s,L-12,y+ch/2+4,lab.length>22?lab.slice(0,22)+"…":lab,"lbl",{"text-anchor":"end",fill:css("--ink")});
+    STG.forEach((st,i)=>{
+      const list=cell(r,st),m=mean(list),x=L+i*cw;
+      if(m==null){el(s,"rect",{x:x+1,y:y+1,width:cw-2,height:ch-2,fill:css("--panel"),opacity:.45});
+        txt(s,x+cw/2,y+ch/2+4,"·","lbl",{"text-anchor":"middle"});return}
+      cells++;if(m>worst.m)worst={m,p:r.label,key:r.key,st};
+      const g=el(s,"g",{});
+      el(g,"rect",{x:x+1,y:y+1,width:cw-2,height:ch-2,fill:paint(m),opacity:.18+.6*((m-lo)/Math.max(.001,hi-lo))});
+      const t1=txt(g,x+cw/2,y+ch/2+1,m.toFixed(1),"lbl",{"text-anchor":"middle",fill:css("--ink")});
+      t1.setAttribute("style","font-size:14px");
+      txt(g,x+cw/2,y+ch/2+15,String(list.length),"lbl",{"text-anchor":"middle"});
+      g.style.cursor="crosshair";
+      const cellTip=`<b>${esc(lab)} · ${st}</b>`+
+        list.map(o=>`<span class="m">${esc(o.statement.length>70?o.statement.slice(0,70)+"…":o.statement)} — ${o.opp}</span>`).join("");
+      g.addEventListener("mouseenter",e=>showTip(e,cellTip));
+      g.addEventListener("mousemove",moveTip);g.addEventListener("mouseleave",hideTip);
+      tapClick(g,cellTip,null);
+      kbdShape(g,`${lab}, ${st}, ${T.avgOpp} ${m.toFixed(1)}, ${list.length} ${T.oCount}`,cellTip,null);
+    });
+    txt(s,W-R+10,y+ch/2+4,r.m.toFixed(1),"lbl",{fill:paint(r.m)});
+  });
+  txt(s,L-12,T2+rows.length*ch+22,T.colMean.toUpperCase(),"lbl",{"text-anchor":"end"});
+  STG.forEach((st,i)=>{
+    const m=mean(staged.filter(o=>o.stage===st));
+    if(m!=null)txt(s,L+i*cw+cw/2,T2+rows.length*ch+22,m.toFixed(1),"lbl",{"text-anchor":"middle",fill:m>=hi-.6?css("--rose"):css("--muted")});
+  });
+  const unstagedOuts=ps.flatMap(p=>p.outcomes.filter(o=>!o.stage).map(o=>({...o,project:p.slug})));
+  if(state.heatList&&unstagedOuts.length){
+    const panel=document.createElement("div");panel.className="unstaged-list";
+    panel.innerHTML=`<h3>${T.unstagedHead} · ${unstagedOuts.length}</h3>
+      <table><tbody>${unstagedOuts.map(o=>`<tr class="row">
+        <td>${esc(o.statement)}</td>
+        <td class="num mono" style="width:120px;color:var(--muted)">${esc(o.project)}</td>
+        <td class="num" style="width:44px">${o.opp??"—"}</td></tr>`).join("")}</tbody></table>`;
+    root.appendChild(panel);
+  }
+  metrics([
+    [T.mStaged,staged.length],
+    [T.mUnstaged,unstagedOuts.length,unstagedOuts.length?"mid":"ok",
+      unstagedOuts.length?{id:"heatList",on:state.heatList}:null],
+    [T.mCells,cells],
+    [T.mWorst,`${worst.st} · ${worst.m.toFixed(1)}`,"warn"]
+  ]);
+  /* worst cell → open that project's Job map (project dim only; touch dim has no single project) */
+  const wCell=dim==="project"?jmLink(worst.key,worst.st,worst.p):esc(worst.p);
+  verdictHTML(T.fAct,"mid",T.nHeat(wCell,esc(worst.st),worst.m.toFixed(1)));
+}
+
+/* ── ODI job map (ported from the Scale Lab) ── */
+function drawJobmap(root){
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  let p=state.project!=="all"?projectsInScope()[0]:null;
+  if(!p){
+    p=DATA.projects.find(x=>x.outcomes.some(o=>o.stage))||null;
+    if(!p){stageEmpty(wrap,DATA.projects.flatMap(x=>x.outcomes));return}
+  }
+  const staged=p.outcomes.filter(o=>o.stage), unstaged=p.outcomes.length-staged.length;
+  if(!staged.length){stageEmpty(wrap,p.outcomes);return}
+  const oppColor=o=>o==null?css("--faint"):o>=12?css("--rose"):o>=8?css("--amber"):css("--accent");
+  const L=24,T2=64,gap=8,W=940,cw=(W-L*2-gap*7)/8,CH=58;
+  const perStage=STG.map(st=>staged.filter(o=>o.stage===st));
+  const maxN=Math.max(...perStage.map(l=>l.length));
+  const H=T2+58+maxN*(CH+6)+40;
+  const s=svg(wrap,W,H);
+  txt(s,L,30,(p.name||p.slug).toUpperCase()+"  ·  8 STAGES","lbl",{});
+  let worst={m:-1};
+  STG.forEach((st,i)=>{
+    const x=L+i*(cw+gap), list=perStage[i];
+    const scoredL=list.filter(o=>o.opp!=null), avg=scoredL.length?scoredL.reduce((a,o)=>a+o.opp,0)/scoredL.length:null;
+    if(avg!=null&&avg>worst.m)worst={m:avg,st};
+    const hl=st===state.jmStage;
+    el(s,"rect",{x,y:T2,width:cw,height:34,rx:2,fill:oppColor(avg),opacity:hl?.24:.14,
+      stroke:hl?css("--accent"):oppColor(avg),"stroke-width":hl?2:.8});
+    txt(s,x+cw/2,T2+14,String(i+1).padStart(2,"0"),"lbl",{"text-anchor":"middle",fill:oppColor(avg)});
+    txt(s,x+cw/2,T2+27,st.toUpperCase(),"lbl",{"text-anchor":"middle",fill:css("--ink")});
+    if(i<7)el(s,"path",{d:`M${x+cw+1},${T2+17} l${gap-2},0`,stroke:css("--faint"),"stroke-width":1});
+    if(avg!=null)txt(s,x+cw/2,T2+48,T.avgOpp+" "+avg.toFixed(1),"lbl",{"text-anchor":"middle"});
+    let y=T2+58;
+    list.forEach(o=>{
+      const g=el(s,"g",{});
+      el(g,"rect",{x,y,width:cw,height:CH,rx:2,fill:css("--card"),stroke:css("--rule"),"stroke-width":.7});
+      el(g,"rect",{x,y,width:3,height:CH,fill:oppColor(o.opp),opacity:.9});
+      const room=Math.max(8,Math.floor((cw-16)/5.6));
+      const words=o.statement.split(" ");let line="",ln=0;
+      words.forEach(w=>{
+        if((line+" "+w).trim().length>room&&ln<2){txt(g,x+9,y+13+ln*11,line,"lbl",{fill:css("--ink")});line=w;ln++}
+        else line=(line+" "+w).trim();
+      });
+      txt(g,x+9,y+13+ln*11,line.length>room?line.slice(0,room-1)+"…":line,"lbl",{fill:css("--ink")});
+      if(o.opp!=null)txt(g,x+9,y+CH-6,`${o.imp} / ${o.sat} → ${o.opp}`,"lbl",{});
+      const jmTip=`<b>${esc(o.statement)}</b><span class="m">${o.stage.toUpperCase()}${o.opp!=null?` · ${T.thImp} ${o.imp} · ${T.thSat} ${o.sat} · ${T.thOpp} ${o.opp}`:""}</span>`;
+      g.addEventListener("mouseenter",e=>showTip(e,jmTip));
+      g.addEventListener("mousemove",moveTip);g.addEventListener("mouseleave",hideTip);
+      tapClick(g,jmTip,null);
+      kbdShape(g,`${plain(o.statement)}, ${o.stage}${o.opp!=null?`, ${T.thOpp} ${o.opp}`:""}`,jmTip,null);
+      y+=CH+6;
+    });
+  });
+  metrics([
+    [T.mHere,staged.length],
+    [T.mUnstaged,unstaged,unstaged?"mid":"ok"],
+    [T.mWorst,worst.st||"—",worst.st?"warn":""]
+  ]);
+  verdict(worst.st?T.fAct:T.fCaptured,worst.st?"mid":"ok",
+    (state.project==="all"?T.jmPickProject+" ":"")+(worst.st?T.nJobmap(worst.st,worst.m.toFixed(1)):""));
+}
+
+/* ── dependency graph ── */
+function drawGraph(root){
+  const tg=document.createElement("div");tg.className="toggle";
+  tg.innerHTML=[["projects",T.toggleProjects],["outcomes",T.toggleOutcomes]]
+    .map(([id,n])=>`<button data-graphmode="${id}" aria-pressed="${state.graphMode===id}">${esc(n)}</button>`).join("");
+  root.appendChild(tg);
+  if(state.graphMode==="outcomes")drawGraphOutcomes(root);
+  else drawGraphProjects(root);
+}
+function drawGraphProjects(root){
+  const ps=DATA.projects, byS=Object.fromEntries(ps.map(p=>[p.slug,p]));
+  const edges=ps.flatMap(p=>(p.links||[]).filter(t=>byS[t]&&t!==p.slug).map(t=>[p.slug,t]));
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  if(!edges.length){
+    wrap.innerHTML=`<div class="empty-state">${T.noLinks}<br>${T.noLinksHint}<br>
+      <code>"links": ["other-project-slug"]</code><br>
+      <span style="color:var(--muted)">${T.restWorks}</span></div>`;
+    metrics([[T.mProjects,ps.length]]);
+    verdict(T.fNoPlot,"mid",T.restWorks);
+    return;
+  }
+  const inGraph=ps.filter(p=>edges.some(e=>e[0]===p.slug||e[1]===p.slug));
+  const depth={};
+  const dep=(s,seen)=>{if(depth[s]!=null)return depth[s];if(seen.has(s))return 0;seen.add(s);
+    const ins=edges.filter(e=>e[1]===s).map(e=>dep(e[0],seen)+1);
+    return depth[s]=ins.length?Math.max(...ins):0};
+  inGraph.forEach(p=>dep(p.slug,new Set()));
+  const layers={};inGraph.forEach(p=>{(layers[depth[p.slug]]=layers[depth[p.slug]]||[]).push(p)});
+  const NL=Object.keys(layers).length, NW=190, NH=44,
+        W=Math.max(720,NL*(NW+120)+80), H=Math.max(300,Math.max(...Object.values(layers).map(l=>l.length))*(NH+26)+70);
+  const pos={};
+  Object.keys(layers).sort((a,b)=>a-b).forEach(li=>{
+    layers[li].forEach((p,i)=>{pos[p.slug]={x:60+li*(NW+120)+NW/2,y:46+i*(NH+26)+NH/2}});
+  });
+  const s=svg(wrap,W,H);
+  const defs=el(s,"defs",{});
+  [["gArr","--rule"],["gArrHot","--rose"]].forEach(([id,c])=>{
+    const m=el(defs,"marker",{id,viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:7,markerHeight:7,orient:"auto-start-reverse"});
+    el(m,"path",{d:"M0 0 L10 5 L0 10 z",fill:css(c)});
+  });
+  const down=id=>{const st=new Set();(function w(n){edges.filter(e=>e[0]===n).forEach(e=>{if(!st.has(e[1])){st.add(e[1]);w(e[1])}})})(id);return st};
+  const up  =id=>{const st=new Set();(function w(n){edges.filter(e=>e[1]===n).forEach(e=>{if(!st.has(e[0])){st.add(e[0]);w(e[0])}})})(id);return st};
+  const eEls=edges.map(([a,b])=>{
+    const A=pos[a],B=pos[b],x1=A.x+NW/2,x2=B.x-NW/2-4,mx=(x1+x2)/2;
+    return {a,b,el:el(s,"path",{d:`M${x1} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${x2} ${B.y}`,
+      fill:"none",stroke:css("--rule"),"stroke-width":1.4,"marker-end":"url(#gArr)"})};
+  });
+  const nEls=inGraph.map(p=>{
+    const {x,y}=pos[p.slug];
+    const g=el(s,"g",{tabindex:0,role:"button","aria-label":p.slug});g.style.cursor="pointer";
+    const r=el(g,"rect",{x:x-NW/2,y:y-NH/2,width:NW,height:NH,rx:3,fill:css("--card"),stroke:css("--rule"),"stroke-width":1.2});
+    txt(g,x-NW/2+12,y-2,(p.name||p.slug).length>24?(p.name||p.slug).slice(0,24)+"…":(p.name||p.slug),"",{fill:css("--ink"),"font-size":"12.5"});
+    txt(g,x-NW/2+12,y+14,`${p.outcomes.filter(o=>o.opp!=null).length}/${p.outcomes.length} · ${T.quotes(p.quotes.length)}`,"lbl",{});
+    const sel=()=>{
+      const D=down(p.slug),U=up(p.slug);
+      nEls.forEach(n=>{n.rect.setAttribute("stroke",n.slug===p.slug?css("--accent"):D.has(n.slug)?css("--rose"):css("--rule"));
+        n.rect.setAttribute("stroke-width",n.slug===p.slug||D.has(n.slug)?2:1.2);
+        n.g.setAttribute("opacity",n.slug===p.slug||D.has(n.slug)||U.has(n.slug)?1:.35)});
+      eEls.forEach(e=>{const hot=(e.a===p.slug||D.has(e.a))&&D.has(e.b);
+        e.el.setAttribute("stroke",hot?css("--rose"):css("--rule"));
+        e.el.setAttribute("marker-end",hot?"url(#gArrHot)":"url(#gArr)");
+        e.el.setAttribute("opacity",hot||U.has(e.b)||e.b===p.slug?1:.25)});
+      const pl=recLink(p.slug,p.name||p.slug);
+      verdictHTML(D.size?T.fAct:T.fNothing,D.size?"bad":"ok",D.size?T.gDown(pl,D.size):T.gNone(pl));
+    };
+    g.addEventListener("click",sel);
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();sel()}});
+    return {slug:p.slug,g,rect:r};
+  });
+  const iso=ps.length-inGraph.length;
+  metrics([[T.mProjects,inGraph.length],[T.mLinks,edges.length]]);
+  verdict(T.fCaptured,"ok",T.gPick+(iso?" "+T.gIsolated(iso):""));
+}
+
+/* ── outcome-level dependency graph ── */
+function drawGraphOutcomes(root){
+  const ps=DATA.projects;
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  const outById=new Map(), homeOf=new Map();
+  ps.forEach(p=>p.outcomes.forEach(o=>{outById.set(o.id,o);homeOf.set(o.id,p.slug);}));
+  const bySlug=Object.fromEntries(ps.map(p=>[p.slug,p]));
+  const resolve=(ref,home)=>{
+    if(outById.has(ref))return ref;                                  /* "slug:oN" */
+    if(/^o\d+$/i.test(ref)){const id=home.slug+":"+ref;return outById.has(id)?id:null;}
+    if(/^\d+$/.test(ref)){const o=home.outcomes[+ref];return o?o.id:null;}
+    if(bySlug[ref]){const o=bySlug[ref].outcomes[0];return o?o.id:null;}
+    return null;
+  };
+  /* edge = [dependency, dependent]; keep only cross-project */
+  const edges=[];
+  ps.forEach(p=>p.outcomes.forEach(o=>{
+    (o.depends_on||[]).forEach(ref=>{
+      const dep=resolve(ref,p);
+      if(dep&&dep!==o.id&&homeOf.get(dep)!==p.slug)edges.push([dep,o.id]);
+    });
+  }));
+  if(!edges.length){
+    wrap.innerHTML=`<div class="empty-state">${T.noOutcomeDeps}<br>${T.noOutcomeDepsHint}<br>
+      <code>"depends_on": ["other-slug:o2"]</code><br>
+      <span style="color:var(--muted)">${T.restWorks}</span></div>`;
+    metrics([[T.mLinks,0]]);verdict(T.fNoPlot,"mid",T.restWorks);return;
+  }
+  const nodeIds=[...new Set(edges.flatMap(e=>e))];
+  /* columns = projects containing a node, in appearance order */
+  const colSlugs=[];nodeIds.forEach(id=>{const s=homeOf.get(id);if(!colSlugs.includes(s))colSlugs.push(s);});
+  const colOf=Object.fromEntries(colSlugs.map((s,i)=>[s,i]));
+  const byCol={};colSlugs.forEach(s=>byCol[s]=[]);
+  nodeIds.forEach(id=>byCol[homeOf.get(id)].push(id));
+  const NW=200,NH=46,COLGAP=110,ROWGAP=20,TOP=64,LEFT=40;
+  const maxRows=Math.max(...colSlugs.map(s=>byCol[s].length));
+  const W=Math.max(720,LEFT*2+colSlugs.length*NW+(colSlugs.length-1)*COLGAP);
+  const H=Math.max(280,TOP+maxRows*(NH+ROWGAP)+30);
+  const pos={};
+  colSlugs.forEach((s,ci)=>{
+    const x=LEFT+ci*(NW+COLGAP);
+    byCol[s].forEach((id,ri)=>{pos[id]={x:x+NW/2,y:TOP+ri*(NH+ROWGAP)+NH/2};});
+  });
+  const svgRoot=svg(wrap,W,H);
+  colSlugs.forEach((s,ci)=>{
+    const x=LEFT+ci*(NW+COLGAP),pr=bySlug[s];
+    txt(svgRoot,x+NW/2,TOP-30,(pr.name||s).toUpperCase(),"lbl",{"text-anchor":"middle",fill:css("--muted")});
+  });
+  const defs=el(svgRoot,"defs",{});
+  [["oArr","--rule"],["oArrHot","--rose"]].forEach(([id,c])=>{
+    const m=el(defs,"marker",{id,viewBox:"0 0 10 10",refX:9,refY:5,markerWidth:7,markerHeight:7,orient:"auto-start-reverse"});
+    el(m,"path",{d:"M0 0 L10 5 L0 10 z",fill:css(c)});
+  });
+  const down=id=>{const st=new Set();(function w(n){edges.filter(e=>e[0]===n).forEach(e=>{if(!st.has(e[1])){st.add(e[1]);w(e[1])}})})(id);return st};
+  const up=id=>{const st=new Set();(function w(n){edges.filter(e=>e[1]===n).forEach(e=>{if(!st.has(e[0])){st.add(e[0]);w(e[0])}})})(id);return st};
+  const eEls=edges.map(([a,b])=>{
+    const A=pos[a],B=pos[b];
+    const x1=A.x+(B.x>=A.x?NW/2:-NW/2),x2=B.x+(B.x>=A.x?-NW/2-4:NW/2+4),mx=(x1+x2)/2;
+    return {a,b,el:el(svgRoot,"path",{d:`M${x1} ${A.y} C ${mx} ${A.y}, ${mx} ${B.y}, ${x2} ${B.y}`,
+      fill:"none",stroke:css("--rule"),"stroke-width":1.4,"marker-end":"url(#oArr)"})};
+  });
+  const oppColor=o=>o==null?css("--faint"):o>=12?css("--rose"):o>=8?css("--amber"):css("--accent");
+  const nEls=nodeIds.map(id=>{
+    const o=outById.get(id),{x,y}=pos[id];
+    const g=el(svgRoot,"g",{tabindex:0,role:"button","aria-label":id});g.style.cursor="pointer";
+    const r=el(g,"rect",{x:x-NW/2,y:y-NH/2,width:NW,height:NH,rx:3,fill:css("--card"),stroke:css("--rule"),"stroke-width":1.2});
+    el(g,"rect",{x:x-NW/2,y:y-NH/2,width:3,height:NH,fill:oppColor(o.opp),opacity:.9});
+    const stmt=o.statement||id;
+    txt(g,x-NW/2+12,y-4,stmt.length>26?stmt.slice(0,26)+"…":stmt,"",{fill:css("--ink"),"font-size":"12"});
+    txt(g,x-NW/2+12,y+13,`${esc(homeOf.get(id))}${o.opp!=null?` · ${T.thOpp} ${o.opp}`:""}`,"lbl",{});
+    const sel=()=>{
+      const D=down(id),U=up(id);
+      nEls.forEach(n=>{n.rect.setAttribute("stroke",n.id===id?css("--accent"):D.has(n.id)?css("--rose"):css("--rule"));
+        n.rect.setAttribute("stroke-width",n.id===id||D.has(n.id)?2:1.2);
+        n.g.setAttribute("opacity",n.id===id||D.has(n.id)||U.has(n.id)?1:.35)});
+      eEls.forEach(e=>{const hot=(e.a===id||D.has(e.a))&&D.has(e.b);
+        e.el.setAttribute("stroke",hot?css("--rose"):css("--rule"));
+        e.el.setAttribute("marker-end",hot?"url(#oArrHot)":"url(#oArr)");
+        e.el.setAttribute("opacity",hot||U.has(e.b)||e.b===id?1:.25)});
+      const ol=recLink(homeOf.get(id),o.statement||id);
+      verdictHTML(D.size?T.fAct:T.fNothing,D.size?"bad":"ok",D.size?T.odDown(ol,D.size):T.odNone(ol));
+    };
+    g.addEventListener("click",sel);
+    g.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();sel()}});
+    return {id,g,rect:r};
+  });
+  metrics([[T.mOutcomes,nodeIds.length],[T.mLinks,edges.length],[T.mProjects,colSlugs.length]]);
+  verdict(T.fCaptured,"ok",T.odPick);
+}
+
+/* ── opportunity landscape ── */
+function drawLandscape(root){
+  const all=outcomesInScope(), scored=all.filter(o=>o.opp!=null);
+  const wrap=document.createElement("div");wrap.className="plot";root.appendChild(wrap);
+  if(!scored.length){
+    const slug=state.project!=="all"?state.project:(DATA.projects[0]||{}).slug||"<slug>";
+    wrap.innerHTML=`<div class="empty-state">${T.noScores}<br>${T.noScoresHint}
+      <code>${esc(T.cmdOdi(slug))}</code><br>${T.noScoresHint2}<br>
+      <span style="color:var(--muted)">${T.restWorks}</span></div>`;
+    metrics([[T.mOutcomes,all.length],[T.mScored,0,"mid"]]);
+    verdict(T.fNoPlot,"mid",T.nNoPlot);
+    return;
+  }
+  const W=940,H=560,L=74,R=40,T2=34,B=54,MID=5.5;
+  const s=svg(wrap,W,H);
+  const x=v=>L+(v-1)/9*(W-L-R), y=v=>H-B-(v-1)/9*(H-T2-B);
+  for(let i=1;i<=10;i++){
+    el(s,"line",{x1:x(i),y1:T2,x2:x(i),y2:H-B,stroke:css("--grid"),"stroke-width":.5});
+    el(s,"line",{x1:L,y1:y(i),x2:W-R,y2:y(i),stroke:css("--grid"),"stroke-width":.5});
+    txt(s,x(i),H-B+16,i,"lbl",{"text-anchor":"middle"});
+    txt(s,L-10,y(i)+3,i,"lbl",{"text-anchor":"end"});
+  }
+  el(s,"rect",{x:L,y:T2,width:x(MID)-L,height:y(MID)-T2,fill:css("--rose"),opacity:.05});
+  txt(s,L+14,T2+22,T.underserved,"lbl",{fill:css("--rose")});
+  txt(s,(L+W-R)/2,H-14,T.axisX,"axis",{"text-anchor":"middle"});
+  const yl=txt(s,18,(T2+H-B)/2,T.axisY,"axis",{"text-anchor":"middle"});
+  yl.setAttribute("transform",`rotate(-90 18 ${(T2+H-B)/2})`);
+  el(s,"line",{x1:L,y1:T2,x2:L,y2:H-B,stroke:css("--rule")});
+  el(s,"line",{x1:L,y1:H-B,x2:W-R,y2:H-B,stroke:css("--rule")});
+  el(s,"line",{x1:x(1),y1:y(1),x2:x(10),y2:y(10),stroke:css("--muted"),"stroke-width":.8,
+    "stroke-dasharray":"4 3",opacity:.5});
+  txt(s,x(8.4),y(8.1),T.diagonal,"lbl",{fill:css("--muted")});
+
+  const plotted=state.tier==="all"?scored:scored.filter(o=>o.tier===state.tier);
+  plotted.slice().sort((a,b)=>a.opp-b.opp).forEach(o=>{
+    const c=el(s,"circle",{cx:x(o.sat),cy:y(o.imp),r:7,fill:css(TIER_COLOR[o.tier]),
+      opacity:.82,stroke:css("--ground"),"stroke-width":1});
+    c.style.cursor="crosshair";
+    const ptTip=`<b>${esc(o.statement)}</b><span class="m">${esc(o.project)} · ${T.tier[o.tier].toUpperCase()}</span>
+        <span class="m">${T.thImp} ${o.imp} · ${T.thSat} ${o.sat} · ${T.thOpp} ${o.opp}</span>`;
+    c.addEventListener("mouseenter",e=>{c.setAttribute("r",9.5);c.setAttribute("opacity",1);showTip(e,ptTip)});
+    c.addEventListener("mousemove",moveTip);
+    c.addEventListener("mouseleave",()=>{c.setAttribute("r",7);c.setAttribute("opacity",.82);hideTip()});
+    tapClick(c,ptTip,null);
+    kbdShape(c,`${plain(o.statement)}, ${T.tier[o.tier]}, ${T.thOpp} ${o.opp}`,ptTip,null);
+  });
+
+  const prio=scored.filter(o=>o.tier==="prioritize");
+  const sortedDesc=scored.slice().sort((a,b)=>b.opp-a.opp), worst=sortedDesc[0];
+  metrics([
+    [T.mScored,scored.length],
+    [T.mPrioritize,prio.length,prio.length?"warn":"",{id:"tier:prioritize",on:state.tier==="prioritize"}],
+    [T.mMarginal,scored.filter(o=>o.tier==="marginal").length,"",{id:"tier:marginal",on:state.tier==="marginal"}],
+    [T.mSkip,scored.filter(o=>o.tier==="skip").length,"ok",{id:"tier:skip",on:state.tier==="skip"}]
+  ]);
+  const wLink=recLink(worst.project,worst.statement);
+  verdictHTML(prio.length?T.fAct:T.fNothing,prio.length?"bad":"ok",
+    prio.length?T.nAct(prio.length,wLink,worst.opp)
+      :T.nNothing(wLink,worst.opp,esc(T.tier[worst.tier])));
+}
+
+/* ── ranked table ── */
+function drawTable(root){
+  const allRaw=outcomesInScope();
+  if(!allRaw.length){const sec=document.createElement("div");sec.style.padding="4px 20px 8px";root.appendChild(sec);
+    sec.innerHTML=`<div class="empty-state">${T.noOutcomes}</div>`;
+    metrics([[T.mOutcomes,0]]);verdict(T.fEmpty,"mid",T.nEmptyTable);return}
+  /* shared tier filter (also driven from the landscape metrics) */
+  const all=state.tier==="all"?allRaw.slice():allRaw.filter(o=>o.tier===state.tier);
+  const sort=state.tblSort||{k:"opp",dir:-1};
+  const val={outcome:o=>(o.statement||"").toLowerCase(),tier:o=>tierRank[o.tier]??-1,
+    imp:o=>o.imp??-1,sat:o=>o.sat??-1,opp:o=>o.opp??-1}[sort.k]||(o=>o.opp??-1);
+  all.sort((a,b)=>{const x=val(a),y=val(b);return(x<y?-1:x>y?1:0)*sort.dir;});
+  const max=Math.max(...allRaw.map(o=>o.opp??0),1);
+  const sortTh=(key,label,type,extra="")=>{
+    const on=sort.k===key;const dir=on?(sort.dir===1?"ascending":"descending"):"none";
+    return `<th class="sortable" data-sort="tbl:${key}:${type}" aria-sort="${dir}"${extra}>${label}<span class="arrow">${on?(sort.dir===1?"▲":"▼"):""}</span></th>`;};
+  const bar=document.createElement("div");bar.className="tblbar";
+  bar.innerHTML=`<input type="search" data-tfilter="tbl" autocomplete="off" placeholder="${esc(T.filterRows)}" aria-label="${esc(T.filterRows)}"><span class="cnt"></span>`;
+  root.appendChild(bar);
+  const sec=document.createElement("div");sec.style.padding="4px 20px 8px";root.appendChild(sec);
+  sec.innerHTML=`<table><thead><tr>
+      ${sortTh("outcome",T.thOutcome,"text",' style="width:52%"')}${sortTh("tier",T.thTier,"num")}${sortTh("imp",T.thImp,"num")}
+      ${sortTh("sat",T.thSat,"num")}${sortTh("opp",T.thOpp,"num")}<th style="width:120px"></th>
+    </tr></thead><tbody>${all.map(o=>`<tr class="row">
+      <td>${esc(o.statement)}${DATA.projects.length>1?`<br><span class="mono" style="font-size:10.5px;color:var(--muted)">${esc(o.project)}</span>`:""}</td>
+      <td><span class="tier ${o.tier}">${T.tier[o.tier]}</span></td>
+      <td class="num">${o.imp??"—"}</td><td class="num">${o.sat??"—"}</td>
+      <td class="num" style="font-weight:600">${o.opp??"—"}</td>
+      <td><span style="display:block;height:5px;border-radius:3px;background:var(--${o.tier==="prioritize"?"rose":o.tier==="marginal"?"amber":"accent"});width:${o.opp?Math.round(o.opp/max*100):2}%"></span></td>
+    </tr>`).join("")}</tbody></table>`;
+  const input=bar.querySelector("input"),tbody=sec.querySelector("tbody");
+  bindTableFilter(input,"tbl",tbody);
+  if(state.tblText){input.value=state.tblText;
+    tbody.querySelectorAll("tr.row").forEach(tr=>{tr.style.display=fuzzy(state.tblText.trim(),tr.textContent)?"":"none";});}
+  const scoredAll=allRaw.filter(o=>o.opp!=null).sort((a,b)=>b.opp-a.opp);
+  metrics([
+    [T.mOutcomes,allRaw.length],
+    [T.mUnscored,allRaw.length-scoredAll.length,allRaw.length-scoredAll.length?"mid":"ok"],
+    [T.mTop,scoredAll.length?scoredAll[0].opp:"—",scoredAll.length&&scoredAll[0].opp>=12?"warn":""],
+    [T.mMedian,scoredAll.length?scoredAll[Math.floor(scoredAll.length/2)].opp:"—"]
+  ]);
+  if(scoredAll.length)verdictHTML(T.fShortlist,"ok",T.nShortlistTop(recLink(scoredAll[0].project,scoredAll[0].statement),scoredAll[0].opp));
+  else verdict(T.fShortlist,"ok",T.nShortlistNone);
+}
+
+/* ── switch forces ── */
+function drawForces(root){
+  const ps=projectsInScope();
+  const grid=document.createElement("div");grid.className="cols";root.appendChild(grid);
+  let filled=0,total=0;
+  ps.forEach(p=>{
+    const f=p.forces;
+    ["push","pull","habit","anxiety"].forEach(k=>{total++;if(f[k])filled++});
+    const sec=document.createElement("section");
+    const row=(k)=>`<div class="force ${k}"><b>${T[k]}</b><p>${f[k]?esc(f[k]):`<span class="empty">${T.notCaptured}</span>`}</p></div>`;
+    sec.innerHTML=`<h3>${esc(p.name||p.slug)}</h3>`+row("push")+row("pull")+row("habit")+row("anxiety");
+    grid.appendChild(sec);
+  });
+  metrics([[T.mProjects,ps.length],[T.mForces,`${filled}/${total}`,filled===total?"ok":"mid"]]);
+  verdict(filled===total?T.fComplete:T.fGaps,filled===total?"ok":"mid",
+    filled===total?T.nForcesOk:T.nForcesGap(total-filled));
+}
+
+/* ── the job record ── */
+function drawRecord(root){
+  const ps=projectsInScope();
+  const bar=document.createElement("div");bar.className="filterbar";
+  bar.innerHTML=`<input type="search" id="rec-filter" placeholder="${esc(T.filterPh)}" aria-label="${esc(T.filterPh)}">
+    <span style="font-size:11.5px;color:var(--muted)">${T.filterHint}</span>`;
+  root.appendChild(bar);
+  bar.querySelector("input").addEventListener("input",e=>{
+    const q=e.target.value.trim().toLowerCase();
+    root.querySelectorAll(".cols li").forEach(li=>{
+      li.style.display=!q||li.textContent.toLowerCase().includes(q)?"":"none"});
+    root.querySelectorAll(".cols section").forEach(sec=>{
+      const lis=[...sec.querySelectorAll("li")];
+      sec.style.opacity=q&&lis.length&&lis.every(li=>li.style.display==="none")?.35:1});
+  });
+  ps.forEach(p=>{
+    const grid=document.createElement("div");grid.className="cols";root.appendChild(grid);
+    const li=a=>a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:`<div class="empty">${T.notCaptured}</div>`;
+    grid.innerHTML=`
+      <section style="grid-column:1/-1;border-right:0">
+        <h3>${esc(p.slug)} · ${T.theJob}</h3>
+        ${p.hook?`<p style="font-size:15px">${esc(p.hook)}</p>`:""}
+        <p><b>${T.when}</b> ${esc(p.situation)||`<span class="empty">${T.notCaptured}</span>`}</p>
+        <p><b>${T.iWant}</b> ${esc(p.motivation)||`<span class="empty">${T.notCaptured}</span>`}</p>
+        <p><b>${T.soThat}</b> ${esc(p.outcome)||`<span class="empty">${T.notCaptured}</span>`}</p>
+      </section>
+      <section><h3>${T.hurts}</h3><p>${esc(p.what_hurts)||`<span class="empty">${T.notCaptured}</span>`}</p>
+        ${p.cost_today?`<h3 style="margin-top:14px">${T.cost}</h3><p>${esc(p.cost_today)}</p>`:""}</section>
+      <section><h3>${T.functional}</h3>${li(p.needs.functional)}</section>
+      <section><h3>${T.emotional}</h3>${li(p.needs.emotional)}
+        ${p.needs.social.length?`<h3 style="margin-top:14px">${T.social}</h3>${li(p.needs.social)}`:""}</section>
+      <section><h3>${T.outputs}</h3>${li(p.outputs)}</section>
+      <section><h3>${T.guardrails}</h3>${li(p.guardrails)}</section>
+      <section><h3>${T.openQ}</h3>${li(p.open_questions)}</section>
+      ${p.target_users.length?`<section><h3>${T.targetUsers}</h3>${li(p.target_users)}</section>`:""}
+      ${p.before_after&&(p.before_after.before||p.before_after.after)?`<section><h3>${T.beforeAfter}</h3>
+        <p><b>${T.before}</b> ${esc(p.before_after.before||"")}</p>
+        <p><b>${T.after}</b> ${esc(p.before_after.after||"")}</p></section>`:""}
+      ${p.trigger&&(p.trigger.type||p.trigger.detail)?`<section><h3>${T.trigger}</h3>
+        <p>${esc(p.trigger.type||"")}${p.trigger.detail?" — "+esc(p.trigger.detail):""}</p></section>`:""}
+      ${p.scenarios.length?`<section style="grid-column:1/-1;border-right:0"><h3>${T.scenarios}</h3>
+        <ul>${p.scenarios.map(s=>`<li><b>${esc(s.title||"")}</b>${s.vignette?" — "+esc(s.vignette):""}</li>`).join("")}</ul></section>`:""}`;
+  });
+  metrics([
+    [T.mProjects,ps.length],
+    [T.mFunctional,ps.reduce((a,x)=>a+x.needs.functional.length,0)],
+    [T.mOutputs,ps.reduce((a,x)=>a+x.outputs.length,0)],
+    [T.mOpen,ps.reduce((a,x)=>a+x.open_questions.length,0)]
+  ]);
+  const gaps=ps.filter(x=>!x.situation||!x.motivation||!x.outcome).length;
+  verdict(gaps?T.fIncomplete:T.fCaptured,gaps?"mid":"ok",
+    gaps?T.nRecordGap(gaps):T.nRecordOk(ps.length===1?ps[0].open_questions.length:0));
+}
+
+/* ── evidence ── */
+const srcOf=who=>{const w=(who||"").trim();if(!w)return T.sourceUnknown;
+  return (w.split("·")[0]||w).trim()||T.sourceUnknown;};
+function evidenceMatrix(root,ps){
+  const mx=document.createElement("div");mx.className="matrix";
+  if(state.project!=="all"&&ps.length===1){
+    /* outcomes × ledger ids */
+    const p=ps[0], ledger=[...new Set((p.quotes||[]).map(q=>q.id).filter(Boolean))];
+    if(!ledger.length||!(p.outcomes||[]).length)return;
+    mx.innerHTML=`<table><thead><tr><th style="min-width:200px">${T.thOutcome}</th>${
+      ledger.map(id=>`<th class="rot mx">${esc(id)}</th>`).join("")}</tr></thead><tbody>${
+      p.outcomes.map(o=>{const ev=o.evidence||[];
+        return `<tr class="row"><td>${esc(o.statement)}</td>${
+          ledger.map(id=>`<td class="mx">${ev.includes(id)?`<span style="color:var(--accent)">●</span>`:`<span style="color:var(--faint)">·</span>`}</td>`).join("")}</tr>`;}).join("")}</tbody></table>`;
+    root.appendChild(mx);return;
+  }
+  /* projects × sources */
+  const counts=new Map();  /* src -> total */
+  const perProj=ps.map(p=>{
+    const m=new Map();
+    (p.quotes||[]).forEach(q=>{const s=srcOf(q.who);m.set(s,(m.get(s)||0)+1);counts.set(s,(counts.get(s)||0)+1);});
+    return {p,m};
+  });
+  let sources=[...counts.entries()].sort((a,b)=>b[1]-a[1]).map(e=>e[0]);
+  if(!sources.length)return;
+  const CAP=14;let overflow=0;
+  if(sources.length>CAP){overflow=sources.length-CAP;sources=sources.slice(0,CAP);}
+  const maxCell=Math.max(1,...perProj.flatMap(r=>[...r.m.values()]));
+  const paintCell=n=>n?hexLerp(css("--panel"),css("--accent"),Math.min(1,n/maxCell)):null;
+  mx.innerHTML=`<table><thead><tr><th style="min-width:160px">${T.thProject}</th>${
+    sources.map(s=>`<th class="rot mx">${esc(s)}</th>`).join("")}${overflow?`<th class="rot mx">${esc(T.moreN(overflow))}</th>`:""}</tr></thead><tbody>${
+    perProj.map(({p,m})=>{
+      const over=overflow?[...m.entries()].filter(([s])=>!sources.includes(s)).reduce((a,[,n])=>a+n,0):0;
+      return `<tr class="row"><td>${esc(p.name||p.slug)}</td>${
+        sources.map(s=>{const n=m.get(s)||0,c=paintCell(n);
+          return `<td class="mx"${c?` style="background:${c}"`:""}>${n||`<span style="color:var(--faint)">·</span>`}</td>`;}).join("")}${
+        overflow?`<td class="mx">${over||`<span style="color:var(--faint)">·</span>`}</td>`:""}</tr>`;}).join("")}</tbody></table>`;
+  root.appendChild(mx);
+}
+function drawEvidence(root){
+  const ps=projectsInScope();
+  evidenceMatrix(root,ps);
+  const grid=document.createElement("div");grid.className="cols";root.appendChild(grid);
+  let quotes=0,weak=0;
+  ps.forEach(p=>{
+    quotes+=p.quotes.length;weak+=p.weaknesses.length;
+    const sec=document.createElement("section");
+    sec.innerHTML=`<h3>${esc(p.name||p.slug)} · ${esc(p.evidence_source)||T.sourceUnknown} · ${T.quotes(p.quotes.length)}</h3>
+      ${p.evidence_limitation?`<p class="limitation">${esc(p.evidence_limitation)}</p>`:""}
+      ${p.quotes.length?p.quotes.map(q=>`<p class="quote">${q.id?`<span class="eid">${esc(q.id)}</span> `:""}${esc(q.text)}${
+          q.who?`<span class="who">${esc(q.who)}</span>`:""}</p>`).join("")
+        :`<div class="empty">${T.noQuotes}</div>`}
+      ${p.pages_read.length?`<h3 style="margin-top:14px">${T.pagesRead}</h3><ul>${p.pages_read.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:""}
+      ${p.weaknesses.length?`<h3 style="margin-top:14px">${T.flaggedThin}</h3><ul>${p.weaknesses.map(w=>`<li>${esc(w)}</li>`).join("")}</ul>`:""}`;
+    grid.appendChild(sec);
+  });
+  const none=ps.filter(p=>!p.quotes.length).length;
+  metrics([
+    [T.mQuotes,quotes,quotes?"ok":"warn"],
+    [T.mNoQuotes,none,none?"warn":"ok"],
+    [T.mWeak,weak,weak?"mid":"ok"]
+  ]);
+  verdict(none?T.fThin:T.fEvidenced,none?"bad":"ok",
+    none?T.nEvidenceThin(none,ps.length):T.nEvidenceOk(quotes,ps.length,weak));
+}
+
+fetch("data.json",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+  DATA=d;
+  if(!DATA.projects.length){document.body.innerHTML=`<div class="empty-state">${STR.en.noProjects}</div>`;return}
+  if(DATA.projects.length===1)state.project=DATA.projects[0].slug;
+  readUrl();
+  if(state.project!=="all"&&!DATA.projects.some(x=>x.slug===state.project))state.project="all";
+  const si=$("#search");if(si&&state.search)si.value=state.search;
+  /* precedence: what you last chose here → what the CLI was told → the browser */
+  let saved=null;try{saved=localStorage.getItem("jtbd-graph-lang")}catch{}
+  const fromData=d.lang&&d.lang!=="auto"?d.lang:null;
+  const fromNav=(navigator.language||"en").toLowerCase().startsWith("ru")?"ru":"en";
+  setLang(saved||fromData||fromNav,false);
+}).catch(e=>{
+  document.body.innerHTML=`<div class="empty-state">${STR.en.loadFail}</div>`;
+  console.error(e);
+});
+</script>
+</body>
+</html>

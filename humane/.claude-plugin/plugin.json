@@ -1,0 +1,13 @@
+{
+  "name": "humane",
+  "description": "A human-centric design method cycle for people and agents: jtbd, persona-review, synthetic-respondent, design-tokens, layout-rules, nielsen-heuristics, before-after. Portable across agentic stacks.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Gleb Kalinin",
+    "url": "https://github.com/glebis"
+  },
+  "homepage": "https://github.com/glebis/humane-agentic-design",
+  "repository": "https://github.com/glebis/humane-agentic-design",
+  "skills": "./skills",
+  "agents": "./agents"
+}

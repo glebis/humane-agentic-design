@@ -39,7 +39,7 @@ python3 scripts/illustrate.py run --tokens T --answers A.json [--out-dir D] [--d
 python3 scripts/illustrate.py run --recipe R.json      # reuse a saved recipe
 ```
 
-`--answers` is a JSON file of the questionnaire results: `purpose`, `style`, `count`, `variants`, `platforms` (list of preset names), `backend`, `budget` (`draft`|`final`), `refs_dir`, `negatives` (list), `seed`.
+`--answers` is a JSON file of the questionnaire results: `subject` (single-image subject), `variants` (list of per-image subjects — overrides `subject`×`count`), `purpose`, `style`, `count`, `platforms` (list of preset names), `backend`, `budget` (`draft`|`final`), `refs_dir`, `negatives` (list), `seed`.
 
 ## What a run produces
 

@@ -129,6 +129,23 @@ def test_setup_edit_regenerates_own_design_md(tmp_path):
     assert 'generator: "design-tokens"' in design.read_text()
 
 
+def test_setup_edit_imports_brand_draft(tmp_path, capsys):
+    # brandkit handoff leaves a draft when no token set exists yet
+    (tmp_path / "brand-block.draft.json").write_text(json.dumps({
+        "$extensions": {"community.design-tokens.brand": {
+            "imageryStyle": "risograph", "mood": ["calm"], "avoid": ["neon glow"]}}}))
+    dest = tmp_path / "new.tokens.json"
+    rc = cli.main(["setup-edit", str(dest)])
+    assert rc == 0
+    tree = json.loads(dest.read_text())
+    block = tree["$extensions"]["community.design-tokens.brand"]
+    assert block["imageryStyle"] == "risograph"
+    assert block["mood"] == ["calm"]
+    assert "imported brand block" in capsys.readouterr().err
+    # and the sibling DESIGN.md now carries the Brand direction section
+    assert "## Brand direction" in (tmp_path / "DESIGN.md").read_text()
+
+
 def test_setup_edit_refuses_overwrite(tmp_path):
     dest = tmp_path / "exists.tokens.json"
     dest.write_text("{}")

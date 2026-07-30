@@ -123,6 +123,11 @@ def _cmd_setup_edit(args):
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(content, encoding="utf-8")
     dest_tree = model.load(str(dest))
+    # Seed the brand block from a brandkit handoff draft, if one sits alongside
+    # (brandkit writes brand-block.draft.json when no token set existed yet).
+    if _import_brand_draft(dest, dest_tree):
+        dest.write_text(json.dumps(dest_tree, indent=2, ensure_ascii=False) + "\n",
+                        encoding="utf-8")
     errors = validate_mod.validate(dest_tree)
     if errors:
         for e in errors:
@@ -134,6 +139,32 @@ def _cmd_setup_edit(args):
     if action != "skipped":
         print(f"{action} {design_path}")
     return 0
+
+
+_BRAND_EXT_KEY = "community.design-tokens.brand"
+
+
+def _import_brand_draft(dest, tree):
+    """If a `brand-block.draft.json` sits next to the scaffolded token file (a
+    brandkit handoff for a set that didn't exist yet), merge its brand block into
+    the tree's $extensions in place. Returns True if anything was imported."""
+    draft = pathlib.Path(dest).parent / "brand-block.draft.json"
+    if not draft.exists():
+        return False
+    try:
+        block = json.loads(draft.read_text(encoding="utf-8")) \
+            .get("$extensions", {}).get(_BRAND_EXT_KEY)
+    except (ValueError, OSError):
+        return False
+    if not isinstance(block, dict) or not block:
+        return False
+    ext = tree.setdefault("$extensions", {})
+    if not isinstance(ext, dict):
+        return False
+    existing = ext.get(_BRAND_EXT_KEY)
+    ext[_BRAND_EXT_KEY] = {**existing, **block} if isinstance(existing, dict) else block
+    print(f"imported brand block from {draft.name}", file=sys.stderr)
+    return True
 
 
 def _write_design_md_sibling(token_path, tree):

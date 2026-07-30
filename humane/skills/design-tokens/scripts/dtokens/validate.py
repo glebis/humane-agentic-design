@@ -45,8 +45,13 @@ def _detect_cycles(idx):
     return errors
 
 
-def validate(tree):
-    """Return a list of error strings; empty means the tree is valid."""
+def validate(tree, strict=False):
+    """Return a list of error strings; empty means the tree is valid.
+
+    `strict=True` also promotes non-DTCG dimension/duration values (clamp(),
+    calc(), var(), and other CSS kept verbatim) from warnings to errors — i.e.
+    it flags them as spec deviations. Default behaviour keeps them as warnings.
+    """
     idx = model.index(tree)
     errors = []
 
@@ -66,16 +71,48 @@ def validate(tree):
             errors.append(f"{path}: $type {ttype!r} is not allowed in v1")
 
     errors.extend(_detect_cycles(idx))
+    if strict:
+        errors.extend(dimension_warnings(_safe_resolve(tree)))
     return errors
 
 
-def warnings(tree):
-    """Return a list of non-fatal advisory strings; empty means nothing to flag.
+def _safe_resolve(tree):
+    """Resolve for advisory checks; return {} if the tree can't resolve (its
+    hard errors are reported by validate() and take precedence)."""
+    from . import resolve as _resolve
+    from . import TokenError
+    try:
+        return _resolve.resolve(tree)
+    except TokenError:
+        return {}
 
-    Currently checks the art-direction contract: the brand-style block and its
-    load-bearing `imageryStyle` field. Missing either is legal DTCG but leaves
-    image generation without a style to confirm, so we warn.
-    """
+
+def _is_dtcg_dimension(value):
+    return isinstance(value, dict) and "value" in value and "unit" in value
+
+
+def dimension_warnings(resolved):
+    """Advisories for dimension/duration (and typography.fontSize) values that
+    are strings we can't parse into {value, unit} — legitimate CSS (clamp/calc/
+    var) kept verbatim rather than dropped. Empty means nothing to flag."""
+    out = []
+    for path in sorted(resolved):
+        entry = resolved[path]
+        ttype, value = entry["type"], entry["value"]
+        if ttype in ("dimension", "duration"):
+            if isinstance(value, str) and not _is_dtcg_dimension(value):
+                out.append(f"non-DTCG {ttype} kept verbatim: {path} = {value!r}")
+        elif ttype == "typography" and isinstance(value, dict):
+            fs = value.get("fontSize")
+            if isinstance(fs, str):
+                out.append(f"non-DTCG dimension kept verbatim: {path}.fontSize = {fs!r}")
+    return out
+
+
+def brand_warnings(tree):
+    """Non-fatal advisories on the art-direction contract: the brand-style block
+    and its load-bearing `imageryStyle` field. Missing either is legal DTCG but
+    leaves image generation without a style to confirm, so we warn."""
     out = []
     ext = tree.get("$extensions")
     brand = ext.get(BRAND_EXT_KEY) if isinstance(ext, dict) else None
@@ -94,3 +131,10 @@ def warnings(tree):
             "visual style and will ASK."
         )
     return out
+
+
+def warnings(tree):
+    """All non-fatal advisories for a tree: the brand-style contract plus any
+    non-DTCG dimension/duration values kept verbatim. Best-effort — dimension
+    checks are skipped if the tree can't resolve."""
+    return brand_warnings(tree) + dimension_warnings(_safe_resolve(tree))

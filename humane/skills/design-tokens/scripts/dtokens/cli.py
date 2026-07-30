@@ -59,8 +59,16 @@ def _print_warnings(tree):
 
 def _cmd_validate(args):
     tree = model.load(args.file)
-    errors = validate_mod.validate(tree)
-    _print_warnings(tree)
+    strict = getattr(args, "strict", False)
+    errors = validate_mod.validate(tree, strict=strict)
+    # In strict mode the non-DTCG dimension issues are already promoted into
+    # `errors`; only the brand-contract advisories remain warnings. Otherwise
+    # print the full advisory set (brand + dimension) to stderr.
+    if strict:
+        for w in validate_mod.brand_warnings(tree):
+            print(f"warning: {w}", file=sys.stderr)
+    else:
+        _print_warnings(tree)
     if errors:
         for e in errors:
             print(e)
@@ -122,7 +130,39 @@ def _cmd_setup_edit(args):
         return 1
     _print_warnings(dest_tree)
     print(f"scaffolded {dest}" + (f" from {args.source}" if args.source else ""))
+    design_path, action = _write_design_md_sibling(dest, dest_tree)
+    if action != "skipped":
+        print(f"{action} {design_path}")
     return 0
+
+
+def _write_design_md_sibling(token_path, tree):
+    """Compile DESIGN.md next to the token file (its canonical home per the
+    storage convention) with provenance. Stale-overwrite guard: an existing
+    DESIGN.md without our generator marker is hand-written/foreign — warn and
+    leave it, rather than clobber. Returns (path, 'wrote'|'regenerated'|'skipped')."""
+    token_path = pathlib.Path(token_path)
+    dest = token_path.parent / "DESIGN.md"
+    source = token_path.name
+    command = f"tokens design-md {source}"
+    content = design_md_mod.to_design_md(
+        resolve_mod.resolve(tree),
+        token_path.stem.replace(".tokens", "") or token_path.stem,
+        brand=brand_summary_mod.extract_brand(tree),
+        source=source, command=command,
+    )
+    if dest.exists():
+        existing = dest.read_text(encoding="utf-8")
+        if design_md_mod.GENERATED_MARKER not in existing:
+            print(f"warning: {dest} exists but carries no {design_md_mod.GENERATOR} "
+                  f"generator marker — it looks hand-edited or foreign, leaving it "
+                  f"untouched. Regenerate explicitly with: {command} -o {dest}",
+                  file=sys.stderr)
+            return dest, "skipped"
+        dest.write_text(content, encoding="utf-8")
+        return dest, "regenerated"
+    dest.write_text(content, encoding="utf-8")
+    return dest, "wrote"
 
 
 _RICH_WARNING = (
@@ -153,9 +193,14 @@ def _cmd_design_md(args):
     if rich and not _confirm_rich(args.yes):
         print("aborted: emitting standard DESIGN.md instead", file=sys.stderr)
         rich = False
-    brand = brand_summary_mod.extract_brand(tree) if rich else None
+    # Always pass the brand block so the default Brand direction section renders;
+    # rich only gates the extended skill-convention sections.
+    brand = brand_summary_mod.extract_brand(tree)
+    source = pathlib.Path(args.file).name
     _emit(design_md_mod.to_design_md(resolved, name, args.description,
-                                     brand=brand, rich=rich), args.out)
+                                     brand=brand, rich=rich,
+                                     source=source, command=f"tokens design-md {source}"),
+          args.out)
     return 0
 
 
@@ -271,10 +316,12 @@ def _cmd_use(args):
     if rich and not _confirm_rich(args.yes):
         print("aborted: emitting standard DESIGN.md instead", file=sys.stderr)
         rich = False
+    _use_source = pathlib.Path(args.file).name
     (out_dir / "DESIGN.md").write_text(
         design_md_mod.to_design_md(
             resolved, name, args.description,
-            brand=brand_summary_mod.extract_brand(tree) if rich else None, rich=rich,
+            brand=brand_summary_mod.extract_brand(tree), rich=rich,
+            source=_use_source, command=f"tokens use {_use_source}",
         ),
         encoding="utf-8",
     )
@@ -308,6 +355,9 @@ def _build_parser():
 
     sv = sub.add_parser("validate")
     sv.add_argument("file")
+    sv.add_argument("--strict", action="store_true",
+                    help="treat non-DTCG dimension/duration values (clamp/calc/var kept "
+                         "verbatim) as errors, not warnings")
     sv.set_defaults(func=_cmd_validate)
 
     sm = sub.add_parser("merge")

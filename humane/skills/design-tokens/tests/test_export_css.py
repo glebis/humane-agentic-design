@@ -54,6 +54,28 @@ def test_structured_color_object_raises():
         export_css.serialize_value("color", {"colorSpace": "srgb", "components": [0, 0, 1]})
 
 
+def test_non_dtcg_dimension_string_passes_through():
+    # clamp()/calc()/var() and bare-string units are legit CSS but not
+    # {value, unit} — keep them verbatim instead of raising.
+    assert export_css.serialize_value("dimension", "clamp(72px, 11vw, 150px)") == \
+        "clamp(72px, 11vw, 150px)"
+    assert export_css.serialize_value("duration", "var(--fast)") == "var(--fast)"
+    assert export_css.serialize_value(
+        "typography", {"fontFamily": "Inter", "fontSize": "clamp(2.6rem, 5vw, 3.6rem)"}
+    ) == {"font-family": "Inter", "font-size": "clamp(2.6rem, 5vw, 3.6rem)"}
+
+
+def test_non_string_non_dtcg_dimension_still_raises():
+    with pytest.raises(TokenError):
+        export_css.serialize_value("dimension", {"value": 8})  # missing unit, not a str
+
+
+def test_clamp_dimension_flows_into_css_block():
+    resolved = {"space.section": {"type": "dimension", "value": "clamp(72px, 11vw, 150px)"}}
+    css = export_css.export_css(resolved)
+    assert "  --space-section: clamp(72px, 11vw, 150px);" in css
+
+
 def test_export_css_full_block():
     resolved = {
         "color.brand": {"type": "color", "value": "#00f"},

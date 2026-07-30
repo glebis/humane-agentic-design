@@ -16,9 +16,14 @@ def css_var_name(path, suffix=""):
 
 
 def _dimension(value):
-    if not (isinstance(value, dict) and "value" in value and "unit" in value):
-        raise TokenError(f"expected {{value, unit}} dimension, got {value!r}")
-    return f"{value['value']}{value['unit']}"
+    if isinstance(value, dict) and "value" in value and "unit" in value:
+        return f"{value['value']}{value['unit']}"
+    # Tolerate legitimate CSS that is not DTCG-shapeable — clamp()/calc()/var()
+    # and other fluid values are common in the wild. A bare string is valid CSS,
+    # so pass it through verbatim; validate.dimension_warnings flags it separately.
+    if isinstance(value, str):
+        return value
+    raise TokenError(f"expected {{value, unit}} dimension, got {value!r}")
 
 
 def serialize_value(ttype, value):

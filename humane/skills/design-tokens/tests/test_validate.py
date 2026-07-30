@@ -70,3 +70,43 @@ def test_complete_brand_block_has_no_warning():
 
 def test_empty_brand_block_warns_as_missing():
     assert "brand-style block" in validate.warnings(_brand_tree({}))[0]
+
+
+# --- non-DTCG dimension tolerance (clamp/calc/var kept verbatim) ---
+
+def _clamp_tree():
+    return {
+        "space": {"$type": "dimension",
+                  "section": {"$value": "clamp(72px, 11vw, 150px)"},
+                  "md": {"$value": {"value": 16, "unit": "px"}}},
+        "type": {"display": {"$type": "typography", "$value": {
+            "fontFamily": "Inter", "fontSize": "clamp(2.6rem, 5vw, 3.6rem)"}}},
+    }
+
+
+def test_clamp_dimension_is_valid_by_default():
+    # not a hard error — the value is kept verbatim, only warned about
+    assert validate.validate(_clamp_tree()) == []
+
+
+def test_dimension_warnings_flag_string_dimensions():
+    resolved = {
+        "space.section": {"type": "dimension", "value": "clamp(72px, 11vw, 150px)"},
+        "space.md": {"type": "dimension", "value": {"value": 16, "unit": "px"}},
+        "type.display": {"type": "typography",
+                         "value": {"fontFamily": "Inter", "fontSize": "clamp(2.6rem, 5vw, 3.6rem)"}},
+    }
+    warns = validate.dimension_warnings(resolved)
+    assert any("space.section" in w and "clamp" in w for w in warns)
+    assert any("type.display.fontSize" in w for w in warns)
+    assert not any("space.md" in w for w in warns)  # well-formed token not flagged
+
+
+def test_strict_promotes_dimension_warnings_to_errors():
+    errors = validate.validate(_clamp_tree(), strict=True)
+    assert any("non-DTCG dimension" in e and "space.section" in e for e in errors)
+    assert validate.validate(_clamp_tree()) == []  # default keeps it valid
+
+
+def test_warnings_includes_dimension_advisories():
+    assert any("clamp" in w for w in validate.warnings(_clamp_tree()))

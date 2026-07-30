@@ -33,13 +33,13 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 
 | Command | What it does |
 | --- | --- |
-| `setup-edit <dest> [--from SRC]` | Scaffold a token file at `<dest>` and validate it (refuses to overwrite). With `--from`, deterministically clone an existing set's structure + content to edit (byte-stable for a given source) instead of the blank template. Ships `templates/base.tokens.json` (minimal), `templates/monaspace.tokens.json` (a real set extracted from a live site — see *Extracting from a site*), and `templates/gsap.tokens.json` (a motion-first set: `duration` tokens under `motion.*` render as a body Motion table, and its `$extensions` brand block carries GSAP animation recipes for `--rich`). |
+| `setup-edit <dest> [--from SRC]` | Scaffold a token file at `<dest>` and validate it (refuses to overwrite). With `--from`, deterministically clone an existing set's structure + content to edit (byte-stable for a given source) instead of the blank template. Ships `templates/base.tokens.json` (minimal), `templates/monaspace.tokens.json` (a real set extracted from a live site — see *Extracting from a site*), and `templates/gsap.tokens.json` (a motion-first set: `duration` tokens under `motion.*` render as a body Motion table, and its `$extensions` brand block carries GSAP animation recipes for `--rich`). Also compiles a **DESIGN.md** next to the token file (provenance-stamped; won't clobber a hand-edited one — see *DESIGN.md output*). |
 | `import <css> [-o OUT]` | Import a CSS file's `:root` custom properties into DTCG, preserving variable names. Skips composites (shadow/gradient) and reports them on stderr. |
-| `validate <file>` | Print `OK` or a list of errors; exit 1 if invalid. Also prints non-fatal `warning:` lines to stderr when the brand-style block or its `imageryStyle` is missing (art-direction contract silent) — advisory only, never changes the exit code. |
+| `validate <file> [--strict]` | Print `OK` or a list of errors; exit 1 if invalid. Also prints non-fatal `warning:` lines to stderr when the brand-style block / its `imageryStyle` is missing, or when a dimension/duration value is legitimate CSS but not DTCG-shapeable (`clamp()`/`calc()`/`var()` and bare unit strings — kept verbatim in outputs). Advisory only, never changes the exit code — except under `--strict`, which promotes the non-DTCG dimension advisories to errors (exit 1) so they can gate CI. |
 | `merge <base> <override> [-o OUT]` | Layer project override on global base. |
 | `resolve <file> [-o OUT]` | Flatten aliases to concrete values (JSON map). |
 | `export-css <file> [--selector SEL] [-o OUT]` | Emit CSS custom properties. |
-| `design-md <file> [--name N] [--description D] [--rich] [--yes] [-o OUT]` | Emit a Google-Labs [DESIGN.md](https://github.com/google-labs-code/design.md) (alpha) — YAML token frontmatter + a table-based body (colors carry their `$description` as a Role column). `--rich` (also on `use`) appends style-guide sections from the brand `$extensions` block — components, do's/don'ts, surfaces, imagery, layout, similar brands, plus a Quick Start CSS block. **Non-standard**: `--rich` extends the Labs alpha body, so the CLI shows a confirmation (auto-accepted with `--yes` or when non-interactive; the note still prints to stderr). |
+| `design-md <file> [--name N] [--description D] [--rich] [--yes] [-o OUT]` | Emit a Google-Labs [DESIGN.md](https://github.com/google-labs-code/design.md) (alpha) — YAML token frontmatter + a table-based body (colors carry their `$description` as a Role column). It is provenance-stamped (generated, do-not-edit) and, when the `$extensions` brand block is present, renders a default `## Brand direction` section (mood / imageryStyle / subjects / avoid). `--rich` (also on `use`) appends style-guide sections from the brand `$extensions` block — components, do's/don'ts, surfaces, imagery, layout, similar brands, plus a Quick Start CSS block. **Non-standard**: `--rich` extends the Labs alpha body, so the CLI shows a confirmation (auto-accepted with `--yes` or when non-interactive; the note still prints to stderr). |
 | `preview <file> [--name N] [--full] [--description D] [-o OUT]` | Emit a standalone HTML swatch page (colors, type specimens, spacing, rounded, shadow). With `--full`, emit a **landing-page mockup** instead — the brand applied in situ (hero, prose, accent band, footer), driven entirely by the role/type/space tokens via `:root` vars. Type specimens load their families via a deterministic Google Fonts `@import` so brand faces render (degrades to a generic fallback offline / for non-Google fonts). |
 | `prompt <file> [--target gpt-image-2\|nano-banana\|tufte\|all] [--preset P ...] [--platform P] [--subject S] [--name N] [-o OUT]` | The **prompt door**: turn resolved tokens into ready-to-paste generation prompts. Image targets emit per-preset CLI invocations with the brand's hex/fonts/shape baked into the subject; `tufte` emits a CSS `:root` theme mapping brand roles onto `/tufte-report`'s variables. |
 | `use <file> [--name N] [--description D] [--out-dir DIR] [--serve/--no-serve] [--port N] [--no-open]` | Validate + resolve, then write `tokens.css`, `DESIGN.md`, `preview.html`, `preview-full.html` (landing-page mockup), `image-prompts.md`, and `tufte-theme.css`. **Serves the output over HTTP and opens it by default when interactive** (see below). |
@@ -144,6 +144,23 @@ Our resolved tokens map to its frontmatter as: `color` → `colors`, `typography
 Types without a DESIGN.md home (`duration`, `shadow`, `number`, `fontFamily`,
 `fontWeight` standalone) are noted in the Overview, not the frontmatter. This
 name/bucket mapping is a skill convention over the DESIGN.md alpha schema.
+
+**Generated, not hand-edited.** DESIGN.md is a compiled render of the token set —
+the same one-way pipeline as CSS. It carries provenance frontmatter (`generator:
+"design-tokens"`, `source:`, `regenerate:`) plus a do-not-edit line in the
+Overview naming the source file and the exact regeneration command. `setup-edit`
+writes it next to the token file (its canonical home per the storage convention);
+`use` writes it into the output dir; `design-md` prints or `-o`-writes it.
+**Stale-overwrite guard:** before overwriting, an existing DESIGN.md that lacks
+the `generator: "design-tokens"` marker is treated as hand-written/foreign — the
+tool warns and leaves it untouched rather than clobber it; regenerate explicitly
+with `design-md <src> -o DESIGN.md`.
+
+**Brand direction (default output).** Whenever the `$extensions` brand block
+carries `mood` / `imageryStyle` / `subjects` / `avoid`, a `## Brand direction`
+section renders in the **default** DESIGN.md (not gated behind `--rich`) — so the
+art-direction contract travels with the compiled artifact. The frontmatter schema
+is otherwise unchanged for Labs consumers.
 
 **Rich mode (opt-in, non-standard).** `--rich` sources extra sections from optional
 keys in `$extensions["community.design-tokens.brand"]`: `essence` (prose),

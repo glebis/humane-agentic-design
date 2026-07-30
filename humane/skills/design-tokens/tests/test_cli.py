@@ -42,6 +42,40 @@ def test_validate_reports_errors(tmp_path, capsys):
     assert "missing" in capsys.readouterr().out
 
 
+def _write_clamp_set(tmp_path):
+    p = tmp_path / "fluid.tokens.json"
+    p.write_text(json.dumps({
+        "space": {"$type": "dimension", "section": {"$value": "clamp(72px, 11vw, 150px)"}},
+        "$extensions": {"community.design-tokens.brand": {
+            "mood": ["calm"], "imageryStyle": "flat vector"}},
+    }))
+    return p
+
+
+def test_validate_clamp_warns_but_passes_by_default(tmp_path, capsys):
+    rc = cli.main(["validate", str(_write_clamp_set(tmp_path))])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "OK" in captured.out
+    assert "non-DTCG dimension kept verbatim" in captured.err
+    assert "clamp(72px, 11vw, 150px)" in captured.err
+
+
+def test_validate_strict_makes_clamp_an_error(tmp_path, capsys):
+    rc = cli.main(["validate", "--strict", str(_write_clamp_set(tmp_path))])
+    assert rc == 1
+    captured = capsys.readouterr()
+    assert "OK" not in captured.out
+    assert "non-DTCG dimension kept verbatim" in captured.out  # promoted to error (stdout)
+
+
+def test_clamp_set_exports_css_verbatim(tmp_path):
+    out_css = tmp_path / "out.css"
+    rc = cli.main(["export-css", str(_write_clamp_set(tmp_path)), "-o", str(out_css)])
+    assert rc == 0
+    assert "--space-section: clamp(72px, 11vw, 150px);" in out_css.read_text()
+
+
 def test_merge_then_export_matches_golden(tmp_path):
     merged = tmp_path / "merged.tokens.json"
     cli.main([
@@ -62,6 +96,37 @@ def test_setup_edit_scaffolds_and_validates(tmp_path, capsys):
     assert rc == 0
     assert dest.exists()
     assert "color" in json.loads(dest.read_text())
+
+
+def test_setup_edit_emits_design_md_sibling(tmp_path, capsys):
+    dest = tmp_path / "new.tokens.json"
+    rc = cli.main(["setup-edit", str(dest)])
+    assert rc == 0
+    design = tmp_path / "DESIGN.md"
+    assert design.exists()
+    text = design.read_text()
+    assert 'generator: "design-tokens"' in text
+    assert 'source: "new.tokens.json"' in text
+    assert "do not hand-edit" in text
+    assert "wrote" in capsys.readouterr().out
+
+
+def test_setup_edit_guards_hand_edited_design_md(tmp_path, capsys):
+    # a DESIGN.md without our marker must NOT be clobbered
+    (tmp_path / "DESIGN.md").write_text("# My hand-written design notes\n")
+    rc = cli.main(["setup-edit", str(tmp_path / "new.tokens.json")])
+    assert rc == 0
+    assert (tmp_path / "DESIGN.md").read_text() == "# My hand-written design notes\n"
+    assert "no design-tokens generator marker" in capsys.readouterr().err
+
+
+def test_setup_edit_regenerates_own_design_md(tmp_path):
+    assert cli.main(["setup-edit", str(tmp_path / "a.tokens.json")]) == 0
+    design = tmp_path / "DESIGN.md"
+    design.write_text(design.read_text() + "\n<!-- stale -->\n")  # still carries the marker
+    assert cli.main(["setup-edit", str(tmp_path / "b.tokens.json")]) == 0
+    assert "<!-- stale -->" not in design.read_text()
+    assert 'generator: "design-tokens"' in design.read_text()
 
 
 def test_setup_edit_refuses_overwrite(tmp_path):

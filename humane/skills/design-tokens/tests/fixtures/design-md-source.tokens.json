@@ -23,5 +23,13 @@
         "lineHeight": 1.5
       }
     }
+  },
+  "$extensions": {
+    "community.design-tokens.brand": {
+      "mood": ["precise", "calm"],
+      "imageryStyle": "flat vector illustration, geometric",
+      "subjects": ["abstract systems", "typography as material"],
+      "avoid": ["stock-photo people", "glossy 3d blobs"]
+    }
   }
 }

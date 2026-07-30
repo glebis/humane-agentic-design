@@ -39,9 +39,14 @@ def test_colors_are_quoted_in_frontmatter():
 
 
 def test_golden_design_md_matches_fixture():
+    from dtokens import brand_summary
     tree = model.load(str(FIXTURES / "design-md-source.tokens.json"))
     resolved = resolve.resolve(tree)
-    out = export_design_md.to_design_md(resolved, name="Test Brand")
+    out = export_design_md.to_design_md(
+        resolved, name="Test Brand", brand=brand_summary.extract_brand(tree),
+        source="design-md-source.tokens.json",
+        command="tokens design-md design-md-source.tokens.json",
+    )
     expected = (FIXTURES / "expected.DESIGN.md").read_text()
     assert out == expected
 
@@ -86,6 +91,55 @@ def test_default_output_has_no_rich_sections():
     resolved = {"color.brand": {"type": "color", "value": "#1A73E8"}}
     out = export_design_md.to_design_md(resolved, name="X")
     assert "## Quick Start" not in out and "skill convention" not in out
+
+
+def test_no_brand_section_when_no_brand_block():
+    resolved = {"color.brand": {"type": "color", "value": "#1A73E8"}}
+    out = export_design_md.to_design_md(resolved, name="X")
+    assert "## Brand direction" not in out
+
+
+def test_brand_direction_renders_in_default_output_when_block_present():
+    resolved = {"color.brand": {"type": "color", "value": "#1A73E8"}}
+    brand = {"mood": ["precise", "calm"], "imageryStyle": "flat vector",
+             "subjects": ["grids"], "avoid": ["stock photos"]}
+    out = export_design_md.to_design_md(resolved, name="X", brand=brand)  # not rich
+    assert "## Brand direction" in out
+    assert "- **Mood:** precise, calm" in out
+    assert "- **Imagery:** flat vector" in out
+    assert "- **Subjects:** grids" in out
+    assert "- **Avoid:** stock photos" in out
+    assert "## Quick Start" not in out  # still not rich
+
+
+def test_provenance_frontmatter_only_when_source_given():
+    resolved = {"color.brand": {"type": "color", "value": "#1A73E8"}}
+    bare = export_design_md.to_design_md(resolved, name="X")
+    assert "generator:" not in bare and "do not hand-edit" not in bare
+    stamped = export_design_md.to_design_md(
+        resolved, name="X", source="my.tokens.json", command="tokens design-md my.tokens.json")
+    assert export_design_md.GENERATED_MARKER in stamped
+    assert 'source: "my.tokens.json"' in stamped
+    assert 'regenerate: "tokens design-md my.tokens.json"' in stamped
+    assert "do not hand-edit" in stamped
+    assert stamped.startswith("---\nversion: alpha\nname: ")  # Labs order preserved
+
+
+def test_design_md_round_trips_brand_block():
+    # every brand-block field the amendment names survives token -> DESIGN.md
+    tree = {
+        "color": {"$type": "color", "primary": {"$value": "#0E7C7B"}},
+        "$extensions": {"community.design-tokens.brand": {
+            "mood": ["editorial"], "imageryStyle": "risograph textures",
+            "subjects": ["systems"], "avoid": ["gradients"]}},
+    }
+    from dtokens import brand_summary
+    resolved = resolve.resolve(tree)
+    out = export_design_md.to_design_md(
+        resolved, name="RT", brand=brand_summary.extract_brand(tree),
+        source="rt.tokens.json", command="tokens design-md rt.tokens.json")
+    for needle in ("editorial", "risograph textures", "systems", "gradients"):
+        assert needle in out
 
 
 def test_duration_tokens_render_as_motion_table():

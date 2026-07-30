@@ -163,3 +163,34 @@ class RecipeTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestGallery(unittest.TestCase):
+    def test_gallery_groups_batches_and_loose(self):
+        import tempfile, json as _json, pathlib as _pl
+        with tempfile.TemporaryDirectory() as td:
+            root = _pl.Path(td)
+            b = root / "20260101-batch"; b.mkdir()
+            (b / "a.png").write_bytes(b"x" if isinstance(b"x", bytes) else b"x")
+            (b / "metadata.json").write_text(_json.dumps({
+                "backend": "gpt-image-2",
+                "outputs": [{"file": "a.png", "subject": "loop", "platform": "square-post", "size": "1080x1080"}]}))
+            (root / "loose.png").write_bytes(bytes(1))
+            out = illustrate.write_gallery(root)
+            html = _pl.Path(out).read_text()
+            self.assertIn("20260101-batch", html)
+            self.assertIn("Other images", html)
+            self.assertIn("loose.png", html)
+            self.assertIn('dialog id="lb"', html)          # lightbox present
+            self.assertIn("ArrowRight", html)               # keyboard nav
+            self.assertIn("2 images across 2 group(s)", html)
+
+    def test_contact_sheet_has_lightbox(self):
+        import tempfile, pathlib as _pl
+        with tempfile.TemporaryDirectory() as td:
+            bd = _pl.Path(td)
+            (bd / "x.png").write_bytes(bytes(1))
+            out = illustrate.write_contact_sheet(bd, [{"file": "x.png", "subject": "s", "platform": "og-image", "size": "1200x630"}])
+            html = _pl.Path(out).read_text()
+            self.assertIn('dialog id="lb"', html)
+            self.assertIn('data-full="x.png"', html)

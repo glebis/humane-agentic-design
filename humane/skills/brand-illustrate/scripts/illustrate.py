@@ -537,40 +537,145 @@ def load_recipe(path):
     return json.loads(pathlib.Path(path).expanduser().read_text())
 
 
-def write_contact_sheet(batch_dir, outputs):
-    """Simple, de-slop-compliant thumbnail grid (rule set: no eyebrow labels,
-    honest filenames, real headings, both-theme aware)."""
-    cells = []
-    for o in outputs:
-        name = pathlib.Path(o["file"]).name
-        cells.append(
-            f'<figure><a href="{name}" title="{o["subject"]}">'
-            f'<img src="{name}" alt="{o["subject"]}" loading="lazy"></a>'
-            f'<figcaption>{name}<br><span>{o["platform"]} &middot; {o["size"]}</span>'
-            f'</figcaption></figure>'
-        )
-    html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+def _sheet_html(title, lead, groups):
+    """Shared sheet renderer: thumbnail grid(s) + a dependency-free lightbox.
+    De-slop rules hold: real headings, honest filenames, both themes, no libs."""
+    sections = []
+    idx = 0
+    for heading, items in groups:
+        cells = []
+        for it in items:
+            cap = it.get("caption", "")
+            sub = it.get("sub", "")
+            cells.append(
+                f'<figure><button type="button" class="th" data-i="{idx}" '
+                f'data-full="{it["src"]}" data-cap="{cap}">'
+                f'<img src="{it["src"]}" alt="{cap}" loading="lazy"></button>'
+                f'<figcaption>{cap}{f"<br><span>{sub}</span>" if sub else ""}</figcaption></figure>'
+            )
+            idx += 1
+        h = f"<h2>{heading}</h2>" if heading else ""
+        sections.append(f'<section>{h}<div class="grid">{"".join(cells)}</div></section>')
+    return f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>brand-illustrate batch</title><style>
+<title>{title}</title><style>
 :root{{--bg:#fff;--fg:#16181d;--sub:#5b6270;--line:#e5e7eb}}
 @media(prefers-color-scheme:dark){{:root{{--bg:#0f1115;--fg:#e8eaed;--sub:#9aa1ad;--line:#242832}}}}
 body{{margin:0;padding:2rem;background:var(--bg);color:var(--fg);
 font:15px/1.5 system-ui,-apple-system,sans-serif}}
 h1{{font-size:1.4rem;margin:0 0 .25rem}}
-p.lead{{color:var(--sub);margin:0 0 2rem}}
+h2{{font-size:1.05rem;margin:2.2rem 0 .9rem}}
+p.lead{{color:var(--sub);margin:0 0 1.6rem}}
 .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.5rem}}
 figure{{margin:0}}
+.th{{display:block;width:100%;padding:0;border:0;background:none;cursor:zoom-in}}
+.th:focus-visible{{outline:2.5px solid #4a7dcc;outline-offset:2px;border-radius:4px}}
 img{{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:4px;background:var(--line)}}
-figcaption{{margin-top:.5rem;font-size:.8rem;word-break:break-all}}
+figcaption{{margin-top:.5rem;font-size:.8rem;word-break:break-word}}
 figcaption span{{color:var(--sub)}}
+dialog#lb{{border:0;padding:0;background:rgba(10,11,14,.94);max-width:100vw;max-height:100vh;
+width:100vw;height:100vh;display:none;align-items:center;justify-content:center}}
+dialog#lb[open]{{display:flex}}
+#lb img{{max-width:92vw;max-height:86vh;width:auto;height:auto;border:0;border-radius:4px}}
+#lb figure{{margin:0;text-align:center}}
+#lb figcaption{{color:#cfd4dc;margin-top:.8rem;font-size:.85rem}}
+#lb .nav{{position:fixed;top:50%;transform:translateY(-50%);border:0;background:rgba(255,255,255,.09);
+color:#fff;font-size:1.6rem;line-height:1;padding:.7rem 1rem;border-radius:6px;cursor:pointer}}
+#lb .nav:focus-visible{{outline:2.5px solid #7fa8dc}}
+#lb .prev{{left:1rem}} #lb .next{{right:1rem}}
+#lb .close{{position:fixed;top:1rem;right:1rem;border:0;background:rgba(255,255,255,.09);
+color:#fff;font-size:1.15rem;padding:.55rem .8rem;border-radius:6px;cursor:pointer}}
+@media(prefers-reduced-motion:no-preference){{#lb img{{transition:opacity .15s}}}}
 </style></head><body>
-<h1>Illustration batch</h1>
-<p class="lead">{len(outputs)} images. Click any thumbnail to open it full size.</p>
-<div class="grid">{''.join(cells)}</div>
+<h1>{title}</h1>
+<p class="lead">{lead}</p>
+{"".join(sections)}
+<dialog id="lb" aria-label="Full-size image viewer">
+  <figure><img alt=""><figcaption></figcaption></figure>
+  <button type="button" class="nav prev" aria-label="Previous image">&#8592;</button>
+  <button type="button" class="nav next" aria-label="Next image">&#8594;</button>
+  <button type="button" class="close" aria-label="Close viewer">Esc &#10005;</button>
+</dialog>
+<script>
+(function(){{
+  var thumbs=[].slice.call(document.querySelectorAll(".th")),
+      lb=document.getElementById("lb"), img=lb.querySelector("img"),
+      cap=lb.querySelector("figcaption"), cur=0;
+  function show(i){{
+    cur=(i+thumbs.length)%thumbs.length;
+    var t=thumbs[cur];
+    img.src=t.dataset.full; img.alt=t.dataset.cap||"";
+    cap.textContent=(t.dataset.cap||"")+"  ("+(cur+1)+"/"+thumbs.length+")";
+  }}
+  thumbs.forEach(function(t){{t.addEventListener("click",function(){{
+    show(+t.dataset.i); if(!lb.open)lb.showModal();}});}});
+  lb.querySelector(".prev").addEventListener("click",function(){{show(cur-1)}});
+  lb.querySelector(".next").addEventListener("click",function(){{show(cur+1)}});
+  lb.querySelector(".close").addEventListener("click",function(){{lb.close()}});
+  lb.addEventListener("click",function(e){{if(e.target===lb)lb.close()}});
+  lb.addEventListener("keydown",function(e){{
+    if(e.key==="ArrowLeft"){{e.preventDefault();show(cur-1)}}
+    if(e.key==="ArrowRight"){{e.preventDefault();show(cur+1)}}
+  }});
+  lb.addEventListener("close",function(){{
+    var t=thumbs[cur]; if(t)t.focus();
+  }});
+}})();
+</script>
 </body></html>"""
+
+
+def write_contact_sheet(batch_dir, outputs):
+    """Per-batch sheet: thumbnail grid with a full-size lightbox."""
+    items = [{"src": pathlib.Path(o["file"]).name,
+              "caption": o.get("subject", pathlib.Path(o["file"]).name),
+              "sub": f'{o.get("platform", "")} &middot; {o.get("size", "")}'.strip(" &middot;")}
+             for o in outputs]
+    html = _sheet_html("Illustration batch",
+                       f"{len(outputs)} images. Click any thumbnail for full size; "
+                       "&#8592;/&#8594; to move, Esc to close.",
+                       [("", items)])
     sheet = batch_dir / "contact-sheet.html"
     sheet.write_text(html)
     return str(sheet)
+
+
+def write_gallery(root, out_path=None):
+    """Cross-batch gallery: every version ever generated under `root`, grouped by
+    batch (metadata.json aware), loose images picked up as an ungrouped section."""
+    root = pathlib.Path(root).expanduser()
+    exts = {".png", ".jpg", ".jpeg", ".webp"}
+    groups, seen = [], set()
+    for meta_path in sorted(root.rglob("metadata.json")):
+        try:
+            meta = json.loads(meta_path.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        bdir = meta_path.parent
+        items = []
+        for o in meta.get("outputs", []):
+            f = bdir / pathlib.Path(o["file"]).name
+            if not f.exists():
+                continue
+            seen.add(f.resolve())
+            items.append({"src": str(f.relative_to(root)).replace("\\", "/"),
+                          "caption": o.get("subject", f.name),
+                          "sub": f'{o.get("platform", "")} &middot; {o.get("size", "")}'.strip(" &middot;")})
+        if items:
+            label = meta.get("subject") or bdir.name
+            groups.append((f'{bdir.name} &middot; {meta.get("backend", "")}'.rstrip(" &middot;"), items))
+    loose = [{"src": str(f.relative_to(root)).replace("\\", "/"), "caption": f.name, "sub": ""}
+             for f in sorted(root.rglob("*")) if f.suffix.lower() in exts
+             and f.resolve() not in seen and "contact-sheet" not in f.name]
+    if loose:
+        groups.append(("Other images", loose))
+    total = sum(len(i) for _, i in groups)
+    html = _sheet_html("All versions", f"{total} images across {len(groups)} group(s). "
+                       "Click any thumbnail for full size; &#8592;/&#8594; to move, Esc to close.",
+                       groups)
+    out = pathlib.Path(out_path).expanduser() if out_path else root / "gallery.html"
+    out.write_text(html)
+    return str(out)
 
 
 # ---------------------------------------------------------------------------
@@ -586,6 +691,9 @@ def main(argv=None):
 
     sub.add_parser("platforms")
     sub.add_parser("backends")
+    ga = sub.add_parser("gallery")
+    ga.add_argument("--dir", required=True, help="root directory containing batches / images")
+    ga.add_argument("-o", "--out", default=None, help="output html (default <dir>/gallery.html)")
 
     sc = sub.add_parser("scaffold")
     sc.add_argument("--tokens", required=True)
@@ -605,6 +713,9 @@ def main(argv=None):
             print(f"{name:16} {p['w']}x{p['h']:<5} {p['desc']}")
         return 0
 
+    if args.cmd == "gallery":
+        print(write_gallery(args.dir, args.out))
+        return 0
     if args.cmd == "backends":
         found = probe_backends()
         if not found:

@@ -121,6 +121,7 @@ scripts/illustrate.py run --recipe <tokenset>.illustrate-recipe.json --out-dir <
 scripts/illustrate.py platforms      # list size presets
 scripts/illustrate.py backends       # show which generators are installed
 scripts/illustrate.py run ... --dry-run   # print commands + write metadata, no API calls
+scripts/illustrate.py gallery --dir <dir> [-o out.html]  # one sheet of ALL versions under <dir>, grouped by batch, full-size lightbox (arrows/Esc)
 ```
 
 `answers.json` shape (only `subject` is required):

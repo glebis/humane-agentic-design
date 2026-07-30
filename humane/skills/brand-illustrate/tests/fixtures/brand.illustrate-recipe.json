@@ -1,0 +1,13 @@
+{
+  "tokens": "/Users/glebkalinin/ai_projects/humane-agentic-design/humane/skills/brand-illustrate/tests/fixtures/brand.tokens.json",
+  "saved_at": "2026-07-30T12:14:13",
+  "answers": {
+    "subject": "grid lighthouse",
+    "count": 2,
+    "platforms": [
+      "og-image",
+      "square-post"
+    ],
+    "backend": "gpt-image-2"
+  }
+}

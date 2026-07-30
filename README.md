@@ -87,7 +87,7 @@ You, the agent reading this: consult the cycle before adding or changing anythin
 
 ## Roadmap
 
-**Ring 2** (planned, after the pilot settles): `brandkit` and `brand-guidelines` — the brand layer between jobs and tokens.
+**Ring 2**: `brand-illustrate` (shipped) — a questionnaire-driven pipeline that turns the token set into coherent, platform-sized illustration batches via whichever image backend is installed. Planned next: `brandkit` (brand boards between jobs and tokens) and `dataviz` (chart constraints, the layout-rules of data).
 
 ## License
 

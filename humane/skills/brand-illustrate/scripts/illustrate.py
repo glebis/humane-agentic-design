@@ -1,0 +1,648 @@
+#!/usr/bin/env python3
+"""brand-illustrate adapter: token file + questionnaire answers -> on-brand image batch.
+
+Ring-2 humane skill. Stdlib only, self-contained, portable. It sits ABOVE
+design-tokens' own `generate` command and adds the layer that turns one-off
+generation into a *coherent set*:
+
+  - reads the on-brand contract straight from the token `.tokens.json`
+    (palette with roles, fonts, shape, and the $extensions brand block) — it
+    does NOT import the dtokens package, so it runs on any agent that installed
+    brand-illustrate alone;
+  - assembles a deterministic prompt scaffold: palette prose + mood/imageryStyle
+    + the user's questionnaire answers + a shared series-coherence block + a
+    negative-prompt list that MERGES the built-in de-slop rules (layout-rules
+    31-39) with the brand's own avoid/negativePrompt and any user negatives;
+  - resolves platform presets (og-image, 16:9 thumbnail, square post, deck
+    cover, spot/UI) into a size manifest;
+  - probes for the gpt-image-2 / nano-banana backend scripts (generators stay
+    OUTSIDE the plugin — guardrail) in both ~/.claude/skills and plugin-relative
+    locations, shells out, and writes a batch dir with metadata.json + recipe.json;
+  - degrades with a clear install message when NO backend is found.
+
+Design note (adapter shape): the backend *scripts* are the stable, documented
+public surface (their SKILL.md publishes the CLI). Probing + shelling them here
+gives one testable unit that captures deterministic metadata, instead of asking
+the agent to orchestrate N generations by hand (no metadata, non-deterministic)
+or importing dtokens internals (private API, breaks portability).
+
+CLI:
+  illustrate.py platforms                       # list platform presets
+  illustrate.py backends                         # probe available backends
+  illustrate.py scaffold --tokens F --answers A  # print resolved scaffold JSON
+  illustrate.py run --tokens F --answers A [--out-dir D] [--dry-run]
+  illustrate.py run --recipe recipe.json [--out-dir D]   # reuse last recipe
+"""
+
+import argparse
+import colorsys
+import datetime
+import json
+import pathlib
+import subprocess
+import sys
+
+# ---------------------------------------------------------------------------
+# Platform presets (target sizes) and their nearest backend-native platform.
+# `flag` is the backend `--platform` name when one matches exactly; otherwise
+# None and we pass the raw --size (gpt-image-2) / record a resize note (nano).
+# ---------------------------------------------------------------------------
+PLATFORMS = {
+    "og-image":      {"w": 1200, "h": 630,  "flag": "blog",   "desc": "Open Graph / link preview"},
+    "thumbnail-16-9":{"w": 1280, "h": 720,  "flag": "youtube","desc": "16:9 video / card thumbnail"},
+    "square-post":   {"w": 1080, "h": 1080, "flag": "square", "desc": "Instagram / square social post"},
+    "deck-cover":    {"w": 1920, "h": 1080, "flag": "slides", "desc": "Slide / deck cover"},
+    "spot-ui":       {"w": 512,  "h": 512,  "flag": None,     "desc": "Spot illustration / UI asset"},
+}
+DEFAULT_PLATFORM = "square-post"
+
+# De-slop negative prompts, derived from layout-rules 31-39. Phrased for image
+# models. Merged with the brand's own avoid-list and any user negatives.
+DESLOP_NEGATIVES = [
+    "no gradient soup, no gradient-filled text, no glassmorphism",           # 33
+    "no generic 3D blobs, no glossy corporate-memphis mascots",              # brief + 33
+    "no uniform rounded-corner cards, no nested card-in-card layouts",       # 33
+    "no default-AI cliche: warm-cream + high-contrast serif + terracotta",   # 31
+    "no near-black canvas with a lone acid-green or vermilion pop",          # 31
+    "no template hero of big-number + tiny-label + gradient accent",         # 32
+    "no emoji or 01/02/03 numbered markers used as decoration",              # 35
+    "nothing forced dead-centre; no gray text on a colored fill",            # 35, 36
+    "no lens flare, no neon glow, no bokeh, no stock-photo people",          # de-slop / brand
+]
+
+# Backend script probe locations (first hit wins). Both plugin-relative and the
+# personal ~/.claude/skills install are checked.
+_PLUGIN_ROOT = pathlib.Path(__file__).resolve().parents[3]  # .../humane
+_BACKEND_CANDIDATES = {
+    "gpt-image-2": [
+        pathlib.Path("~/.claude/skills/gpt-image-2/scripts/gpt_image_2.py").expanduser(),
+        _PLUGIN_ROOT / "skills" / "gpt-image-2" / "scripts" / "gpt_image_2.py",
+    ],
+    "nano-banana": [
+        pathlib.Path("~/.claude/skills/nano-banana/scripts/nano_banana.py").expanduser(),
+        _PLUGIN_ROOT / "skills" / "nano-banana" / "scripts" / "nano_banana.py",
+    ],
+}
+
+# Which backends carry a real seed flag (for series coherence). nano-banana has
+# none, so we anchor its series on the first output as a reference image.
+_SEED_BACKENDS = {"gpt-image-2"}
+
+
+# ---------------------------------------------------------------------------
+# Token file -> brand summary (minimal, self-contained DTCG reader)
+# ---------------------------------------------------------------------------
+_ROLE_RULES = [
+    ("background", ("background", "bg", "surface", "canvas", "base", "paper")),
+    ("text", ("ink", "text", "foreground", "fg", "body", "content")),
+    ("primary", ("primary", "brand", "action", "main")),
+    ("accent", ("accent", "secondary", "highlight", "pop")),
+    ("success", ("success", "positive", "ok", "moss", "green")),
+    ("warning", ("warning", "caution", "warn", "amber", "yellow")),
+    ("danger", ("danger", "error", "negative", "rust", "red")),
+    ("muted", ("muted", "subtle", "neutral", "gray", "grey", "slate")),
+]
+_ROLE_ORDER = ["primary", "accent", "text", "background", "success", "warning", "danger", "muted"]
+BRAND_EXT_KEY = "community.design-tokens.brand"
+
+
+def _infer_role(name):
+    low = name.lower()
+    if low.startswith("on-") or low.startswith("on_"):
+        return None
+    for role, needles in _ROLE_RULES:
+        if any(n in low for n in needles):
+            return role
+    return None
+
+
+def _color_word(hex_):
+    """Rough English name for a hex. Models ground the word even when they
+    misread the digits, so scaffolds carry both."""
+    h = hex_.lstrip("#")
+    if len(h) != 6:
+        return None
+    try:
+        r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        return None
+    mx, mn = max(r, g, b), min(r, g, b)
+    if mx < 40:
+        return "near-black"
+    if mn > 235:
+        return "near-white"
+    if mx - mn < 24:
+        return "gray" if mx < 180 else "light gray"
+    hue = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0] * 360
+    for limit, word in ((15, "red"), (45, "orange"), (70, "yellow"), (160, "green"),
+                        (200, "cyan"), (255, "blue"), (290, "violet"),
+                        (330, "magenta"), (360, "red")):
+        if hue <= limit:
+            return word
+    return None
+
+
+def _walk_tokens(node, path, out):
+    """Yield (flat_name, $type, raw $value) for every leaf token."""
+    if not isinstance(node, dict):
+        return
+    if "$value" in node:
+        out.append((path, node.get("$type"), node["$value"]))
+        return
+    inherited = node.get("$type")
+    for key, child in node.items():
+        if key.startswith("$"):
+            continue
+        if isinstance(child, dict) and "$value" in child and "$type" not in child and inherited:
+            child = {**child, "$type": inherited}
+        _walk_tokens(child, f"{path}.{key}" if path else key, out)
+
+
+def _resolve_alias(value, by_path):
+    """Resolve a whole-value {group.token} alias one hop at a time."""
+    seen = set()
+    while isinstance(value, str) and value.startswith("{") and value.endswith("}"):
+        ref = value[1:-1]
+        if ref in seen or ref not in by_path:
+            break
+        seen.add(ref)
+        value = by_path[ref]
+    return value
+
+
+def _flat_role_name(path):
+    parts = path.split(".")
+    return parts[-1] if parts else path
+
+
+def summarize_tokens(tree):
+    """Distil a token tree into {palette, fonts, shape, brand}. Self-contained."""
+    leaves = []
+    _walk_tokens(tree, "", leaves)
+    by_path = {p: v for p, _, v in leaves}
+
+    colors, fonts, radii = [], [], []
+    seen_fonts = set()
+    # Prefer explicit role-alias tokens (name == role) as authoritative.
+    exact, keyword = {}, {}
+    for path, ttype, raw in leaves:
+        value = _resolve_alias(raw, by_path)
+        name = _flat_role_name(path)
+        if ttype == "color" and isinstance(value, str):
+            role = _infer_role(name)
+            colors.append({"name": name, "hex": value, "role": role})
+            if role:
+                if name.lower() == role:
+                    exact.setdefault(role, value)
+                else:
+                    keyword.setdefault(role, value)
+        elif ttype == "fontFamily":
+            fams = value if isinstance(value, list) else [value]
+            for fam in fams:
+                if isinstance(fam, str) and fam not in seen_fonts:
+                    seen_fonts.add(fam); fonts.append(fam)
+        elif ttype == "typography" and isinstance(value, dict):
+            fam = value.get("fontFamily")
+            if isinstance(fam, list):
+                fam = fam[0] if fam else None
+            if isinstance(fam, str) and fam not in seen_fonts:
+                seen_fonts.add(fam); fonts.append(fam)
+        elif ttype == "dimension":
+            group = path.split(".")[0].lower()
+            if group in ("radius", "rounded", "corner", "corners"):
+                if isinstance(value, dict) and "value" in value:
+                    radii.append(float(value["value"]))
+
+    roles = {**keyword, **exact}  # exact wins
+    brand = {}
+    ext = tree.get("$extensions")
+    if isinstance(ext, dict) and isinstance(ext.get(BRAND_EXT_KEY), dict):
+        brand = ext[BRAND_EXT_KEY]
+
+    return {
+        "palette": colors,
+        "roles": roles,
+        "fonts": fonts,
+        "shape": _shape_language(radii),
+        "brand": brand,
+    }
+
+
+def _shape_language(radii):
+    if not radii:
+        return None
+    m = max(radii)
+    if m == 0:
+        return "sharp"
+    if m <= 6:
+        return "soft"
+    if m <= 16:
+        return "rounded"
+    return "pill"
+
+
+# ---------------------------------------------------------------------------
+# Prompt scaffold
+# ---------------------------------------------------------------------------
+def merge_negatives(brand, user_negatives=None):
+    """De-slop list + brand.avoid + brand.negativePrompt + user negatives,
+    de-duplicated, order-stable (de-slop first, then brand, then user)."""
+    out, seen = [], set()
+    def add(items):
+        for it in items:
+            it = str(it).strip()
+            key = it.lower()
+            if it and key not in seen:
+                seen.add(key); out.append(it)
+    add(DESLOP_NEGATIVES)
+    add(brand.get("avoid") or [])
+    if brand.get("negativePrompt"):
+        add([brand["negativePrompt"]])
+    add(user_negatives or [])
+    return out
+
+
+def palette_clause(summary):
+    roles = summary["roles"]
+    if not roles:
+        return None
+    ordered = sorted(roles, key=lambda r: _ROLE_ORDER.index(r) if r in _ROLE_ORDER else 99)
+    swatches = []
+    for role in ordered:
+        word = _color_word(roles[role])
+        swatches.append(f"{role} {word} ({roles[role]})" if word else f"{role} ({roles[role]})")
+    return "Palette, exactly and only: " + ", ".join(swatches) + "."
+
+
+def series_block(summary, answers):
+    """Shared style descriptor that every image in the set repeats verbatim,
+    so five outputs read as one family."""
+    brand = summary["brand"]
+    bits = []
+    mood = brand.get("mood")
+    if mood:
+        bits.append(", ".join(mood) if isinstance(mood, list) else str(mood))
+    if brand.get("imageryStyle"):
+        bits.append(str(brand["imageryStyle"]).rstrip("."))
+    if answers.get("style"):
+        bits.append(str(answers["style"]).rstrip("."))
+    if summary["shape"]:
+        bits.append(f"{summary['shape']}-edged geometry")
+    return "Shared style across the set: " + "; ".join(bits) + "." if bits else None
+
+
+def compose_prompt(summary, subject, answers, refs=None):
+    """Deterministic scaffold: lead mood -> subject -> series style -> palette
+    -> type -> refs -> merged negatives."""
+    brand = summary["brand"]
+    parts = []
+    mood = brand.get("mood")
+    lead = ", ".join(mood) if isinstance(mood, list) else (mood or "")
+    parts.append(f"A {lead} image: {subject}." if lead else f"{subject}.")
+    sb = series_block(summary, answers)
+    if sb:
+        parts.append(sb)
+    pc = palette_clause(summary)
+    if pc:
+        parts.append(pc)
+    if summary["fonts"]:
+        parts.append(f"Any visible text set in {summary['fonts'][0]}-style type.")
+    for i, entry in enumerate(refs or [], start=1):
+        take = ", ".join(entry.get("take", [])) or "overall style"
+        clause = f"From reference image {i} ({entry.get('file', entry.get('path', ''))}) take: {take}"
+        if entry.get("note"):
+            clause += f" — {entry['note']}"
+        parts.append(clause + ".")
+    negs = merge_negatives(brand, answers.get("negatives"))
+    if negs:
+        parts.append("Strictly avoid: " + "; ".join(negs) + ".")
+    return " ".join(parts)
+
+
+def resolve_platforms(answers):
+    names = answers.get("platforms") or [answers.get("purpose") or DEFAULT_PLATFORM]
+    out = []
+    for n in names:
+        if n in PLATFORMS:
+            out.append({"name": n, **PLATFORMS[n]})
+    if not out:
+        out.append({"name": DEFAULT_PLATFORM, **PLATFORMS[DEFAULT_PLATFORM]})
+    return out
+
+
+def variant_subjects(answers):
+    """The list of per-image subjects. `variants` overrides; else `count` copies
+    of the single subject (the backend's own seed/re-roll varies them)."""
+    variants = answers.get("variants")
+    if variants:
+        return list(variants)
+    count = int(answers.get("count") or 1)
+    return [answers["subject"]] * max(1, count)
+
+
+def build_scaffold(tree, answers):
+    """Everything needed to run a batch, as a plain dict (also the recipe body)."""
+    summary = summarize_tokens(tree)
+    subjects = variant_subjects(answers)
+    platforms = resolve_platforms(answers)
+    refs = load_refs(answers.get("refs_dir")) if answers.get("refs_dir") else []
+    items = []
+    for idx, subj in enumerate(subjects):
+        items.append({
+            "index": idx,
+            "subject": subj,
+            "prompt": compose_prompt(summary, subj, answers, refs=refs),
+        })
+    return {
+        "answers": answers,
+        "backend": answers.get("backend", "auto"),
+        "budget": answers.get("budget", "draft"),
+        "seed": answers.get("seed"),
+        "platforms": platforms,
+        "negatives": merge_negatives(summary["brand"], answers.get("negatives")),
+        "series_style": series_block(summary, answers),
+        "fonts": summary["fonts"],
+        "roles": summary["roles"],
+        "refs": refs,
+        "items": items,
+    }
+
+
+def load_refs(refs_dir):
+    if not refs_dir:
+        return []
+    p = pathlib.Path(refs_dir).expanduser()
+    manifest = p / "refs.json"
+    if not manifest.exists():
+        return []
+    data = json.loads(manifest.read_text())
+    imgs = data.get("images", data if isinstance(data, list) else [])
+    out = []
+    for e in imgs:
+        if e.get("take") or e.get("note"):
+            out.append({**e, "path": str(p / e["file"])})
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Backend probing + command building
+# ---------------------------------------------------------------------------
+def probe_backends():
+    found = {}
+    for name, cands in _BACKEND_CANDIDATES.items():
+        for c in cands:
+            if pathlib.Path(c).exists():
+                found[name] = str(c)
+                break
+    return found
+
+
+def pick_backend(requested, found):
+    if requested and requested != "auto":
+        return requested if requested in found else None
+    # auto: prefer gpt-image-2 (has a seed flag for coherence), else nano-banana
+    for pref in ("gpt-image-2", "nano-banana"):
+        if pref in found:
+            return pref
+    return None
+
+
+NO_BACKEND_MESSAGE = (
+    "No image backend found. brand-illustrate is a thin adapter; the generators "
+    "live outside the plugin. Install ONE of them, then re-run:\n"
+    "  - gpt-image-2 (has a seed flag, best for coherent series)\n"
+    "  - nano-banana (native reference-image style transfer)\n"
+    "Install channels:\n"
+    "  Claude Code: place the skill under ~/.claude/skills/<name>/\n"
+    "  Any agent:   npx skills add <source>  (then point the agent at it)\n"
+    "Probed locations: ~/.claude/skills/<name>/scripts/ and "
+    "<plugin>/skills/<name>/scripts/."
+)
+
+
+def build_command(script, backend, prompt, out_path, platform, size, draft,
+                  seed=None, refs=None, anchor=None):
+    cmd = ["python3", script]
+    flag, (w, h) = platform.get("flag"), (platform["w"], platform["h"])
+    if backend == "gpt-image-2":
+        if flag:
+            cmd += ["--platform", flag]
+        else:
+            cmd += ["--size", f"{w}x{h}"]
+        cmd += ["--draft"] if draft else ["--quality", "high"]
+        cmd += ["-y"]
+        if seed is not None:
+            cmd += ["--seed", str(seed)]
+    else:  # nano-banana
+        if flag:
+            cmd += ["--platform", flag]
+        cmd += ["--model", "flash" if draft else "pro"]
+    for entry in refs or []:
+        cmd += ["--reference", entry["path"]]
+    if anchor:  # series anchor for seedless backends
+        cmd += ["--reference", anchor]
+    cmd += [prompt, str(out_path)]
+    return cmd
+
+
+def _slug(text):
+    out = "".join(c.lower() if c.isalnum() else "-" for c in (text or "brand"))
+    while "--" in out:
+        out = out.replace("--", "-")
+    return out.strip("-")[:40] or "brand"
+
+
+# ---------------------------------------------------------------------------
+# Batch run
+# ---------------------------------------------------------------------------
+def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.run,
+              found=None):
+    found = probe_backends() if found is None else found
+    backend = pick_backend(scaffold.get("backend"), found)
+    if not backend:
+        return {"ok": False, "error": "no-backend", "message": NO_BACKEND_MESSAGE}
+    script = found[backend]
+    draft = scaffold.get("budget", "draft") != "final"
+    seed = scaffold.get("seed")
+    if seed is None and backend in _SEED_BACKENDS and scaffold.get("items"):
+        seed = 20260730  # deterministic default so a re-run reproduces the set
+
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    base = _slug(scaffold["answers"].get("subject", "batch"))
+    batch_dir = pathlib.Path(out_dir).expanduser() / f"{stamp}-{base}"
+    batch_dir.mkdir(parents=True, exist_ok=True)
+
+    outputs, anchor = [], None
+    for item in scaffold["items"]:
+        for plat in scaffold["platforms"]:
+            fname = f"{base}-{item['index']:02d}-{plat['name']}.png"
+            out_path = batch_dir / fname
+            cmd = build_command(
+                script, backend, item["prompt"], out_path, plat,
+                (plat["w"], plat["h"]), draft, seed=seed,
+                refs=scaffold.get("refs"),
+                anchor=anchor if backend not in _SEED_BACKENDS else None,
+            )
+            rc = 0
+            if not dry_run:
+                proc = runner(cmd)
+                rc = getattr(proc, "returncode", 0)
+                if rc == 0 and anchor is None and backend not in _SEED_BACKENDS:
+                    anchor = str(out_path)  # anchor the rest of the series
+            outputs.append({
+                "file": str(out_path), "platform": plat["name"],
+                "size": f"{plat['w']}x{plat['h']}", "subject": item["subject"],
+                "prompt": item["prompt"], "command": cmd, "returncode": rc,
+            })
+
+    metadata = {
+        "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "backend": backend, "budget": scaffold.get("budget"), "seed": seed,
+        "tokens": str(pathlib.Path(tokens_path).expanduser()) if tokens_path else None,
+        "series_style": scaffold.get("series_style"),
+        "negatives": scaffold.get("negatives"),
+        "platforms": [p["name"] for p in scaffold["platforms"]],
+        "outputs": outputs,
+    }
+    (batch_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+    recipe = save_recipe(scaffold, tokens_path)
+    sheet = write_contact_sheet(batch_dir, outputs)
+    return {"ok": True, "backend": backend, "batch_dir": str(batch_dir),
+            "outputs": outputs, "metadata": str(batch_dir / "metadata.json"),
+            "recipe": recipe, "contact_sheet": sheet}
+
+
+def recipe_path(tokens_path):
+    """Recipe sits next to the token set (answers the jtbd open question:
+    sidecar JSON, so the token file stays a clean DTCG document)."""
+    p = pathlib.Path(tokens_path).expanduser()
+    return p.with_name(p.stem.replace(".tokens", "") + ".illustrate-recipe.json")
+
+
+def save_recipe(scaffold, tokens_path):
+    if not tokens_path:
+        return None
+    body = {
+        "tokens": str(pathlib.Path(tokens_path).expanduser()),
+        "saved_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "answers": scaffold["answers"],
+    }
+    rp = recipe_path(tokens_path)
+    rp.write_text(json.dumps(body, indent=2))
+    return str(rp)
+
+
+def load_recipe(path):
+    return json.loads(pathlib.Path(path).expanduser().read_text())
+
+
+def write_contact_sheet(batch_dir, outputs):
+    """Simple, de-slop-compliant thumbnail grid (rule set: no eyebrow labels,
+    honest filenames, real headings, both-theme aware)."""
+    cells = []
+    for o in outputs:
+        name = pathlib.Path(o["file"]).name
+        cells.append(
+            f'<figure><a href="{name}" title="{o["subject"]}">'
+            f'<img src="{name}" alt="{o["subject"]}" loading="lazy"></a>'
+            f'<figcaption>{name}<br><span>{o["platform"]} &middot; {o["size"]}</span>'
+            f'</figcaption></figure>'
+        )
+    html = f"""<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>brand-illustrate batch</title><style>
+:root{{--bg:#fff;--fg:#16181d;--sub:#5b6270;--line:#e5e7eb}}
+@media(prefers-color-scheme:dark){{:root{{--bg:#0f1115;--fg:#e8eaed;--sub:#9aa1ad;--line:#242832}}}}
+body{{margin:0;padding:2rem;background:var(--bg);color:var(--fg);
+font:15px/1.5 system-ui,-apple-system,sans-serif}}
+h1{{font-size:1.4rem;margin:0 0 .25rem}}
+p.lead{{color:var(--sub);margin:0 0 2rem}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1.5rem}}
+figure{{margin:0}}
+img{{width:100%;height:auto;display:block;border:1px solid var(--line);border-radius:4px;background:var(--line)}}
+figcaption{{margin-top:.5rem;font-size:.8rem;word-break:break-all}}
+figcaption span{{color:var(--sub)}}
+</style></head><body>
+<h1>Illustration batch</h1>
+<p class="lead">{len(outputs)} images. Click any thumbnail to open it full size.</p>
+<div class="grid">{''.join(cells)}</div>
+</body></html>"""
+    sheet = batch_dir / "contact-sheet.html"
+    sheet.write_text(html)
+    return str(sheet)
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+def _load_json(path):
+    return json.loads(pathlib.Path(path).expanduser().read_text())
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="brand-illustrate adapter")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+
+    sub.add_parser("platforms")
+    sub.add_parser("backends")
+
+    sc = sub.add_parser("scaffold")
+    sc.add_argument("--tokens", required=True)
+    sc.add_argument("--answers", required=True)
+
+    rn = sub.add_parser("run")
+    rn.add_argument("--tokens")
+    rn.add_argument("--answers")
+    rn.add_argument("--recipe")
+    rn.add_argument("--out-dir", default=".")
+    rn.add_argument("--dry-run", action="store_true")
+
+    args = ap.parse_args(argv)
+
+    if args.cmd == "platforms":
+        for name, p in PLATFORMS.items():
+            print(f"{name:16} {p['w']}x{p['h']:<5} {p['desc']}")
+        return 0
+
+    if args.cmd == "backends":
+        found = probe_backends()
+        if not found:
+            print(NO_BACKEND_MESSAGE)
+            return 1
+        for name, path in found.items():
+            print(f"{name:14} {path}")
+        return 0
+
+    if args.cmd == "scaffold":
+        tree = _load_json(args.tokens)
+        answers = _load_json(args.answers)
+        print(json.dumps(build_scaffold(tree, answers), indent=2))
+        return 0
+
+    if args.cmd == "run":
+        if args.recipe:
+            rec = load_recipe(args.recipe)
+            tokens_path = rec["tokens"]
+            answers = rec["answers"]
+        else:
+            if not (args.tokens and args.answers):
+                ap.error("run needs --recipe OR both --tokens and --answers")
+            tokens_path = args.tokens
+            answers = _load_json(args.answers)
+        tree = _load_json(tokens_path)
+        scaffold = build_scaffold(tree, answers)
+        result = run_batch(scaffold, tokens_path, args.out_dir, dry_run=args.dry_run)
+        if not result["ok"]:
+            print(result["message"], file=sys.stderr)
+            return 2
+        print(json.dumps({k: v for k, v in result.items()
+                          if k in ("backend", "batch_dir", "metadata", "recipe",
+                                   "contact_sheet")}, indent=2))
+        return 0
+
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

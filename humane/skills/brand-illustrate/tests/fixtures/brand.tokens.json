@@ -1,0 +1,37 @@
+{
+  "$description": "Test fixture for brand-illustrate: a small DTCG set with role aliases and a brand $extensions block.",
+  "color": {
+    "$type": "color",
+    "teal-600": { "$value": "#0E7C7B" },
+    "coral-500": { "$value": "#F2714E" },
+    "ink-900": { "$value": "#13201F" },
+    "paper-50": { "$value": "#FBF7F0" },
+    "primary": { "$value": "{color.teal-600}" },
+    "accent": { "$value": "{color.coral-500}" },
+    "text": { "$value": "{color.ink-900}" },
+    "background": { "$value": "{color.paper-50}" }
+  },
+  "radius": {
+    "$type": "dimension",
+    "md": { "$value": { "value": 12, "unit": "px" } }
+  },
+  "type": {
+    "display": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "Fraunces",
+        "fontSize": { "value": 40, "unit": "px" },
+        "fontWeight": 600,
+        "lineHeight": 1.1
+      }
+    }
+  },
+  "$extensions": {
+    "community.design-tokens.brand": {
+      "mood": ["precise", "editorial", "calm"],
+      "imageryStyle": "flat vector illustration with dot-grid textures; no photorealism",
+      "avoid": ["glows and lens flares", "stock-photo people"],
+      "negativePrompt": "photorealistic, 3d render, neon glow"
+    }
+  }
+}

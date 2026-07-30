@@ -12,6 +12,28 @@ def test_validate_ok(capsys):
     assert "OK" in capsys.readouterr().out
 
 
+def test_validate_warns_on_silent_art_direction(capsys):
+    # global.base has no brand block -> valid (rc 0) but a stderr warning.
+    rc = cli.main(["validate", str(FIXTURES / "global.base.tokens.json")])
+    assert rc == 0
+    captured = capsys.readouterr()
+    assert "OK" in captured.out
+    assert "warning:" in captured.err
+    assert "imageryStyle" in captured.err or "brand-style block" in captured.err
+
+
+def test_validate_no_warning_with_complete_brand_block(tmp_path, capsys):
+    good = tmp_path / "good.tokens.json"
+    good.write_text(json.dumps({
+        "color": {"$type": "color", "primary": {"$value": "#0E7C7B"}},
+        "$extensions": {"community.design-tokens.brand": {
+            "mood": ["calm"], "imageryStyle": "flat vector, dot-grid"}},
+    }))
+    rc = cli.main(["validate", str(good)])
+    assert rc == 0
+    assert "warning:" not in capsys.readouterr().err
+
+
 def test_validate_reports_errors(tmp_path, capsys):
     bad = tmp_path / "bad.tokens.json"
     bad.write_text(json.dumps({"a": {"$type": "color", "$value": "{missing}"}}))

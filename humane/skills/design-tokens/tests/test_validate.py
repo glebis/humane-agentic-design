@@ -37,3 +37,36 @@ def test_circular_alias_is_reported():
     }
     errors = validate.validate(tree)
     assert any("circular" in e.lower() for e in errors)
+
+
+# --- brand-block warnings (non-fatal art-direction contract) ---
+
+def _brand_tree(brand):
+    return {
+        "color": {"$type": "color", "primary": {"$value": "#0E7C7B"}},
+        "$extensions": {validate.BRAND_EXT_KEY: brand},
+    }
+
+
+def test_missing_brand_block_warns_not_errors():
+    tree = {"color": {"$type": "color", "primary": {"$value": "#0E7C7B"}}}
+    assert validate.validate(tree) == []          # still valid
+    warns = validate.warnings(tree)
+    assert len(warns) == 1
+    assert "brand-style block" in warns[0]
+    assert "brand-illustrate" in warns[0]
+
+
+def test_brand_block_without_imagerystyle_warns():
+    warns = validate.warnings(_brand_tree({"mood": ["calm"]}))
+    assert len(warns) == 1
+    assert "imageryStyle" in warns[0]
+
+
+def test_complete_brand_block_has_no_warning():
+    tree = _brand_tree({"mood": ["calm"], "imageryStyle": "flat vector, dot-grid"})
+    assert validate.warnings(tree) == []
+
+
+def test_empty_brand_block_warns_as_missing():
+    assert "brand-style block" in validate.warnings(_brand_tree({}))[0]

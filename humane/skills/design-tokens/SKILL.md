@@ -35,7 +35,7 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 | --- | --- |
 | `setup-edit <dest> [--from SRC]` | Scaffold a token file at `<dest>` and validate it (refuses to overwrite). With `--from`, deterministically clone an existing set's structure + content to edit (byte-stable for a given source) instead of the blank template. Ships `templates/base.tokens.json` (minimal), `templates/monaspace.tokens.json` (a real set extracted from a live site — see *Extracting from a site*), and `templates/gsap.tokens.json` (a motion-first set: `duration` tokens under `motion.*` render as a body Motion table, and its `$extensions` brand block carries GSAP animation recipes for `--rich`). |
 | `import <css> [-o OUT]` | Import a CSS file's `:root` custom properties into DTCG, preserving variable names. Skips composites (shadow/gradient) and reports them on stderr. |
-| `validate <file>` | Print `OK` or a list of errors; exit 1 if invalid. |
+| `validate <file>` | Print `OK` or a list of errors; exit 1 if invalid. Also prints non-fatal `warning:` lines to stderr when the brand-style block or its `imageryStyle` is missing (art-direction contract silent) — advisory only, never changes the exit code. |
 | `merge <base> <override> [-o OUT]` | Layer project override on global base. |
 | `resolve <file> [-o OUT]` | Flatten aliases to concrete values (JSON map). |
 | `export-css <file> [--selector SEL] [-o OUT]` | Emit CSS custom properties. |
@@ -49,7 +49,29 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 
 ## Brand-style extensions ($extensions)
 
-SKILL CONVENTION: an optional `$extensions["community.design-tokens.brand"]` block at the token-file root (`mood` adjectives, `imageryStyle`/`voice` prose, `subjects`, `avoid`, `negativePrompt`) feeds the prompt door: mood/imageryStyle join the brand clause, `avoid` becomes DON'T lines, `negativePrompt` an "Avoid:" tail. See `templates/brand-extensions.example.json` (worked ai-design example). Fidelity tests (`references/prompt-fidelity-notes.md`): art-direction **prose** with hexes + color words beats both the bare comma-clause and strict constraint blocks (which are unreliable on Nano Banana); provider capabilities in `references/providers.md`.
+SKILL CONVENTION: a `$extensions["community.design-tokens.brand"]` block at the token-file root (`mood` adjectives, `imageryStyle`/`voice` prose, `subjects`, `avoid`, `negativePrompt`) feeds the prompt door: mood/imageryStyle join the brand clause, `avoid` becomes DON'T lines, `negativePrompt` an "Avoid:" tail. See `templates/brand-extensions.example.json` (worked ai-design example). Fidelity tests (`references/prompt-fidelity-notes.md`): art-direction **prose** with hexes + color words beats both the bare comma-clause and strict constraint blocks (which are unreliable on Nano Banana); provider capabilities in `references/providers.md`.
+
+The block is technically optional in DTCG, but leaving it out makes the **art-direction contract silent**: palette and type say nothing about illustration style, so every downstream generator (`brand-illustrate`, the prompt door) has to guess or ask. Treat it as a first-class part of setup, not an afterthought — author it during `setup-edit`, and `validate`/`use` will **warn** (never fail) when it or `imageryStyle` is missing.
+
+### Authoring the brand block (questionnaire)
+
+After scaffolding a set (`setup-edit`), or when editing a set whose validate/​use output warns that the block is missing, walk the user through these questions **one at a time**. Use a structured multiple-choice question tool when the agent has one; fall back to a plain numbered question otherwise. Write the answers into `$extensions["community.design-tokens.brand"]`.
+
+> **Claude Code extras:** use `AskUserQuestion` for the pick-one/pick-many steps (imageryStyle direction, mood adjectives) so the options render as chips. On other agents, list them as plain text and read the reply back.
+
+1. **imageryStyle** *(load-bearing — never skip)*. "What visual language should on-brand imagery use?" Offer concrete directions, let the user pick one or describe their own:
+   - **flat-geometric** — flat vector, geometric shapes, dot-grid/stipple textures, code-native
+   - **technical-line** — thin-line technical/blueprint drawing, engineering diagram feel
+   - **risograph** — textured print, limited flat inks, grain, zine aesthetic
+   - **painterly** — brush/ink or gouache, organic, hand-made
+   - **photographic** — real photography, lighting/lens language
+   - **3D-sculptural** — rendered forms, material and depth
+   - **Other** — the user's own prose (capture verbatim)
+   Store as a short prose sentence (e.g. "flat vector illustration with dot-grid textures; no photorealism"), not just the keyword — fidelity tests show prose beats a bare tag.
+2. **mood** — "Two to four adjectives for how the brand should feel." (e.g. precise, editorial, calm.) Store as a list.
+3. **avoid** — "Anything specific this brand must never show?" Brand-specific negatives (stock-photo people, glossy 3D blobs, lens flares). Store as a list; these become DON'T lines. (The generic de-slop negatives are added downstream by `brand-illustrate`, so don't restate them here.)
+
+Optionally capture `voice`, `subjects`, and a terse `negativePrompt` tail when the user offers them. Confirm existing values on edit rather than re-asking from scratch.
 
 ## Serving previews (default)
 

@@ -53,7 +53,9 @@ already sets `mood` and `imageryStyle`, **confirm** them rather than re-ask
 If the tokens are **silent on art direction** (no brand block, or no
 `imageryStyle`), you must **ASK** — never guess a style. Offer a few directions
 (flat vector / editorial illustration / isotype pictograms / textured print) and
-let the user pick or describe their own.
+let the user pick or describe their own. To fix this permanently, run
+`humane:design-tokens` setup and author the brand block once, so future batches
+confirm the style instead of re-asking.
 
 ### Step 3 — Count & variants
 

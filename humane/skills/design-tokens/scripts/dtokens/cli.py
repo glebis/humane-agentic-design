@@ -50,8 +50,17 @@ def _add_serve_flags(parser):
     parser.add_argument("--no-open", action="store_true", help="serve but do not open a browser")
 
 
+def _print_warnings(tree):
+    """Emit non-fatal advisories (e.g. a silent art-direction contract) to stderr.
+    Never affects exit status."""
+    for w in validate_mod.warnings(tree):
+        print(f"warning: {w}", file=sys.stderr)
+
+
 def _cmd_validate(args):
-    errors = validate_mod.validate(model.load(args.file))
+    tree = model.load(args.file)
+    errors = validate_mod.validate(tree)
+    _print_warnings(tree)
     if errors:
         for e in errors:
             print(e)
@@ -105,11 +114,13 @@ def _cmd_setup_edit(args):
         content = _TEMPLATE.read_text(encoding="utf-8")
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(content, encoding="utf-8")
-    errors = validate_mod.validate(model.load(str(dest)))
+    dest_tree = model.load(str(dest))
+    errors = validate_mod.validate(dest_tree)
     if errors:
         for e in errors:
             print(e)
         return 1
+    _print_warnings(dest_tree)
     print(f"scaffolded {dest}" + (f" from {args.source}" if args.source else ""))
     return 0
 
@@ -250,6 +261,7 @@ def _cmd_use(args):
         for e in errors:
             print(e)
         return 1
+    _print_warnings(tree)
     resolved = resolve_mod.resolve(tree)
     name = args.name or pathlib.Path(args.file).stem
     out_dir = pathlib.Path(args.out_dir) if args.out_dir else pathlib.Path(args.file).parent / "resolved"

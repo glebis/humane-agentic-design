@@ -11,7 +11,7 @@
   "plugins": [
     {
       "name": "humane",
-      "description": "A human-centric design method cycle for people and agents: jtbd, persona-review, synthetic-respondent, design-tokens, layout-rules, nielsen-heuristics, before-after. Portable across agentic stacks.",
+      "description": "A human-centric design method cycle for people and agents: jtbd, persona-review, respondent-panel, design-tokens, layout-rules, nielsen-heuristics, before-after. Portable across agentic stacks.",
       "version": "0.1.0",
       "author": {
         "name": "Gleb Kalinin",

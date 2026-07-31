@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 480" width="1440" height="480" role="img" aria-label="The humane cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back; with Ring 2 skills brandkit and brand-illustrate feeding design-tokens.">
+  <title>The humane cycle</title>
+  <defs>
+    <style>
+      .bg   { fill: #08080a; }
+      .line { fill: none; stroke: #e9e6df; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+      .amber{ fill: none; stroke: #e08b2c; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+      .amberf { fill: #e08b2c; }
+      .dim  { fill: none; stroke: #4a4a50; stroke-width: 1; stroke-linecap: round; stroke-dasharray: 3 4; }
+      .ring { fill: none; stroke: #3a3a41; stroke-width: 1; }
+      .lbl  { fill: #e9e6df; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; letter-spacing: .02em; text-anchor: middle; }
+      .sub  { fill: #7d7d86; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; text-anchor: middle; }
+      .r2   { fill: #e08b2c; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; text-anchor: middle; }
+      .arrow{ fill: none; stroke: #6f6f78; stroke-width: 1.1; stroke-linecap: round; }
+    </style>
+    <marker id="tip" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1 1 L6.5 4 L1 7" fill="none" stroke="#6f6f78" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1440" height="480" rx="14"/>
+
+  <!-- ============ Ring 2 (above, feeding design-tokens) ============ -->
+  <g transform="translate(430,58)">
+    <text class="r2" x="60" y="-14">ring 2 · identity</text>
+    <!-- brandkit: three overlapping boards -->
+    <g transform="translate(0,0)">
+      <rect class="amber" x="-16" y="-4" width="30" height="22" rx="2"/>
+      <rect class="amber" x="-10" y="2" width="30" height="22" rx="2"/>
+      <rect class="amber" x="-4" y="8" width="30" height="22" rx="2"/>
+      <text class="sub" x="10" y="52">brandkit</text>
+    </g>
+    <!-- brand-illustrate: frame with amber sun -->
+    <g transform="translate(120,0)">
+      <rect class="amber" x="-16" y="-2" width="36" height="28" rx="2"/>
+      <circle class="amberf" cx="-4" cy="8" r="4"/>
+      <path class="amber" d="M-16 20 L-4 10 L4 18 L12 12 L20 20"/>
+      <text class="sub" x="2" y="52">brand-illustrate</text>
+    </g>
+  </g>
+  <!-- ring2 -> tokens -->
+  <path class="dim" d="M440 132 C 440 168, 505 172, 519 196" marker-end="url(#tip)"/>
+  <path class="dim" d="M552 132 C 552 168, 548 176, 541 196" marker-end="url(#tip)"/>
+
+  <!-- ============ The chain ============ -->
+  <!-- node centres: 130, 330, 530, 730, 930, 1130  at y=250 -->
+
+  <!-- 1 jtbd — concentric target -->
+  <g transform="translate(130,250)">
+    <circle class="ring" r="46"/>
+    <circle class="line" r="20"/>
+    <circle class="line" r="11"/>
+    <circle class="amberf" r="4"/>
+    <text class="lbl" y="76">jtbd</text>
+    <text class="sub" y="96">what people hire</text>
+  </g>
+
+  <!-- 2 persona-review — cluster of dots -->
+  <g transform="translate(330,250)">
+    <circle class="ring" r="46"/>
+    <circle class="line" cx="0" cy="-16" r="6"/>
+    <circle class="line" cx="-16" cy="-2" r="6"/>
+    <circle class="amber" cx="16" cy="-2" r="6"/>
+    <circle class="line" cx="-9" cy="16" r="6"/>
+    <circle class="line" cx="9" cy="16" r="6"/>
+    <text class="lbl" y="76">persona-review</text>
+    <text class="sub" y="96">who reacts, and how</text>
+  </g>
+
+  <!-- 3 design-tokens — swatch row -->
+  <g transform="translate(530,250)">
+    <circle class="ring" r="46"/>
+    <rect class="line" x="-26" y="-11" width="16" height="22" rx="1.5"/>
+    <rect class="line" x="-8" y="-11" width="16" height="22" rx="1.5"/>
+    <rect class="amber" x="10" y="-11" width="16" height="22" rx="1.5"/>
+    <text class="lbl" y="76">design-tokens</text>
+    <text class="sub" y="96">the system</text>
+  </g>
+
+  <!-- 4 layout-rules — grid with one amber cell -->
+  <g transform="translate(730,250)">
+    <circle class="ring" r="46"/>
+    <rect class="line" x="-24" y="-24" width="48" height="48" rx="2"/>
+    <path class="line" d="M-8 -24 V24 M8 -24 V24 M-24 -8 H24 M-24 8 H24"/>
+    <rect class="amber" x="8" y="-24" width="16" height="16"/>
+    <text class="lbl" y="76">layout-rules</text>
+    <text class="sub" y="96">execution constraints</text>
+  </g>
+
+  <!-- 5 nielsen-heuristics — checklist -->
+  <g transform="translate(930,250)">
+    <circle class="ring" r="46"/>
+    <rect class="line" x="-24" y="-26" width="48" height="52" rx="3"/>
+    <circle class="line" cx="-13" cy="-13" r="4"/><path class="line" d="M-4 -13 H15"/>
+    <circle class="amber" cx="-13" cy="0" r="4"/><path class="line" d="M-4 0 H15"/>
+    <circle class="line" cx="-13" cy="13" r="4"/><path class="line" d="M-4 13 H15"/>
+    <text class="lbl" y="76">nielsen-heuristics</text>
+    <text class="sub" y="96">the classic audit</text>
+  </g>
+
+  <!-- 6 before-after — split rectangle -->
+  <g transform="translate(1130,250)">
+    <circle class="ring" r="46"/>
+    <rect class="line" x="-26" y="-19" width="26" height="38"/>
+    <rect class="amber" x="0" y="-19" width="26" height="38"/>
+    <text class="lbl" y="76">before-after</text>
+    <text class="sub" y="96">proof</text>
+  </g>
+
+  <!-- arrows between nodes -->
+  <path class="arrow" d="M180 250 H278" marker-end="url(#tip)"/>
+  <path class="arrow" d="M380 250 H478" marker-end="url(#tip)"/>
+  <path class="arrow" d="M580 250 H678" marker-end="url(#tip)"/>
+  <path class="arrow" d="M780 250 H878" marker-end="url(#tip)"/>
+  <path class="arrow" d="M980 250 H1078" marker-end="url(#tip)"/>
+
+  <!-- loop back: before-after -> jtbd -->
+  <path class="arrow" d="M1176 268 C 1300 400, 1240 420, 900 420 L 260 420 C 150 420, 108 350, 116 292" marker-end="url(#tip)"/>
+  <text class="sub" x="640" y="444">next iteration — every change re-enters as evidence</text>
+</svg>

@@ -1,6 +1,6 @@
 # Humane Agentic Design
 
-![The humane cycle — jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back; brandkit and brand-illustrate feed the token set](assets/cycle.svg)
+![Humane Agentic Design — the cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back to the start; brandkit feeds the token set and brand-illustrate renders from it](assets/hero.png)
 
 > Taught live at the **[Agentic Design Lab](https://ai-design.salient.community/)** — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method.
 

@@ -1,52 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 480" width="1440" height="480" role="img" aria-label="The humane cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back; with Ring 2 skills brandkit and brand-illustrate feeding design-tokens.">
-  <title>The humane cycle</title>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 640" width="1440" height="640" role="img" aria-label="Humane Agentic Design — the cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back; brandkit and brand-illustrate feed the token set.">
+  <title>Humane Agentic Design — the cycle</title>
   <defs>
     <style>
-      .bg   { fill: #08080a; }
-      .line { fill: none; stroke: #e9e6df; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
-      .amber{ fill: none; stroke: #e08b2c; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
-      .amberf { fill: #e08b2c; }
-      .dim  { fill: none; stroke: #4a4a50; stroke-width: 1; stroke-linecap: round; stroke-dasharray: 3 4; }
-      .ring { fill: none; stroke: #3a3a41; stroke-width: 1; }
-      .lbl  { fill: #e9e6df; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 15px; letter-spacing: .02em; text-anchor: middle; }
-      .sub  { fill: #7d7d86; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; text-anchor: middle; }
-      .r2   { fill: #e08b2c; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; text-anchor: middle; }
-      .arrow{ fill: none; stroke: #6f6f78; stroke-width: 1.1; stroke-linecap: round; }
+      .bg    { fill: #08080a; }
+      .line  { fill: none; stroke: #e9e6df; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+      .amber { fill: none; stroke: #e08b2c; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
+      .amberf{ fill: #e08b2c; }
+      .dim   { fill: none; stroke: #4a4a50; stroke-width: 1; stroke-linecap: round; stroke-dasharray: 3 4; }
+      .ring  { fill: none; stroke: #3a3a41; stroke-width: 1; }
+      .rule  { fill: none; stroke: #26262c; stroke-width: 1; }
+      .arrow { fill: none; stroke: #6f6f78; stroke-width: 1.1; stroke-linecap: round; }
+
+      text   { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .title { fill: #e9e6df; font-size: 38px; letter-spacing: .14em; }
+      .title tspan.hl { fill: #e08b2c; }
+      .tag   { fill: #7d7d86; font-size: 13px; letter-spacing: .09em; }
+      .meta  { fill: #55555e; font-size: 12px; letter-spacing: .12em; text-anchor: end; }
+      .num   { fill: #e08b2c; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
+      .lbl   { fill: #e9e6df; font-size: 15px; letter-spacing: .02em; text-anchor: middle; }
+      .sub   { fill: #7d7d86; font-size: 11.5px; text-anchor: middle; }
+      .r2    { fill: #e08b2c; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
+      .foot  { fill: #55555e; font-size: 11.5px; letter-spacing: .06em; text-anchor: middle; }
     </style>
     <marker id="tip" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M1 1 L6.5 4 L1 7" fill="none" stroke="#6f6f78" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
+    <marker id="tipdim" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M1 1 L6.5 4 L1 7" fill="none" stroke="#4a4a50" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
   </defs>
 
-  <rect class="bg" width="1440" height="480" rx="14"/>
+  <rect class="bg" width="1440" height="640" rx="14"/>
 
-  <!-- ============ Ring 2 (above, feeding design-tokens) ============ -->
-  <g transform="translate(430,58)">
-    <text class="r2" x="60" y="-14">ring 2 · identity</text>
-    <!-- brandkit: three overlapping boards -->
-    <g transform="translate(0,0)">
-      <rect class="amber" x="-16" y="-4" width="30" height="22" rx="2"/>
-      <rect class="amber" x="-10" y="2" width="30" height="22" rx="2"/>
-      <rect class="amber" x="-4" y="8" width="30" height="22" rx="2"/>
-      <text class="sub" x="10" y="52">brandkit</text>
-    </g>
-    <!-- brand-illustrate: frame with amber sun -->
-    <g transform="translate(120,0)">
-      <rect class="amber" x="-16" y="-2" width="36" height="28" rx="2"/>
-      <circle class="amberf" cx="-4" cy="8" r="4"/>
-      <path class="amber" d="M-16 20 L-4 10 L4 18 L12 12 L20 20"/>
-      <text class="sub" x="2" y="52">brand-illustrate</text>
-    </g>
+  <!-- ============ wordmark ============ -->
+  <text class="title" x="80" y="112"><tspan class="hl">humane</tspan> agentic design</text>
+  <text class="tag" x="82" y="146">a design method, installed next to the agent</text>
+  <text class="meta" x="1360" y="112">9 skills · 1 agent</text>
+  <text class="meta" x="1360" y="134">portable across agentic stacks</text>
+  <path class="rule" d="M80 182 H1360"/>
+
+  <!-- ============ brand identity — one in, one out of the token set ============ -->
+  <text class="r2" x="530" y="222">BRAND IDENTITY</text>
+
+  <!-- brandkit: stacked boards — feeds INTO design-tokens -->
+  <g transform="translate(400,258)">
+    <rect class="amber" x="-16" y="-4" width="30" height="22" rx="2"/>
+    <rect class="amber" x="-10" y="2" width="30" height="22" rx="2"/>
+    <rect class="amber" x="-4" y="8" width="30" height="22" rx="2"/>
+    <text class="sub" x="8" y="52">brandkit</text>
+    <text class="sub" x="8" y="70">explores the direction</text>
   </g>
-  <!-- ring2 -> tokens -->
-  <path class="dim" d="M440 132 C 440 168, 505 172, 519 196" marker-end="url(#tip)"/>
-  <path class="dim" d="M552 132 C 552 168, 548 176, 541 196" marker-end="url(#tip)"/>
+  <path class="dim" d="M410 336 C 410 358, 480 356, 498 372" marker-end="url(#tipdim)"/>
 
-  <!-- ============ The chain ============ -->
-  <!-- node centres: 130, 330, 530, 730, 930, 1130  at y=250 -->
+  <!-- brand-illustrate: framed scene — consumes design-tokens -->
+  <g transform="translate(660,258)">
+    <rect class="amber" x="-18" y="-2" width="36" height="28" rx="2"/>
+    <circle class="amberf" cx="-7" cy="7" r="3.6"/>
+    <path class="amber" d="M-18 20 L-6 10 L2 18 L10 12 L18 20"/>
+    <text class="sub" x="0" y="52">brand-illustrate</text>
+    <text class="sub" x="0" y="70">renders the assets</text>
+  </g>
+  <path class="dim" d="M562 372 C 580 356, 650 358, 655 336" marker-end="url(#tipdim)"/>
 
-  <!-- 1 jtbd — concentric target -->
-  <g transform="translate(130,250)">
+  <!-- ============ the chain — centres x: 130 330 530 730 930 1130, y 420 ============ -->
+
+  <g transform="translate(130,420)">
+    <text class="num" y="-62">01</text>
     <circle class="ring" r="46"/>
     <circle class="line" r="20"/>
     <circle class="line" r="11"/>
@@ -55,20 +74,20 @@
     <text class="sub" y="96">what people hire</text>
   </g>
 
-  <!-- 2 persona-review — cluster of dots -->
-  <g transform="translate(330,250)">
+  <g transform="translate(330,420)">
+    <text class="num" y="-62">02</text>
     <circle class="ring" r="46"/>
-    <circle class="line" cx="0" cy="-16" r="6"/>
-    <circle class="line" cx="-16" cy="-2" r="6"/>
-    <circle class="amber" cx="16" cy="-2" r="6"/>
+    <circle class="line" cx="0" cy="-17" r="6"/>
+    <circle class="line" cx="-17" cy="-3" r="6"/>
+    <circle class="amber" cx="17" cy="-3" r="6"/>
     <circle class="line" cx="-9" cy="16" r="6"/>
     <circle class="line" cx="9" cy="16" r="6"/>
     <text class="lbl" y="76">persona-review</text>
     <text class="sub" y="96">who reacts, and how</text>
   </g>
 
-  <!-- 3 design-tokens — swatch row -->
-  <g transform="translate(530,250)">
+  <g transform="translate(530,420)">
+    <text class="num" y="-62">03</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-26" y="-11" width="16" height="22" rx="1.5"/>
     <rect class="line" x="-8" y="-11" width="16" height="22" rx="1.5"/>
@@ -77,8 +96,8 @@
     <text class="sub" y="96">the system</text>
   </g>
 
-  <!-- 4 layout-rules — grid with one amber cell -->
-  <g transform="translate(730,250)">
+  <g transform="translate(730,420)">
+    <text class="num" y="-62">04</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-24" y="-24" width="48" height="48" rx="2"/>
     <path class="line" d="M-8 -24 V24 M8 -24 V24 M-24 -8 H24 M-24 8 H24"/>
@@ -87,8 +106,8 @@
     <text class="sub" y="96">execution constraints</text>
   </g>
 
-  <!-- 5 nielsen-heuristics — checklist -->
-  <g transform="translate(930,250)">
+  <g transform="translate(930,420)">
+    <text class="num" y="-62">05</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-24" y="-26" width="48" height="52" rx="3"/>
     <circle class="line" cx="-13" cy="-13" r="4"/><path class="line" d="M-4 -13 H15"/>
@@ -98,8 +117,8 @@
     <text class="sub" y="96">the classic audit</text>
   </g>
 
-  <!-- 6 before-after — split rectangle -->
-  <g transform="translate(1130,250)">
+  <g transform="translate(1130,420)">
+    <text class="num" y="-62">06</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-26" y="-19" width="26" height="38"/>
     <rect class="amber" x="0" y="-19" width="26" height="38"/>
@@ -107,14 +126,14 @@
     <text class="sub" y="96">proof</text>
   </g>
 
-  <!-- arrows between nodes -->
-  <path class="arrow" d="M180 250 H278" marker-end="url(#tip)"/>
-  <path class="arrow" d="M380 250 H478" marker-end="url(#tip)"/>
-  <path class="arrow" d="M580 250 H678" marker-end="url(#tip)"/>
-  <path class="arrow" d="M780 250 H878" marker-end="url(#tip)"/>
-  <path class="arrow" d="M980 250 H1078" marker-end="url(#tip)"/>
+  <!-- links -->
+  <path class="arrow" d="M180 420 H278" marker-end="url(#tip)"/>
+  <path class="arrow" d="M380 420 H478" marker-end="url(#tip)"/>
+  <path class="arrow" d="M580 420 H678" marker-end="url(#tip)"/>
+  <path class="arrow" d="M780 420 H878" marker-end="url(#tip)"/>
+  <path class="arrow" d="M980 420 H1078" marker-end="url(#tip)"/>
 
-  <!-- loop back: before-after -> jtbd -->
-  <path class="arrow" d="M1176 268 C 1300 400, 1240 420, 900 420 L 260 420 C 150 420, 108 350, 116 292" marker-end="url(#tip)"/>
-  <text class="sub" x="640" y="444">next iteration — every change re-enters as evidence</text>
+  <!-- loop back -->
+  <path class="arrow" d="M1176 420 H1194 Q1210 420 1210 436 V546 Q1210 562 1194 562 H72 Q56 562 56 546 V436 Q56 420 72 420 H78" marker-end="url(#tip)"/>
+  <text class="foot" x="720" y="600">next iteration — every change re-enters as evidence</text>
 </svg>

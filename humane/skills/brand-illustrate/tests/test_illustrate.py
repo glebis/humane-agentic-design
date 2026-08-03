@@ -5,6 +5,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+import unittest.mock
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "scripts"))
 import illustrate  # noqa: E402
@@ -147,15 +148,70 @@ class PlatformTests(unittest.TestCase):
 
 
 class BackendTests(unittest.TestCase):
-    def test_no_backend_message(self):
-        scaffold = illustrate.build_scaffold(_tree(), {"subject": "x"})
+    def test_no_backend_writes_prompts_instead_of_stopping(self):
+        scaffold = illustrate.build_scaffold(
+            _tree(), {"subject": "x", "platforms": ["og-image", "square-post"]})
         with tempfile.TemporaryDirectory() as d:
             res = illustrate.run_batch(scaffold, str(_tokens_copy(d)), d, found={})
-        self.assertFalse(res["ok"])
-        self.assertEqual(res["error"], "no-backend")
-        self.assertIn("gpt-image-2", res["message"])
-        self.assertIn("nano-banana", res["message"])
-        self.assertIn("npx skills add", res["message"])
+            # the batch succeeds, it just did not generate
+            self.assertTrue(res["ok"])
+            self.assertFalse(res["generated"])
+            self.assertEqual(res["error"], "no-backend")
+            self.assertIsNone(res["backend"])
+            # the prompts — the expensive part — are on disk
+            prompts = pathlib.Path(res["prompts"])
+            self.assertTrue(prompts.exists())
+            body = prompts.read_text()
+            self.assertIn(scaffold["items"][0]["prompt"], body)
+            self.assertIn("1200x630", body)   # the size to paste it at
+            # one entry per item x platform, same as a real run
+            self.assertEqual(len(res["outputs"]),
+                             len(scaffold["items"]) * len(scaffold["platforms"]))
+            # and it is resumable
+            self.assertTrue(pathlib.Path(res["metadata"]).exists())
+            self.assertTrue(pathlib.Path(res["recipe"]).exists())
+
+    def test_no_backend_message_says_how_to_proceed(self):
+        msg = illustrate.NO_BACKEND_MESSAGE
+        self.assertIn("gpt-image-2", msg)
+        self.assertIn("nano-banana", msg)
+        self.assertIn("npx skills add", msg)
+        self.assertIn("HUMANE_IMAGE_BACKEND", msg)
+
+
+class BackendResolutionTests(unittest.TestCase):
+    def test_env_override_wins_and_is_reported(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = pathlib.Path(d) / "my_generator.py"
+            script.write_text("# stub\n")
+            env = {"HUMANE_IMAGE_BACKEND": f"gpt-image-2:{script}"}
+            with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
+                found = illustrate.probe_backends()
+                self.assertEqual(found["gpt-image-2"], str(script))
+                self.assertTrue(illustrate.backend_search_report()["override_valid"])
+
+    def test_env_override_pointing_nowhere_is_ignored_not_fatal(self):
+        env = {"HUMANE_IMAGE_BACKEND": "gpt-image-2:/nope/missing.py"}
+        with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
+            report = illustrate.backend_search_report()
+            self.assertFalse(report["override_valid"])
+
+    def test_custom_skills_dir_is_searched(self):
+        with tempfile.TemporaryDirectory() as d:
+            script = pathlib.Path(d) / "nano-banana" / "scripts" / "nano_banana.py"
+            script.parent.mkdir(parents=True)
+            script.write_text("# stub\n")
+            env = {"HUMANE_SKILLS_DIR": d, "HUMANE_IMAGE_BACKEND": ""}
+            with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
+                self.assertEqual(illustrate.probe_backends().get("nano-banana"),
+                                 str(script))
+
+    def test_search_is_not_claude_specific(self):
+        roots = " ".join(illustrate.backend_search_report()["roots_searched"])
+        self.assertIn(".codex", roots)
+        self.assertIn(".agents", roots)
+        # Claude is one candidate among several, not the assumption
+        self.assertIn(".claude", roots)
 
     def test_pick_backend_auto_prefers_seeded(self):
         found = {"nano-banana": "/n", "gpt-image-2": "/g"}

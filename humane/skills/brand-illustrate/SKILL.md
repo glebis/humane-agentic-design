@@ -11,8 +11,29 @@ walks the user through a short questionnaire — JTBD-style, one step at a time 
 scaffold prompts that stay on-brand and generate a *set that reads as one family*.
 
 Generators live **outside** the plugin. This skill is a thin adapter: it composes
-the prompt and shells out to whichever backend is installed. If none is, it says
-which to install and stops — it never bundles a generator.
+the prompt and shells out to whichever backend is installed. It never bundles a
+generator, an API client, or your keys.
+
+**No backend is not a dead end.** The prompts are what this skill actually
+produces — assembled from the palette, the brand block, and the merged de-slop
+negatives — and they are the same whether or not an API call follows. With no
+generator present, a run writes `prompts.md` with every final prompt at its
+target size, plus `metadata.json` and the recipe. Paste them into any image tool,
+or install a backend and resume with `run --recipe`.
+
+### Finding a backend
+
+Discovery makes no assumption about which agent you run. First hit wins:
+
+| # | Source | |
+| --- | --- | --- |
+| 1 | `HUMANE_IMAGE_BACKEND=<name>:/path/to/script` | explicit override, always wins |
+| 2 | `HUMANE_SKILLS_DIR=/one:/two` | extra skill roots to search |
+| 3 | Known agent skill roots | `~/.claude/skills`, `~/.codex/skills`, `~/.config/skills`, project `.agents/skills` and `.claude/skills`, and the plugin's own tree |
+| 4 | `PATH` | a generator packaged as a plain executable |
+
+`scripts/illustrate.py backends -v` prints what was found and every location
+searched — use it before concluding anything is missing.
 
 ## What you need first
 
@@ -170,13 +191,15 @@ After generation, offer review:
 
 ## Guardrails (do not violate)
 
-- Generators stay outside the plugin. If none is installed, relay the install
-  message and stop — never bundle or reimplement a generator.
+- Generators stay outside the plugin — never bundle or reimplement one, and
+  never handle an API key. With none installed, hand back `prompts.md` and the
+  resume command; do not treat it as a failure.
 - No style invention. When the tokens are silent on art direction, ASK (Step 2).
 - Fast path for one-off images: Step 1 only.
-- Portability: the core flow names no Claude-only tool. `illustrate.py` is
-  stdlib-only and reads the token file directly (it does not import `design-tokens`),
-  so the skill runs on any agent that installed it alone.
+- Portability: the core flow names no Claude-only tool, and backend discovery
+  names no single agent's directory. `illustrate.py` is stdlib-only and reads the
+  token file directly (it does not import `design-tokens`), so the skill runs on
+  any agent that installed it alone.
 
 ## Tests
 

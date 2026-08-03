@@ -1,0 +1,3 @@
+interface:
+  display_name: "Setup"
+  short_description: "Check, configure, and complete a humane install"

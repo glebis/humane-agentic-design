@@ -10,6 +10,8 @@ Agent-produced interface slop is a method problem, not a model problem. A capabl
 
 Each skill knows its place in the method. Run them in order for a new project, or reach for any one on its own.
 
+**Start with `humane:setup`** if this is a fresh machine, or if a skill ever complains it cannot find something. It resolves the configuration (corpus root, token base, image backend, task-export target, language — project file over global over environment over default), checks every dependency the cycle needs, and prints the exact command for each gap. It diagnoses read-only first and installs only what you confirm — and it never touches an API key.
+
 ### 1. `jtbd` — what people are hiring the product to do
 
 A terminal-first Jobs-to-Be-Done engine. It runs a focused interview one question at a time, kills jargon as you speak it, and captures the four switching forces — Push (what hurts today), Pull (what attracts), Habit (what keeps them stuck), Anxiety (what scares them off). It also ingests material you already have: voice transcripts, customer-review exports, sales-call notes.

@@ -15,10 +15,15 @@ generation into a *coherent set*:
     31-39) with the brand's own avoid/negativePrompt and any user negatives;
   - resolves platform presets (og-image, 16:9 thumbnail, square post, deck
     cover, spot/UI) into a size manifest;
-  - probes for the gpt-image-2 / nano-banana backend scripts (generators stay
-    OUTSIDE the plugin — guardrail) in both ~/.claude/skills and plugin-relative
-    locations, shells out, and writes a batch dir with metadata.json + recipe.json;
-  - degrades with a clear install message when NO backend is found.
+  - discovers the gpt-image-2 / nano-banana backend scripts (generators stay
+    OUTSIDE the plugin — guardrail) without assuming any one agent's layout:
+    HUMANE_IMAGE_BACKEND, then HUMANE_SKILLS_DIR, then the known agent skill
+    roots (Claude Code, Codex, XDG, project .agents/.claude), then a matching
+    executable on PATH — shells out and writes a batch dir with metadata.json
+    + recipe.json;
+  - when NO backend is found it does not stop: it writes prompts.md with every
+    final on-brand prompt plus metadata and the recipe, so the work survives and
+    the batch resumes with `run --recipe` once a generator exists.
 
 Design note (adapter shape): the backend *scripts* are the stable, documented
 public surface (their SKILL.md publishes the CLI). Probing + shelling them here
@@ -28,7 +33,7 @@ or importing dtokens internals (private API, breaks portability).
 
 CLI:
   illustrate.py platforms                       # list platform presets
-  illustrate.py backends                         # probe available backends
+  illustrate.py backends [-v]                    # what was found, and where we looked
   illustrate.py scaffold --tokens F --answers A  # print resolved scaffold JSON
   illustrate.py run --tokens F --answers A [--out-dir D] [--dry-run]
   illustrate.py run --recipe recipe.json [--out-dir D]   # reuse last recipe
@@ -38,8 +43,10 @@ import argparse
 import colorsys
 import datetime
 import json
+import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
 
@@ -71,19 +78,53 @@ DESLOP_NEGATIVES = [
     "no lens flare, no neon glow, no bokeh, no stock-photo people",          # de-slop / brand
 ]
 
-# Backend script probe locations (first hit wins). Both plugin-relative and the
-# personal ~/.claude/skills install are checked.
+# Backend resolution. The generators live outside the plugin, so we discover
+# them rather than depend on them — and the search must not assume any one
+# agent's directory layout. Precedence, first hit wins:
+#
+#   1. HUMANE_IMAGE_BACKEND=<name>:<path>  — an explicit override, always wins
+#   2. HUMANE_SKILLS_DIR                   — a colon-separated list of skill roots
+#   3. the agent skill dirs we know about  — Claude Code, Codex, the `skills`
+#      CLI convention, and this plugin's own tree
+#   4. an executable of that name on PATH  — a generator packaged as a CLI
+#
+# Nothing here is Claude-specific: ~/.claude/skills is one candidate among
+# several, not the assumption.
 _PLUGIN_ROOT = pathlib.Path(__file__).resolve().parents[3]  # .../humane
-_BACKEND_CANDIDATES = {
-    "gpt-image-2": [
-        pathlib.Path("~/.claude/skills/gpt-image-2/scripts/gpt_image_2.py").expanduser(),
-        _PLUGIN_ROOT / "skills" / "gpt-image-2" / "scripts" / "gpt_image_2.py",
-    ],
-    "nano-banana": [
-        pathlib.Path("~/.claude/skills/nano-banana/scripts/nano_banana.py").expanduser(),
-        _PLUGIN_ROOT / "skills" / "nano-banana" / "scripts" / "nano_banana.py",
-    ],
+
+# Where agents keep skills, relative to $HOME unless absolute.
+_SKILL_ROOTS = [
+    pathlib.Path("~/.claude/skills"),      # Claude Code
+    pathlib.Path("~/.codex/skills"),       # Codex
+    pathlib.Path("~/.config/skills"),      # XDG-ish
+    pathlib.Path(".agents/skills"),        # `npx skills add`, project scope
+    pathlib.Path(".claude/skills"),        # project scope
+    _PLUGIN_ROOT / "skills",               # bundled alongside humane, if ever
+]
+
+# script filename within a skill dir, and the PATH executable name
+_BACKENDS = {
+    "gpt-image-2": {"script": "gpt_image_2.py", "exe": "gpt-image-2"},
+    "nano-banana": {"script": "nano_banana.py", "exe": "nano-banana"},
 }
+
+
+def _env_override():
+    """HUMANE_IMAGE_BACKEND as 'name' or 'name:/path/to/script'."""
+    raw = os.environ.get("HUMANE_IMAGE_BACKEND", "").strip()
+    if not raw:
+        return None, None
+    name, _, path = raw.partition(":")
+    return name.strip() or None, (path.strip() or None)
+
+
+def _skill_roots():
+    roots = []
+    for entry in os.environ.get("HUMANE_SKILLS_DIR", "").split(os.pathsep):
+        if entry.strip():
+            roots.append(pathlib.Path(entry.strip()))
+    roots.extend(_SKILL_ROOTS)
+    return [r.expanduser() for r in roots]
 
 # Which backends carry a real seed flag (for series coherence). nano-banana has
 # none, so we anchor its series on the first output as a reference image.
@@ -441,13 +482,47 @@ def load_refs(refs_dir):
 # Backend probing + command building
 # ---------------------------------------------------------------------------
 def probe_backends():
+    """Return {backend_name: script-path-or-executable}. See the precedence
+    note at _SKILL_ROOTS; discovery never assumes a single agent's layout."""
     found = {}
-    for name, cands in _BACKEND_CANDIDATES.items():
-        for c in cands:
-            if pathlib.Path(c).exists():
-                found[name] = str(c)
+
+    # 1. explicit override
+    env_name, env_path = _env_override()
+    if env_name and env_path and pathlib.Path(env_path).expanduser().exists():
+        found[env_name] = str(pathlib.Path(env_path).expanduser())
+
+    roots = _skill_roots()
+    for name, spec in _BACKENDS.items():
+        if name in found:
+            continue
+        # 2-3. a skill checkout under any known root
+        for root in roots:
+            cand = root / name / "scripts" / spec["script"]
+            if cand.exists():
+                found[name] = str(cand)
                 break
+        else:
+            # 4. a generator installed as a plain executable
+            exe = shutil.which(spec["exe"])
+            if exe:
+                found[name] = exe
     return found
+
+
+def backend_search_report():
+    """What was searched and what was found — for `backends` and for setup's
+    doctor. Reporting the probed locations turns 'no backend' from a dead end
+    into something the user can act on."""
+    env_name, env_path = _env_override()
+    return {
+        "found": probe_backends(),
+        "env": {"HUMANE_IMAGE_BACKEND": os.environ.get("HUMANE_IMAGE_BACKEND") or None,
+                "HUMANE_SKILLS_DIR": os.environ.get("HUMANE_SKILLS_DIR") or None},
+        "override_valid": bool(env_name and env_path
+                               and pathlib.Path(env_path).expanduser().exists()),
+        "roots_searched": [str(r) for r in _skill_roots()],
+        "backends_known": sorted(_BACKENDS),
+    }
 
 
 def pick_backend(requested, found):
@@ -461,16 +536,85 @@ def pick_backend(requested, found):
 
 
 NO_BACKEND_MESSAGE = (
-    "No image backend found. brand-illustrate is a thin adapter; the generators "
-    "live outside the plugin. Install ONE of them, then re-run:\n"
-    "  - gpt-image-2 (has a seed flag, best for coherent series)\n"
-    "  - nano-banana (native reference-image style transfer)\n"
-    "Install channels:\n"
-    "  Claude Code: place the skill under ~/.claude/skills/<name>/\n"
-    "  Any agent:   npx skills add <source>  (then point the agent at it)\n"
-    "Probed locations: ~/.claude/skills/<name>/scripts/ and "
-    "<plugin>/skills/<name>/scripts/."
+    "No image backend found — writing the prompts instead of stopping.\n"
+    "brand-illustrate is a thin adapter; the generators live outside the plugin "
+    "so it never bundles an API client or your keys.\n"
+    "\n"
+    "Every prompt below is final and on-brand. Paste one into any image tool you "
+    "already use, or install a backend and re-run to generate them here:\n"
+    "  - gpt-image-2  (carries a real --seed; best for a coherent series)\n"
+    "  - nano-banana  (native reference-image style transfer)\n"
+    "\n"
+    "Point at one you already have:  HUMANE_IMAGE_BACKEND=<name>:/path/to/script\n"
+    "Add a skills directory to the search:  HUMANE_SKILLS_DIR=/path/one:/path/two\n"
+    "Or install into any agent:  npx skills add <source>"
 )
+
+
+def prompts_only(scaffold, out_dir, tokens_path=None, reason="no-backend"):
+    """The soft landing: no generator, so emit what one would have been given.
+
+    A batch that cannot run is still worth something. The prompts are the part
+    this skill actually produces — assembled from the token palette, the brand
+    block, and the merged de-slop negatives — and they are identical whether or
+    not an API call follows. Stopping would throw that away and leave the user
+    with nothing but an install instruction.
+
+    Writes the same batch layout as run_batch (timestamped dir, metadata.json,
+    saved recipe) so the run resumes with `run --recipe` once a backend exists.
+    """
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    base = _slug(scaffold["answers"].get("subject", "batch"))
+    batch_dir = pathlib.Path(out_dir).expanduser() / f"{stamp}-{base}"
+    batch_dir.mkdir(parents=True, exist_ok=True)
+
+    entries, lines = [], []
+    for item in scaffold["items"]:
+        for plat in scaffold["platforms"]:
+            entries.append({
+                "file": None, "platform": plat["name"],
+                "size": f"{plat['w']}x{plat['h']}", "subject": item["subject"],
+                "prompt": item["prompt"], "command": None, "returncode": None,
+            })
+
+    lines += [f"# {base} — {len(entries)} prompt(s)", "",
+              "brand-illustrate found no image backend, so it wrote the prompts",
+              "instead of stopping. Each one is final and on-brand: paste it into",
+              "any image tool at the size given, or install a backend and re-run",
+              "",
+              f"    illustrate.py run --recipe {_recipe_path(tokens_path) or '<recipe>'} --out-dir <dir>",
+              ""]
+    for i, e in enumerate(entries, 1):
+        lines += [f"## {i}. {e['subject']} — {e['platform']} ({e['size']})", "",
+                  "```", e["prompt"], "```", ""]
+    (batch_dir / "prompts.md").write_text("\n".join(lines), encoding="utf-8")
+
+    metadata = {
+        "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
+        "backend": None, "reason": reason,
+        "budget": scaffold.get("budget"), "seed": scaffold.get("seed"),
+        "tokens": str(pathlib.Path(tokens_path).expanduser()) if tokens_path else None,
+        "series_style": scaffold.get("series_style"),
+        "negatives": scaffold.get("negatives"),
+        "platforms": [p["name"] for p in scaffold["platforms"]],
+        "outputs": entries,
+    }
+    (batch_dir / "metadata.json").write_text(
+        json.dumps(metadata, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    recipe = save_recipe(scaffold, tokens_path) if tokens_path else None
+    return {"ok": True, "generated": False, "error": reason, "backend": None,
+            "message": NO_BACKEND_MESSAGE, "batch_dir": str(batch_dir),
+            "prompts": str(batch_dir / "prompts.md"),
+            "metadata": str(batch_dir / "metadata.json"),
+            "recipe": recipe, "outputs": entries}
+
+
+def _recipe_path(tokens_path):
+    if not tokens_path:
+        return None
+    p = pathlib.Path(tokens_path).expanduser()
+    return str(p.with_name(p.name.replace(".tokens.json", "") + ".illustrate-recipe.json"))
 
 
 def build_command(script, backend, prompt, out_path, platform, size, draft,
@@ -513,7 +657,9 @@ def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.r
     found = probe_backends() if found is None else found
     backend = pick_backend(scaffold.get("backend"), found)
     if not backend:
-        return {"ok": False, "error": "no-backend", "message": NO_BACKEND_MESSAGE}
+        # No generator available. Emit the prompts rather than throwing the
+        # batch away — see prompts_only.
+        return prompts_only(scaffold, out_dir, tokens_path)
     script = found[backend]
     draft = scaffold.get("budget", "draft") != "final"
     seed = scaffold.get("seed")
@@ -743,7 +889,9 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("platforms")
-    sub.add_parser("backends")
+    sb = sub.add_parser("backends")
+    sb.add_argument("-v", "--verbose", action="store_true",
+                    help="also print every location searched")
     ga = sub.add_parser("gallery")
     ga.add_argument("--dir", required=True, help="root directory containing batches / images")
     ga.add_argument("-o", "--out", default=None, help="output html (default <dir>/gallery.html)")
@@ -770,12 +918,26 @@ def main(argv=None):
         print(write_gallery(args.dir, args.out))
         return 0
     if args.cmd == "backends":
-        found = probe_backends()
+        report = backend_search_report()
+        found = report["found"]
+        for name in report["backends_known"]:
+            path = found.get(name)
+            print(f"  {'OK  ' if path else 'none'}  {name:14} {path or '-'}")
+        env = report["env"]
+        if env["HUMANE_IMAGE_BACKEND"]:
+            state = "valid" if report["override_valid"] else "set, but the path does not exist"
+            print(f"\nHUMANE_IMAGE_BACKEND={env['HUMANE_IMAGE_BACKEND']}  ({state})")
+        if env["HUMANE_SKILLS_DIR"]:
+            print(f"HUMANE_SKILLS_DIR={env['HUMANE_SKILLS_DIR']}")
+        if args.verbose:
+            print("\nsearched:")
+            for r in report["roots_searched"]:
+                print(f"  {r}/<backend>/scripts/")
+            print("  then any <backend> executable on PATH")
         if not found:
+            print()
             print(NO_BACKEND_MESSAGE)
-            return 1
-        for name, path in found.items():
-            print(f"{name:14} {path}")
+            # Not an error: a run without a backend still writes its prompts.
         return 0
 
     if args.cmd == "scaffold":

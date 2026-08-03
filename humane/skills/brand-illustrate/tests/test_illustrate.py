@@ -56,18 +56,63 @@ class NegativeMergeTests(unittest.TestCase):
     def test_merges_deslop_brand_and_user_without_dupes(self):
         brand = {"avoid": ["stock-photo people"], "negativePrompt": "neon glow"}
         negs = illustrate.merge_negatives(brand, user_negatives=["neon glow", "hands"])
-        # de-slop entries lead
-        self.assertEqual(negs[0], illustrate.DESLOP_NEGATIVES[0])
+        # de-slop clauses lead
+        self.assertEqual(negs[0], illustrate.DESLOP_NEGATIVES[0].split(",")[0].strip())
         # brand + user appended
-        self.assertIn("stock-photo people", negs)
         self.assertIn("hands", negs)
-        # case-insensitive dedupe: "neon glow" appears once
-        self.assertEqual(sum(1 for n in negs if n.lower() == "neon glow"), 1)
+        # "neon glow" is already a de-slop ban ("no neon glow"), so the brand's
+        # bare restatement collapses into it — the ban appears exactly once.
+        glow = illustrate._neg_key("neon glow")
+        self.assertEqual(sum(1 for n in negs if illustrate._neg_key(n) == glow), 1)
 
     def test_deslop_always_present(self):
+        """Every de-slop ban survives the merge, at clause granularity."""
         negs = illustrate.merge_negatives({}, None)
-        for d in illustrate.DESLOP_NEGATIVES:
-            self.assertIn(d, negs)
+        keys = [illustrate._neg_key(n) for n in negs]
+        for entry in illustrate.DESLOP_NEGATIVES:
+            for clause in illustrate._split_negatives(entry):
+                self.assertIn(illustrate._neg_key(clause), keys, clause)
+
+    def test_compound_entries_split_into_clauses(self):
+        negs = illustrate.merge_negatives({}, ["no screens, no laptops, no phones"])
+        for want in ("no screens", "no laptops", "no phones"):
+            self.assertIn(want, negs)
+
+    def test_comma_inside_a_clause_is_not_split(self):
+        """Only a comma introducing a new `no ...` ban is a separator."""
+        negs = illustrate.merge_negatives({}, ["no hero of big text, tiny label, gradient"])
+        self.assertIn("no hero of big text, tiny label, gradient", negs)
+
+    def test_semicolon_splits(self):
+        negs = illustrate.merge_negatives({}, ["nothing dead-centre; no gray on color"])
+        self.assertIn("nothing dead-centre", negs)
+        self.assertIn("no gray on color", negs)
+
+    def test_more_specific_restatement_is_dropped(self):
+        """The real defect: brand `avoid` repeating a de-slop ban more verbosely."""
+        brand = {"avoid": ["stock-photo people smiling at laptops"]}
+        negs = illustrate.merge_negatives(brand, None)
+        self.assertIn("no stock-photo people", negs)          # broad de-slop ban kept
+        self.assertNotIn("stock-photo people smiling at laptops", negs)
+
+    def test_plural_and_singular_are_the_same_ban(self):
+        brand = {"avoid": ["glossy 3D blobs and lens flares"]}   # de-slop has "no lens flare"
+        negs = illustrate.merge_negatives(brand, None)
+        self.assertNotIn("glossy 3D blobs and lens flares", negs)
+
+    def test_broader_later_ban_is_kept(self):
+        """A later clause banning strictly more is not redundant."""
+        negs = illustrate.merge_negatives({}, ["no faces"])
+        self.assertIn("no faces", negs)
+
+    def test_no_duplicate_keys_in_output(self):
+        brand = {
+            "avoid": ["stock-photo people smiling at laptops", "glossy 3D blobs and lens flares"],
+            "negativePrompt": "no photorealism, no stock-photo people",
+        }
+        negs = illustrate.merge_negatives(brand, ["no faces", "no screens, no laptops"])
+        keys = [illustrate._neg_key(n) for n in negs]
+        self.assertEqual(len(keys), len(set(keys)))
 
 
 class PlatformTests(unittest.TestCase):

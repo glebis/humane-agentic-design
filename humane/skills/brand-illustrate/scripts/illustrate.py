@@ -39,6 +39,7 @@ import colorsys
 import datetime
 import json
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -244,16 +245,68 @@ def _shape_language(radii):
 # ---------------------------------------------------------------------------
 # Prompt scaffold
 # ---------------------------------------------------------------------------
+# Words carrying no meaning for negative-clause comparison.
+_NEG_FILLER = {
+    "a", "an", "the", "of", "or", "and", "with", "used", "as", "in", "on",
+    "that", "into", "for", "its", "at", "to", "by",
+}
+
+
+def _split_negatives(entry):
+    """Split a compound negative into atomic clauses.
+
+    Sources phrase negatives at wildly different granularity — the de-slop list
+    packs four bans into one string ("no lens flare, no neon glow, no bokeh, no
+    stock-photo people") while a brand `avoid` entry is usually one idea. Without
+    splitting, dedup can only compare whole strings and misses every overlap.
+
+    Splits on `;` always, and on `,` only when the next fragment starts a new
+    ban ("no ..."), so commas *inside* a clause ("a lone acid-green or vermilion
+    pop") survive intact.
+    """
+    parts = [p for chunk in str(entry).split(";") for p in re.split(r",\s*(?=no\b)", chunk)]
+    return [p.strip().strip(".") for p in parts if p.strip().strip(".")]
+
+
+def _neg_key(clause):
+    """Comparison token-set for a clause: lowercased, de-prefixed, singularised."""
+    text = clause.lower().strip()
+    for prefix in ("no ", "nothing ", "avoid ", "never "):
+        if text.startswith(prefix):
+            text = text[len(prefix):]
+            break
+    text = re.sub(r"[^a-z0-9\s-]", " ", text).replace("-", " ")
+    tokens = set()
+    for tok in text.split():
+        if tok in _NEG_FILLER:
+            continue
+        if len(tok) > 3 and tok.endswith("s") and not tok.endswith("ss"):
+            tok = tok[:-1]          # naive singular: flares -> flare
+        tokens.add(tok)
+    return frozenset(tokens)
+
+
 def merge_negatives(brand, user_negatives=None):
     """De-slop list + brand.avoid + brand.negativePrompt + user negatives,
-    de-duplicated, order-stable (de-slop first, then brand, then user)."""
-    out, seen = [], set()
+    de-duplicated, order-stable (de-slop first, then brand, then user).
+
+    Compound entries are split into atomic clauses first, so dedup happens at
+    the granularity a ban is actually expressed at. A clause is dropped when it
+    repeats an earlier one, or when it is a strictly more specific restatement
+    of one ("stock-photo people smiling at laptops" after "stock-photo people")
+    — the broader ban already covers it. A later clause that is *broader* than
+    an earlier one is kept, since it bans strictly more.
+    """
+    out, seen = [], []
     def add(items):
-        for it in items:
-            it = str(it).strip()
-            key = it.lower()
-            if it and key not in seen:
-                seen.add(key); out.append(it)
+        for entry in items:
+            for clause in _split_negatives(entry):
+                key = _neg_key(clause)
+                if not key:
+                    continue
+                if any(key == kept or kept < key for kept in seen):
+                    continue
+                seen.append(key); out.append(clause)
     add(DESLOP_NEGATIVES)
     add(brand.get("avoid") or [])
     if brand.get("negativePrompt"):

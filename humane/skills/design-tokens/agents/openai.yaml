@@ -1,0 +1,3 @@
+interface:
+  display_name: "Design Tokens"
+  short_description: "DTCG token sets, CSS export, and APCA/WCAG contrast checking"

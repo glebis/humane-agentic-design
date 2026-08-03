@@ -1,0 +1,3 @@
+interface:
+  display_name: "Nielsen Heuristics"
+  short_description: "Formal heuristic evaluation with severity and evidence"

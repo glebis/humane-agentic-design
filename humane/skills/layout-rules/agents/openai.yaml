@@ -1,0 +1,3 @@
+interface:
+  display_name: "Layout Rules"
+  short_description: "A defect-class avoid-list for tool and dashboard UIs"

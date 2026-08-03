@@ -1,12 +1,10 @@
 # Humane Agentic Design
 
-![Humane Agentic Design — the cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back to the start; brandkit feeds the token set and brand-illustrate renders from it](assets/hero.png)
+![Humane Agentic Design — the nine-step cycle: jtbd, persona-review with respondent-panel, design-tokens, layout-rules, ux-writing, nielsen-heuristics, walkthrough, review, before-after, looping back so every change re-enters as evidence; brandkit feeds the token set and brand-illustrate renders from it](assets/hero.png)
 
 > Taught live at the **[Agentic Design Lab](https://ai-design.salient.community/)** — a 5-week cohort where designers, PMs, and founders build real products with agents using exactly this method.
 
 Agent-produced interface slop is a method problem, not a model problem. A capable model still ships generic UI when it jumps straight to pixels with no idea who it is building for or under which constraints. The fix is not a better model — it is the method, installed next to the agent: what to build, for whom, under which constraints, then proof it got better. This plugin packages that method as a cycle, for people and for the agents working alongside them.
-
-It is one plugin (`humane`) and its own single-entry marketplace.
 
 ## The cycle
 
@@ -38,6 +36,7 @@ Two pressure tests in different registers — experts reading carefully, and str
 A dependency-free Python core over [DTCG Format Module 2025.10](https://www.designtokens.org/tr/drafts/format/). It scaffolds a token set, validates it, resolves `{alias}` references, and exports CSS custom properties. Its distinctive move is **layering**: a global brand base merged with a project override, so ten projects share one identity without copy-pasting hex codes.
 
 - **Outputs:** validated `*.tokens.json`, compiled CSS variables, `DESIGN.md` — a single generated brand render with provenance and a stale guard — and an on-brand context file that downstream generators (including `brand-illustrate`) read as their style contract.
+- **Checks contrast, executably:** `tokens contrast <file>` measures every text/background role pair on both **APCA Lc** and the **WCAG ratio**, and proposes a fix that moves OKLCH lightness only, so your hue survives. The two disagree often enough to matter — `#747474` on white passes 4.5:1 and still fails APCA. Advisory by default, a hard error under `validate --strict`, so CI can gate on it. Colors it cannot parse are reported as *not measured*, never as failures.
 - **Reach for it when:** starting any project that will have a UI, or consolidating a brand that currently lives in a Figma file and three people's heads.
 
 ### 4. `layout-rules` — execution constraints
@@ -47,15 +46,38 @@ An avoid-list of **39 defect classes** for tool, dashboard, viewer, and admin UI
 - **How it's used:** as *constraints in the plan* before you design, as enforcement while building, and as a post-build checklist — screenshot-tested in a real browser, on both themes, and against an empty dataset.
 - **Reach for it when:** before writing the first line of HTML/CSS for anything tool-like. This is the single highest-leverage skill for stopping agent slop.
 
-### 5. `nielsen-heuristics` — the classic audit
+### 5. `ux-writing` — the words inside the product
+
+The strings are part of the interface, not a layer applied to it. This skill writes and reviews button labels, error messages, empty states, confirmations, settings labels, and placeholders — and it starts by reading the corpus, not a style guide.
+
+- **Grounded in evidence:** the `switch_forces.anxiety` from `jtbd.json` tells you what a destructive confirmation must defuse; `habit` tells you what the old vocabulary was; `evidence.quotes[]` is the product's real vocabulary, so a noun taken from a quote beats an invented one — cite the evidence id beside the string.
+- **Closes the loop:** hand the result to `respondent-panel` verbatim, treat convergent misreadings as defects in the copy rather than in the readers, revise, re-run the same briefs.
+- **Reach for it when:** writing any user-facing string, or when a review keeps turning up "Oops! Something went wrong", `Submit` buttons, and bare "No data" empty states.
+
+### 6. `nielsen-heuristics` — the classic audit
 
 A formal heuristic evaluation against Nielsen's 10 usability heuristics (Nielsen & Molich 1990, refined 1994). What it adds over "critique this UI" is a **consistent rubric plus honesty guards**: sharp per-heuristic probes, a per-finding severity scale, and a mandatory evidence locator — a finding without a pointer to where it happens doesn't ship.
 
 - **Accepts five input types:** screenshot, live URL, codebase/HTML, a written interface description, or a JTBD/spec doc — and adjusts its rigor honestly to what is actually observable.
 - **Outputs:** markdown by default, or a Tufte-style HTML report; findings above a severity threshold can be exported as Linear or Beads tasks after confirmation.
-- **Scope guard:** it does one thing. Accessibility issues are flagged only when they're also heuristic violations; for multi-dimension auditing it defers to `impeccable:audit`.
+- **Scope guard:** it does one thing. Accessibility issues are flagged only when they're also heuristic violations; for multi-dimension auditing it defers to `humane:review` (step 8), and to `impeccable:audit` for post-build polish.
 
-### 6. `before-after` — proof
+### 7. `walkthrough` — can they actually get through?
+
+Inspection asks whether an interface obeys principles; reaction asks how words land. Neither asks the question that decides whether the product works. `walkthrough` takes **one job from the corpus** — preferably an underserved ODI outcome — states it in the person's own words with no interface nouns in it, and attempts it step by step, answering the four cognitive-walkthrough questions at each decision: will they try it, notice the control, connect it to their goal, and see that progress was made?
+
+- **Any "no" is a break**, recorded with its evidence locator and what the person most likely does next — recover, take a wrong path, or abandon. That last field is what separates friction from a dead end.
+- **Unhappy paths too:** empty, error, slow, interrupted, permission. Reloading mid-task is the cheapest high-yield check there is.
+- **Honest about its ceiling:** an analytical walkthrough is not a usability test. It finds missing affordances, vocabulary mismatches, and dead ends cheaply — it cannot tell you how frustrating something feels.
+- **Reach for it when:** you want evidence rather than opinion, or before/after proof with a receipt — a blocked-then-completed task is the strongest input `before-after` can get.
+
+### 8. `review` — one verdict, honestly scoped
+
+A user-invoked orchestrator over the review skills. It resolves scope and mode (`quick` caps at 5 findings, `full` at 15), runs the domains foundational-first, consolidates one root cause into one finding, and ends with a single `Block` / `Needs changes` / `Approve`.
+
+What makes it worth having is what it refuses to do: it marks a domain **Not reviewed** and names the missing skill rather than improvising rules it doesn't own — including the domains humane deliberately doesn't cover, where it points at `interfaces`. It requires a *Considered but Rejected* table so restraint is visible, never converts a verification gap into a finding, and never pads to reach the cap. A short review is a valid result.
+
+### 9. `before-after` — proof
 
 Emotional Before/After transformation grids — the felt shift, not a feature list. It chains directly from `jtbd.json` (Push → primary BEFORE, Pull → primary AFTER, Anxiety → fear dimension flipped to confidence, and so on) or runs standalone from a 3-question interview. Cells are written in first person ("I check my dashboard with dread every morning" → "I glance at costs once a week, casually"), with somatic markers and valence scoring.
 
@@ -73,6 +95,8 @@ Two extra skills sit alongside the cycle for visual identity work:
 
 ### Claude Code
 
+One plugin (`humane`), served by its own single-entry marketplace in this repo:
+
 ```
 /plugin marketplace add glebis/humane-agentic-design
 /plugin install humane@humane-agentic-design
@@ -88,18 +112,30 @@ The skills are stdlib-only and self-contained. Add them to any agent that reads 
 npx skills add glebis/humane-agentic-design
 ```
 
-Point your agent at the `humane/skills/` directory, or copy the individual skill folders into wherever your agent loads skills from.
+**This one is interactive** — it asks four questions rather than running straight through, so run it somewhere you can answer them:
+
+1. **Which agents** — 75 are supported; Claude Code is preselected.
+2. **Scope** — `Project` (the default) installs into `./.agents/skills` in the current directory, committed with that project. `Global` makes the skills available everywhere. Pick one deliberately: a per-project copy that drifts from a global one is the failure this repo exists to avoid.
+3. **Method** — `Symlink` (recommended) keeps one source of truth, so an update lands everywhere at once. `Copy` duplicates the files per agent.
+4. **A confirmation**, behind a per-skill security-risk table.
+
+Skills land in `.agents/skills/<name>/`, with each selected agent's own directory (`.claude/skills/`, and so on) symlinked to them. The bundled Python scripts come along and run from there.
+
+If you would rather skip the installer: point your agent at this repo's `humane/skills/` directory, or copy the individual skill folders wherever your agent loads skills from.
 
 ## How to use it
 
-Start a new product idea and let the cycle carry it end to end:
+Start a new product idea and let the cycle carry it end to end. The steps are the nine above, in order:
 
-1. **Capture the job.** Say `describe my project with humane:jtbd` (or paste customer reviews / an interview transcript). The interview produces `~/jtbd/<slug>/jtbd.json` — the corpus every later step reads.
-2. **Score and stage the outcomes.** Ask for the ODI pass: each outcome gets importance / satisfaction and one of the eight process stages. Honest scores beat flattering ones — `creator-estimate` is a valid, labeled source.
-3. **Pressure-test with people.** Run `humane:persona-review` on the brief for expert objections, then `humane:respondent-panel` on the copy for gut reactions from people who have read none of your reasoning.
-4. **Set the system.** `humane:design-tokens` turns the brand into DTCG tokens and compiled CSS variables before any layout exists.
-5. **Build under constraints.** Before writing HTML/CSS, load `humane:layout-rules` and treat its avoid-list as hard rules; audit the result with `humane:nielsen-heuristics`.
-6. **Prove it.** `humane:before-after` shows the change worked; feed what you learned back into step 1.
+1. **Capture the job** — `humane:jtbd`. Say `describe my project with humane:jtbd`, or paste customer reviews or an interview transcript. Produces `~/jtbd/<slug>/jtbd.json`, the corpus every later step reads. Ask for the ODI pass while you're here: each outcome gets importance / satisfaction and one of the eight process stages, so "underserved" becomes a number. Honest scores beat flattering ones — `creator-estimate` is a valid, labeled source.
+2. **Pressure-test with people** — `humane:persona-review` on the brief for expert objections, then `humane:respondent-panel` on the copy for gut reactions from people who have read none of your reasoning.
+3. **Set the system** — `humane:design-tokens` turns the brand into DTCG tokens and compiled CSS variables before any layout exists. Run `tokens contrast` once per theme and fix what it flags.
+4. **Build under constraints** — load `humane:layout-rules` before writing any HTML/CSS and treat its avoid-list as hard rules.
+5. **Write the words** — `humane:ux-writing` turns the corpus into interface copy: the anxiety force shapes the confirmation, the quotes supply the vocabulary.
+6. **Audit it** — `humane:nielsen-heuristics` for the formal usability inspection.
+7. **Check someone can get through it** — `humane:walkthrough` takes an underserved outcome and attempts it as the person who has it, including the empty, error, and interrupted paths.
+8. **Get one verdict** — `humane:review` consolidates every domain, and tells you which ones it could not cover.
+9. **Prove it** — `humane:before-after`, strongest when a task that was blocked now completes. Feed what you learned back into step 1.
 
 Two commands ship with the `jtbd` skill for looking at the corpus:
 
@@ -118,9 +154,15 @@ Reading a method is not the same as running one. The full cycle — jobs, person
 
 The core skills carry no absolute paths and no Claude-only tool imperatives — they say "ask the user", not any one tool's name, and their scripts use only the Python standard library. Where a capability is genuinely Claude Code specific (the bundled Linear CLI for task export, the `synthetic-respondent` agent format), it is called out under a "Claude Code extras" note rather than assumed. On other agents, those steps degrade gracefully to plain instructions.
 
-## Humane and Impeccable
+## Humane, interfaces, and Impeccable
 
-They complement each other. **Humane** is the method and system *before* code: what to build, for whom, under which constraints — jobs, personas, tokens, layout rules. **Impeccable** is interface quality *after*: audit, normalize, polish, harden. A project that runs both starts from evidence and ships without slop. Install both.
+They complement each other, and there is a third worth naming:
+
+- **Humane** — the method *before* code: what to build, for whom, under which constraints, in which words. Jobs, personas, tokens, layout rules, copy, audit, proof.
+- **[interfaces](https://github.com/jakubkrehel/skills)** — craft *in* the code: typography mechanics, OKLCH palette construction, accessibility engineering, motion recipes. Humane deliberately does not cover these; where they matter, it defers.
+- **Impeccable** — quality *after*: audit, normalize, polish, harden.
+
+A project that runs all three starts from evidence, is built with craft, and ships without slop. Humane's review skills mark a domain **Not reviewed** and name the missing plugin rather than improvising rules they don't own — so installing the others makes the reviews genuinely broader, not just louder.
 
 ## For agents
 
@@ -133,7 +175,9 @@ You, the agent reading this: consult the cycle before adding or changing anythin
 
 ## Roadmap
 
-**Ring 2**: `brand-illustrate` (shipped) — turns the token set into coherent, platform-sized illustration batches via whichever image backend is installed. `brandkit` (shipped) — its upstream twin: explores competing identity directions as premium brand boards and hands the winning direction into the design-tokens brand block, so a token set is born with its art direction. Planned next: `dataviz` (chart constraints, the layout-rules of data).
+Shipped since the first release: `brandkit` and `brand-illustrate` (Ring 2, described above), `ux-writing`, `walkthrough`, `review`, and executable contrast checking in `design-tokens`.
+
+Planned next: `dataviz` — chart constraints, the `layout-rules` of data.
 
 ## License
 

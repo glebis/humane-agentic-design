@@ -1,0 +1,3 @@
+interface:
+  display_name: "Brand Illustrate"
+  short_description: "Generate on-brand illustration sets from a token contract"

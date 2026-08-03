@@ -24,7 +24,7 @@ Distilled from the JTBD Graph viewer build/audit cycle (2026-07). Each rule is a
 
 ## Color & contrast
 
-12. **Audit the faintest text token.** Anything used for text must clear WCAG 4.5:1 on BOTH themes; reserve the faintest tint for decorative lines/dots only. Small ALL-CAPS text needs the same ratio as body.
+12. **Audit the faintest text token.** Anything used for text must clear WCAG 4.5:1 **and** APCA Lc 75 on BOTH themes; reserve the faintest tint for decorative lines/dots only. Small ALL-CAPS text needs the same bar as body. Don't eyeball this — if the project has a token set, run `design-tokens contrast <file>` per theme (it measures both scales and proposes a lightness-only fix that keeps the hue). WCAG alone is not enough: `#747474` on white passes 4.5:1 and still fails APCA.
 13. **Labels over colored fills pick their color by luminance** (dark-on-light / white-on-dark via relative luminance), never a fixed token.
 14. **Semantic color ≠ accent.** Ramps (good→warn→bad) are consistent across all views; the interactive accent is a separate hue.
 15. **Tokenize shadows** per theme (stronger on dark); no hard-coded rgba.
@@ -45,7 +45,7 @@ Distilled from the JTBD Graph viewer build/audit cycle (2026-07). Each rule is a
 
 22. **Custom interactives are real buttons**: `tabindex`, `role`, `aria-label`, Enter/Space activation, and a **visible** `:focus-visible` ring — including SVG nodes.
 23. **Hover-only tooltips are a desktop-only feature.** Provide tap-to-toggle on touch and focus-triggered display for keyboard; data shown only in a tooltip is data some users never see.
-24. **Touch targets ≥ 40–44px effective** — expand hit areas with padding or a negative-inset pseudo-element, not by inflating the visuals.
+24. **Hit areas: 24×24 CSS px is the floor, 44 is the target.** WCAG 2.5.8 (AA) requires 24×24 — that is the conformance bar, *not* 44. Aim for 44×44 in touch contexts and 40×40 on desktop where density permits, but a smaller control is not automatically a failure: under the spacing exception it passes if a 24px circle centred on its bounding box doesn't intersect another target's circle (≈4px gap between 20px targets). Expand the hit area with padding or a negative-inset pseudo-element rather than inflating the visuals — and put that pseudo-element on the wrapping `<label>`/`<button>`, never on the `<input>`: replaced elements don't render `::before`/`::after` reliably. Check the exception before reporting a violation; compact professional tools are allowed to be compact.
 25. **Filter chip groups: one row per dimension.** Don't let two filter dimensions wrap into one visual stream.
 26. **Narrow screens get native controls**: long button lists collapse to `<select>` at the breakpoint.
 
@@ -53,6 +53,11 @@ Distilled from the JTBD Graph viewer build/audit cycle (2026-07). Each rule is a
 
 27. **Every user-facing string exists in every locale from the first commit** (single STR table, key-parity check). No calques — idiomatic target language ("прогони проход" → "запусти оценку"). Verbatim quotes/data stay in their captured language; only chrome translates.
 28. **Design both themes at token level**: define palette on `:root`, override tokens in `@media (prefers-color-scheme: dark)` and again under `[data-theme=…]`; components never reference raw colors.
+
+## Process rules that caught the bugs
+
+29. **Screenshot-test in a real browser after every batch** — the popover-open-on-load, washed SVG labels, and chip-wrap bugs were invisible in code review and obvious in one screenshot.
+30. **Verify against the real corpus AND a minimal/empty one** — every view must degrade with instructions, not blank space.
 
 ## De-slop (from impeccable / frontend-design audit criteria)
 
@@ -67,8 +72,3 @@ Anti-patterns that read as "AI-generated" regardless of correctness — avoid un
 37. **Motion slop**: bounce easing, scattered micro-effects. One orchestrated moment beats many; sometimes none is right.
 38. **Copy slop**: redundant restating copy, selling adjectives, "Submit" buttons. A control names its exact action; label labels, example demonstrates, nothing does double duty.
 39. **Boldness budget**: spend it in one signature place, keep everything around it quiet; before shipping, remove one accessory (Chanel rule).
-
-## Process rules that caught the bugs
-
-29. **Screenshot-test in a real browser after every batch** — the popover-open-on-load, washed SVG labels, and chip-wrap bugs were invisible in code review and obvious in one screenshot.
-30. **Verify against the real corpus AND a minimal/empty one** — every view must degrade with instructions, not blank space.

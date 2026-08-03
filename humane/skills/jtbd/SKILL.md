@@ -253,13 +253,21 @@ Reads the `jtbd.json` files the skill already writes, shapes them into `.graph/d
 next to them, copies `templates/graph.html` alongside it, and serves the pair on localhost.
 Stdlib only, no build step, no network. Five views over the same record:
 
+Eleven views over the same record (`VIEW_IDS` in `templates/graph.html`):
+
 | View | Answers | Needs |
 |---|---|---|
-| **Opportunity** | Which outcomes are worth building for? | `odi.outcomes[]` with importance + satisfaction |
-| **Outcomes** | What is the shortlist? | `odi.outcomes[]` (unscored ones still list) |
-| **Switch forces** | Will they actually switch? | `switch_forces` |
-| **Record** | What did we actually learn? | core schema |
-| **Evidence** | What do we know versus assert? | `evidence.quotes[]`, `evidence.weaknesses[]` |
+| **overview** | What is in this corpus at a glance? | core schema |
+| **jobs** | What is being hired, across projects? | core schema, `macro` |
+| **icicle** | How does the job decompose? | `odi.outcomes[]` with `stage` |
+| **landscape** | Which outcomes are worth building for? | `odi.outcomes[]` with importance + satisfaction |
+| **table** | What is the shortlist, sortable? | `odi.outcomes[]` (unscored ones still list) |
+| **heatmap** | Where is pain concentrated by stage and touchpoint? | `odi.outcomes[]` with `stage` + `touch` |
+| **jobmap** | Where in the eight process steps does it hurt? | `odi.outcomes[]` with `stage` |
+| **graph** | What depends on what? | `depends_on` at project and outcome level |
+| **forces** | Will they actually switch? | `switch_forces` |
+| **record** | What did we actually learn? | core schema |
+| **evidence** | What do we know versus assert? | `evidence.quotes[]`, `evidence.weaknesses[]` |
 
 Tiers on the landscape are the skill's own: ≥12 prioritize, ≤8 skip, between them marginal.
 The `imp = sat` diagonal is drawn — distance above it is the opportunity, continuously, which

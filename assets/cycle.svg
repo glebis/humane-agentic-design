@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 640" width="1440" height="640" role="img" aria-label="Humane Agentic Design — the cycle: jtbd, persona-review, design-tokens, layout-rules, nielsen-heuristics, before-after, looping back; brandkit and brand-illustrate feed the token set.">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1760 660" width="1760" height="660" role="img" aria-label="Humane Agentic Design — the nine-step cycle: jtbd, persona-review with respondent-panel, design-tokens, layout-rules, ux-writing, nielsen-heuristics, walkthrough, review, before-after, looping back so every change re-enters as evidence; brandkit feeds the token set and brand-illustrate renders from it.">
   <title>Humane Agentic Design — the cycle</title>
   <defs>
     <style>
+      /* amber-500 #e08b2c is the graphic accent (strokes, fills — the 3:1 UI bar);
+         amber-400 #f49e43 carries it whenever it is set as type. Neutrals are
+         slate-300/400, lifted so captions and page marks clear APCA on the canvas. */
       .bg    { fill: #08080a; }
       .line  { fill: none; stroke: #e9e6df; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
       .amber { fill: none; stroke: #e08b2c; stroke-width: 1.25; stroke-linecap: round; stroke-linejoin: round; }
@@ -13,14 +16,14 @@
 
       text   { font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
       .title { fill: #e9e6df; font-size: 38px; letter-spacing: .14em; }
-      .title tspan.hl { fill: #e08b2c; }
-      .tag   { fill: #7d7d86; font-size: 13px; letter-spacing: .09em; }
-      .meta  { fill: #55555e; font-size: 12px; letter-spacing: .12em; text-anchor: end; }
-      .num   { fill: #e08b2c; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
+      .title tspan.hl { fill: #f49e43; }
+      .tag   { fill: #ccccd6; font-size: 13px; letter-spacing: .09em; }
+      .meta  { fill: #b1b1bb; font-size: 12px; letter-spacing: .12em; text-anchor: end; }
+      .num   { fill: #f49e43; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
       .lbl   { fill: #e9e6df; font-size: 15px; letter-spacing: .02em; text-anchor: middle; }
-      .sub   { fill: #7d7d86; font-size: 11.5px; text-anchor: middle; }
-      .r2    { fill: #e08b2c; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
-      .foot  { fill: #55555e; font-size: 11.5px; letter-spacing: .06em; text-anchor: middle; }
+      .sub   { fill: #ccccd6; font-size: 11.5px; text-anchor: middle; }
+      .r2    { fill: #f49e43; font-size: 11px; letter-spacing: .16em; text-anchor: middle; }
+      .foot  { fill: #b1b1bb; font-size: 11.5px; letter-spacing: .06em; text-anchor: middle; }
     </style>
     <marker id="tip" viewBox="0 0 8 8" refX="6.5" refY="4" markerWidth="7" markerHeight="7" orient="auto">
       <path d="M1 1 L6.5 4 L1 7" fill="none" stroke="#6f6f78" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
@@ -30,40 +33,41 @@
     </marker>
   </defs>
 
-  <rect class="bg" width="1440" height="640" rx="14"/>
+  <rect class="bg" width="1760" height="660" rx="14"/>
 
   <!-- ============ wordmark ============ -->
   <text class="title" x="80" y="112"><tspan class="hl">humane</tspan> agentic design</text>
   <text class="tag" x="82" y="146">a design method, installed next to the agent</text>
-  <text class="meta" x="1360" y="112">9 skills · 1 agent</text>
-  <text class="meta" x="1360" y="134">portable across agentic stacks</text>
-  <path class="rule" d="M80 182 H1360"/>
+  <text class="meta" x="1680" y="112">12 skills · 1 agent</text>
+  <text class="meta" x="1680" y="134">portable across agentic stacks</text>
+  <path class="rule" d="M80 182 H1680"/>
 
   <!-- ============ brand identity — one in, one out of the token set ============ -->
-  <text class="r2" x="530" y="222">BRAND IDENTITY</text>
+  <text class="r2" x="515" y="222">BRAND IDENTITY</text>
 
   <!-- brandkit: stacked boards — feeds INTO design-tokens -->
-  <g transform="translate(400,258)">
+  <g transform="translate(385,258)">
     <rect class="amber" x="-16" y="-4" width="30" height="22" rx="2"/>
     <rect class="amber" x="-10" y="2" width="30" height="22" rx="2"/>
     <rect class="amber" x="-4" y="8" width="30" height="22" rx="2"/>
     <text class="sub" x="8" y="52">brandkit</text>
     <text class="sub" x="8" y="70">explores the direction</text>
   </g>
-  <path class="dim" d="M410 336 C 410 358, 480 356, 498 372" marker-end="url(#tipdim)"/>
+  <path class="dim" d="M395 336 C 395 358, 462 356, 480 372" marker-end="url(#tipdim)"/>
 
   <!-- brand-illustrate: framed scene — consumes design-tokens -->
-  <g transform="translate(660,258)">
+  <g transform="translate(645,258)">
     <rect class="amber" x="-18" y="-2" width="36" height="28" rx="2"/>
     <circle class="amberf" cx="-7" cy="7" r="3.6"/>
     <path class="amber" d="M-18 20 L-6 10 L2 18 L10 12 L18 20"/>
     <text class="sub" x="0" y="52">brand-illustrate</text>
     <text class="sub" x="0" y="70">renders the assets</text>
   </g>
-  <path class="dim" d="M562 372 C 580 356, 650 358, 655 336" marker-end="url(#tipdim)"/>
+  <path class="dim" d="M542 372 C 560 356, 632 358, 640 336" marker-end="url(#tipdim)"/>
 
-  <!-- ============ the chain — centres x: 130 330 530 730 930 1130, y 420 ============ -->
+  <!-- ============ the chain — centres x: 130 320 510 700 890 1080 1270 1460 1650, y 420 ============ -->
 
+  <!-- 01 jtbd: concentric target -->
   <g transform="translate(130,420)">
     <text class="num" y="-62">01</text>
     <circle class="ring" r="46"/>
@@ -74,7 +78,8 @@
     <text class="sub" y="96">what people hire</text>
   </g>
 
-  <g transform="translate(330,420)">
+  <!-- 02 persona-review (+ respondent-panel): a group, one of them an outsider -->
+  <g transform="translate(320,420)">
     <text class="num" y="-62">02</text>
     <circle class="ring" r="46"/>
     <circle class="line" cx="0" cy="-17" r="6"/>
@@ -83,10 +88,11 @@
     <circle class="line" cx="-9" cy="16" r="6"/>
     <circle class="line" cx="9" cy="16" r="6"/>
     <text class="lbl" y="76">persona-review</text>
-    <text class="sub" y="96">who reacts, and how</text>
+    <text class="sub" y="96">+ respondent-panel</text>
   </g>
 
-  <g transform="translate(530,420)">
+  <!-- 03 design-tokens: swatches -->
+  <g transform="translate(510,420)">
     <text class="num" y="-62">03</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-26" y="-11" width="16" height="22" rx="1.5"/>
@@ -96,7 +102,8 @@
     <text class="sub" y="96">the system</text>
   </g>
 
-  <g transform="translate(730,420)">
+  <!-- 04 layout-rules: constrained grid -->
+  <g transform="translate(700,420)">
     <text class="num" y="-62">04</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-24" y="-24" width="48" height="48" rx="2"/>
@@ -106,8 +113,21 @@
     <text class="sub" y="96">execution constraints</text>
   </g>
 
-  <g transform="translate(930,420)">
+  <!-- 05 ux-writing: set lines of copy, one of them the load-bearing one -->
+  <g transform="translate(890,420)">
     <text class="num" y="-62">05</text>
+    <circle class="ring" r="46"/>
+    <path class="line" d="M-24 -16 H20"/>
+    <path class="amber" d="M-24 -4 H8"/>
+    <path class="line" d="M-24 8 H24"/>
+    <path class="line" d="M-24 20 H2"/>
+    <text class="lbl" y="76">ux-writing</text>
+    <text class="sub" y="96">the words</text>
+  </g>
+
+  <!-- 06 nielsen-heuristics: a scored checklist -->
+  <g transform="translate(1080,420)">
+    <text class="num" y="-62">06</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-24" y="-26" width="48" height="52" rx="3"/>
     <circle class="line" cx="-13" cy="-13" r="4"/><path class="line" d="M-4 -13 H15"/>
@@ -117,8 +137,32 @@
     <text class="sub" y="96">the classic audit</text>
   </g>
 
-  <g transform="translate(1130,420)">
-    <text class="num" y="-62">06</text>
+  <!-- 07 walkthrough: a path taken step by step, the break in amber -->
+  <g transform="translate(1270,420)">
+    <text class="num" y="-62">07</text>
+    <circle class="ring" r="46"/>
+    <path class="line" d="M-24 16 L-8 -2 L8 10 L24 -16"/>
+    <circle class="line" cx="-24" cy="16" r="3.5"/>
+    <circle class="line" cx="-8" cy="-2" r="3.5"/>
+    <circle class="amberf" cx="8" cy="10" r="4"/>
+    <circle class="line" cx="24" cy="-16" r="3.5"/>
+    <text class="lbl" y="76">walkthrough</text>
+    <text class="sub" y="96">can they get through</text>
+  </g>
+
+  <!-- 08 review: one verdict stamped over the domains -->
+  <g transform="translate(1460,420)">
+    <text class="num" y="-62">08</text>
+    <circle class="ring" r="46"/>
+    <rect class="line" x="-24" y="-24" width="48" height="48" rx="4"/>
+    <path class="amber" d="M-13 1 L-4 11 L14 -11"/>
+    <text class="lbl" y="76">review</text>
+    <text class="sub" y="96">one verdict</text>
+  </g>
+
+  <!-- 09 before-after: the split -->
+  <g transform="translate(1650,420)">
+    <text class="num" y="-62">09</text>
     <circle class="ring" r="46"/>
     <rect class="line" x="-26" y="-19" width="26" height="38"/>
     <rect class="amber" x="0" y="-19" width="26" height="38"/>
@@ -127,13 +171,16 @@
   </g>
 
   <!-- links -->
-  <path class="arrow" d="M180 420 H278" marker-end="url(#tip)"/>
-  <path class="arrow" d="M380 420 H478" marker-end="url(#tip)"/>
-  <path class="arrow" d="M580 420 H678" marker-end="url(#tip)"/>
-  <path class="arrow" d="M780 420 H878" marker-end="url(#tip)"/>
-  <path class="arrow" d="M980 420 H1078" marker-end="url(#tip)"/>
+  <path class="arrow" d="M180 420 H268" marker-end="url(#tip)"/>
+  <path class="arrow" d="M370 420 H458" marker-end="url(#tip)"/>
+  <path class="arrow" d="M560 420 H648" marker-end="url(#tip)"/>
+  <path class="arrow" d="M750 420 H838" marker-end="url(#tip)"/>
+  <path class="arrow" d="M940 420 H1028" marker-end="url(#tip)"/>
+  <path class="arrow" d="M1130 420 H1218" marker-end="url(#tip)"/>
+  <path class="arrow" d="M1320 420 H1408" marker-end="url(#tip)"/>
+  <path class="arrow" d="M1510 420 H1598" marker-end="url(#tip)"/>
 
   <!-- loop back -->
-  <path class="arrow" d="M1176 420 H1194 Q1210 420 1210 436 V546 Q1210 562 1194 562 H72 Q56 562 56 546 V436 Q56 420 72 420 H78" marker-end="url(#tip)"/>
-  <text class="foot" x="720" y="600">next iteration — every change re-enters as evidence</text>
+  <path class="arrow" d="M1696 420 H1714 Q1730 420 1730 436 V566 Q1730 582 1714 582 H72 Q56 582 56 566 V436 Q56 420 72 420 H78" marker-end="url(#tip)"/>
+  <text class="foot" x="880" y="620">next iteration — every change re-enters as evidence</text>
 </svg>

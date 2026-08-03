@@ -1,0 +1,220 @@
+{
+  "$extensions": {
+    "community.design-tokens.brand": {
+      "mood": [
+        "warm",
+        "human",
+        "considered"
+      ],
+      "imageryStyle": "risograph print illustration — limited flat inks, visible grain and paper texture, slight misregistration between layers, hand-pulled feel; no photorealism, no vector slickness",
+      "voice": "plainspoken and unhurried; explains the method, never sells it",
+      "subjects": [
+        "hands and tools working on something unfinished",
+        "schematic diagrams drawn as if printed, not rendered",
+        "small repeated marks that add up to a system",
+        "workbenches, drafting surfaces, proof sheets"
+      ],
+      "avoid": [
+        "stock-photo people smiling at laptops",
+        "robot faces, humanoid AI mascots, glowing brains",
+        "glossy 3D blobs and lens flares",
+        "fake UI screenshots as decoration",
+        "circuit-board and neural-network cliches"
+      ],
+      "negativePrompt": "no photorealism, no glossy 3D, no robot imagery, no circuit-board motifs, no stock-photo people"
+    },
+    "community.design-tokens.contrast": {
+      "$comment": "SKILL CONVENTION: which foreground/background pairs actually meet on screen, and at which bar. Declared because name inference reads `surface` (paper-50) and `accent` (clay-600) as screen colors, but both are print/risograph inks; and because `primary` is painted as a fill, not as type — it is held to the graphic bar, while `primary-text` carries the accent when it is set as type. Checked by `tokens contrast`.",
+      "pairs": [
+        [
+          "text",
+          "background",
+          "body"
+        ],
+        [
+          "muted",
+          "background",
+          "body"
+        ],
+        [
+          "utility",
+          "background",
+          "non-body"
+        ],
+        [
+          "primary-text",
+          "background",
+          "non-body"
+        ],
+        [
+          "primary",
+          "background",
+          "graphic"
+        ]
+      ],
+      "exclude": [
+        "surface",
+        "accent"
+      ]
+    }
+  },
+  "color": {
+    "$type": "color",
+    "ink-950": {
+      "$value": "#08080A",
+      "$description": "canvas — the near-black the interface sits on"
+    },
+    "bone-100": {
+      "$value": "#E9E6DF",
+      "$description": "primary text on the dark canvas"
+    },
+    "slate-300": {
+      "$value": "#CCCCD6",
+      "$description": "secondary text and captions on the dark canvas"
+    },
+    "slate-400": {
+      "$value": "#B1B1BB",
+      "$description": "utility text — metadata, footnotes, page marks"
+    },
+    "amber-500": {
+      "$value": "#E08B2C",
+      "$description": "the single accent as a fill or graphic mark; use amber-400 when it is type"
+    },
+    "amber-400": {
+      "$value": "#F49E43",
+      "$description": "the accent when it is set as type on the dark canvas"
+    },
+    "paper-50": {
+      "$value": "#F2EDE3",
+      "$description": "warm paper surface for printed / risograph contexts"
+    },
+    "clay-600": {
+      "$value": "#B4552F",
+      "$description": "second riso ink — earth red, for layered print work"
+    },
+    "slate-500": {
+      "$value": "#7D7D86",
+      "$description": "mid neutral — graphic marks and print surfaces; too dark for text on the canvas"
+    },
+    "slate-800": {
+      "$value": "#26262C",
+      "$description": "hairlines, rules, and borders"
+    },
+    "background": {
+      "$value": "{color.ink-950}"
+    },
+    "surface": {
+      "$value": "{color.paper-50}"
+    },
+    "text": {
+      "$value": "{color.bone-100}"
+    },
+    "muted": {
+      "$value": "{color.slate-300}"
+    },
+    "primary": {
+      "$value": "{color.amber-500}"
+    },
+    "accent": {
+      "$value": "{color.clay-600}"
+    },
+    "utility": {
+      "$value": "{color.slate-400}"
+    },
+    "primary-text": {
+      "$value": "{color.amber-400}"
+    }
+  },
+  "space": {
+    "$type": "dimension",
+    "xs": {
+      "$value": {
+        "value": 4,
+        "unit": "px"
+      }
+    },
+    "sm": {
+      "$value": {
+        "value": 8,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 16,
+        "unit": "px"
+      }
+    },
+    "lg": {
+      "$value": {
+        "value": 24,
+        "unit": "px"
+      }
+    },
+    "xl": {
+      "$value": {
+        "value": 48,
+        "unit": "px"
+      }
+    }
+  },
+  "rounded": {
+    "$type": "dimension",
+    "sm": {
+      "$value": {
+        "value": 2,
+        "unit": "px"
+      }
+    },
+    "md": {
+      "$value": {
+        "value": 14,
+        "unit": "px"
+      }
+    }
+  },
+  "font": {
+    "$type": "fontFamily",
+    "mono": {
+      "$value": "Berkeley Mono"
+    }
+  },
+  "type": {
+    "display": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "Berkeley Mono",
+        "fontSize": {
+          "value": 38,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "lineHeight": 1.2
+      }
+    },
+    "body": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "Berkeley Mono",
+        "fontSize": {
+          "value": 15,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "lineHeight": 1.55
+      }
+    },
+    "caption": {
+      "$type": "typography",
+      "$value": {
+        "fontFamily": "Berkeley Mono",
+        "fontSize": {
+          "value": 11.5,
+          "unit": "px"
+        },
+        "fontWeight": 400,
+        "lineHeight": 1.4
+      }
+    }
+  }
+}

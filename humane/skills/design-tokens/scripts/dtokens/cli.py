@@ -8,6 +8,7 @@ import sys
 from . import TokenError
 from . import annotate as annotate_mod
 from . import brand_summary as brand_summary_mod
+from . import contrast as contrast_mod
 from . import generate as generate_mod
 from . import export_css as export_css_mod
 from . import export_design_md as design_md_mod
@@ -75,6 +76,19 @@ def _cmd_validate(args):
         return 1
     print("OK")
     return 0
+
+
+def _cmd_contrast(args):
+    tree = model.load(args.file)
+    resolved = resolve_mod.resolve(tree)
+    report = contrast_mod.check(resolved, standard=args.standard, level=args.level,
+                                spec=contrast_mod.extract_spec(tree))
+    if args.json:
+        _emit(json.dumps(report, indent=2, ensure_ascii=False) + "\n", args.out)
+    else:
+        _emit(contrast_mod.format_report(report, args.standard), args.out)
+    failing = [r for r in report["results"] if not r["passed"]]
+    return 1 if failing and not args.no_fail else 0
 
 
 def _cmd_merge(args):
@@ -390,6 +404,21 @@ def _build_parser():
                     help="treat non-DTCG dimension/duration values (clamp/calc/var kept "
                          "verbatim) as errors, not warnings")
     sv.set_defaults(func=_cmd_validate)
+
+    sc = sub.add_parser("contrast",
+                        help="measure APCA/WCAG contrast for every inferred "
+                             "text/background token pair")
+    sc.add_argument("file")
+    sc.add_argument("--standard", choices=("apca", "wcag", "both"), default="both",
+                    help="which scale decides pass/fail (default: both must clear)")
+    sc.add_argument("--level", choices=("auto", "body", "non-body"), default="auto",
+                    help="threshold to apply; auto picks per pair from the "
+                         "foreground's inferred role (default: auto)")
+    sc.add_argument("--json", action="store_true", help="emit the raw report as JSON")
+    sc.add_argument("--no-fail", action="store_true",
+                    help="always exit 0; report without gating")
+    sc.add_argument("-o", "--out")
+    sc.set_defaults(func=_cmd_contrast)
 
     sm = sub.add_parser("merge")
     sm.add_argument("base")

@@ -1,0 +1,503 @@
+"""Measure foreground/background contrast across a resolved token set.
+
+DTCG says nothing about contrast — it stores colors, not relationships. This
+module is a SKILL CONVENTION layered on top: it uses the same role inference as
+`brand_summary` to guess which color is text and which is a surface, measures
+every plausible pair, and reports the ones that fail.
+
+Two scales are computed:
+
+* **WCAG 2.x contrast ratio** — the legal/conformance number (4.5:1 body,
+  3:1 large text and UI). Well known, widely required, and a poor model of
+  perceived readability at the extremes.
+* **APCA Lc** (W3C draft, algorithm version 0.1.9) — perceptual lightness
+  contrast, polarity-aware: |Lc| >= 75 for body text, >= 60 for non-body.
+  Better predictor of actual readability; still a draft, so it never stands
+  alone as a conformance claim.
+
+Both are reported. A pair fails only when it misses the threshold on the
+standard being applied.
+
+Honesty rule: a color we cannot parse (`var()`, `currentColor`, a gradient) is
+reported as **not measured**, never as a failure. A verification gap is not a
+finding.
+
+Fixes follow `better-colors`' rule and DTCG's own value model: adjust OKLCH
+lightness first, preserve chroma and hue, then re-measure.
+"""
+
+import math
+import re
+
+from .brand_summary import _flat_name, _infer_role
+
+# SKILL CONVENTION: an optional declaration of which pairs actually meet, under
+# $extensions at the token-file root. Name inference cannot know intent — our
+# own set has a `paper-50` surface documented as "printed / risograph contexts",
+# which never sits behind screen text, yet reads as a background by name. When
+# this block is present its `pairs` are the whole truth; `exclude` always
+# applies. Absent, we fall back to inference, so existing sets keep working.
+#
+#   "$extensions": {
+#     "community.design-tokens.contrast": {
+#       "pairs": [["text", "background"], ["on-primary", "primary"]],
+#       "exclude": ["surface"]
+#     }
+#   }
+CONTRAST_EXT_KEY = "community.design-tokens.contrast"
+
+
+def extract_spec(tree):
+    """Return the contrast declaration from a raw token tree, or {}."""
+    ext = tree.get("$extensions")
+    if isinstance(ext, dict):
+        spec = ext.get(CONTRAST_EXT_KEY)
+        if isinstance(spec, dict):
+            return spec
+    return {}
+
+
+# ---------------------------------------------------------------------------
+# Thresholds
+# ---------------------------------------------------------------------------
+
+# Applied per pair according to the foreground's inferred usage. "body" is text
+# meant to be read in quantity; "non-body" covers links, icons, badges, and
+# large display text, which both standards allow to be lighter; "graphic" is for
+# a color that is never text — a fill, a rule, a chart mark, an icon shape —
+# where WCAG 1.4.11 asks 3:1 as a UI component and APCA's floor is lower than
+# any reading threshold. Declare it explicitly; inference never assigns it,
+# because a token's name cannot tell you whether it is painted as type.
+THRESHOLDS = {
+    "body": {"apca": 75.0, "wcag": 4.5},
+    "non-body": {"apca": 60.0, "wcag": 3.0},
+    "graphic": {"apca": 45.0, "wcag": 3.0},
+}
+
+# Roles that read as running text when used as a foreground.
+_BODY_ROLES = ("text", "muted")
+# Roles that are typically links, icons, badges, or fills — held to the
+# non-body bar unless the caller overrides with --level.
+_NON_BODY_ROLES = ("primary", "accent", "success", "warning", "danger")
+
+
+# ---------------------------------------------------------------------------
+# Color parsing  (sRGB in, 0..255 ints out; alpha and unparseables rejected)
+# ---------------------------------------------------------------------------
+
+_HEX_RE = re.compile(r"^#([0-9a-fA-F]{3,8})$")
+_RGB_RE = re.compile(r"^rgba?\(([^)]*)\)$", re.I)
+_OKLCH_RE = re.compile(r"^oklch\(([^)]*)\)$", re.I)
+
+
+class Unparseable(Exception):
+    """The color is legal CSS but not something we can measure."""
+
+
+def parse_color(value):
+    """Return (r, g, b) as 0-255 ints, or raise Unparseable.
+
+    Accepts hex (3/4/6/8 digit), rgb()/rgba(), and oklch(). Anything carrying
+    alpha is refused: contrast against a translucent color depends on what is
+    behind it, which the token file does not know.
+    """
+    if not isinstance(value, str):
+        raise Unparseable("not a string color value")
+    v = value.strip()
+
+    m = _HEX_RE.match(v)
+    if m:
+        h = m.group(1)
+        if len(h) in (3, 4):
+            h = "".join(c * 2 for c in h)
+        if len(h) == 8:
+            raise Unparseable("has alpha; contrast depends on the layer beneath")
+        if len(h) != 6:
+            raise Unparseable(f"unrecognised hex length: #{m.group(1)}")
+        return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
+
+    m = _RGB_RE.match(v)
+    if m:
+        parts = [p for p in re.split(r"[,\s/]+", m.group(1).strip()) if p]
+        if len(parts) >= 4:
+            raise Unparseable("has alpha; contrast depends on the layer beneath")
+        if len(parts) != 3:
+            raise Unparseable(f"cannot read rgb() components from {v!r}")
+        out = []
+        for p in parts:
+            if p.endswith("%"):
+                out.append(round(float(p[:-1]) * 255 / 100))
+            else:
+                out.append(round(float(p)))
+        return tuple(max(0, min(255, c)) for c in out)
+
+    m = _OKLCH_RE.match(v)
+    if m:
+        body = m.group(1)
+        if "/" in body:
+            raise Unparseable("has alpha; contrast depends on the layer beneath")
+        parts = [p for p in re.split(r"[,\s]+", body.strip()) if p]
+        if len(parts) != 3:
+            raise Unparseable(f"cannot read oklch() components from {v!r}")
+        lightness = float(parts[0][:-1]) / 100 if parts[0].endswith("%") else float(parts[0])
+        chroma = float(parts[1][:-1]) * 0.4 / 100 if parts[1].endswith("%") else float(parts[1])
+        hue = float(re.sub(r"(deg|rad|turn)$", "", parts[2], flags=re.I))
+        return oklch_to_rgb(lightness, chroma, hue)
+
+    raise Unparseable(f"unsupported color notation: {v!r}")
+
+
+# ---------------------------------------------------------------------------
+# sRGB <-> OKLCH  (Ottosson's OKLab, standard matrices)
+# ---------------------------------------------------------------------------
+
+def _srgb_to_linear(c):
+    c = c / 255
+    return c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4
+
+
+def _linear_to_srgb(c):
+    c = 12.92 * c if c <= 0.0031308 else 1.055 * (c ** (1 / 2.4)) - 0.055
+    return max(0, min(255, round(c * 255)))
+
+
+def rgb_to_oklch(rgb):
+    """Return (L, C, H) with L in 0..1, C in 0..~0.4, H in degrees."""
+    r, g, b = (_srgb_to_linear(c) for c in rgb)
+    l = 0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b
+    m = 0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b
+    s = 0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b
+    l_, m_, s_ = (math.copysign(abs(v) ** (1 / 3), v) for v in (l, m, s))
+    L = 0.2104542553 * l_ + 0.7936177850 * m_ - 0.0040720468 * s_
+    a = 1.9779984951 * l_ - 2.4285922050 * m_ + 0.4505937099 * s_
+    bb = 0.0259040371 * l_ + 0.7827717662 * m_ - 0.8086757660 * s_
+    C = math.hypot(a, bb)
+    H = math.degrees(math.atan2(bb, a)) % 360
+    return (L, C, H)
+
+
+def oklch_to_rgb(L, C, H):
+    """Return (r, g, b) 0-255, clipped into sRGB. Out-of-gamut values clamp."""
+    a = C * math.cos(math.radians(H))
+    b = C * math.sin(math.radians(H))
+    l_ = L + 0.3963377774 * a + 0.2158037573 * b
+    m_ = L - 0.1055613458 * a - 0.0638541728 * b
+    s_ = L - 0.0894841775 * a - 1.2914855480 * b
+    l, m, s = (v ** 3 for v in (l_, m_, s_))
+    r = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s
+    g = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s
+    bl = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s
+    return tuple(_linear_to_srgb(c) for c in (r, g, bl))
+
+
+def to_hex(rgb):
+    return "#%02x%02x%02x" % tuple(rgb)
+
+
+# ---------------------------------------------------------------------------
+# WCAG 2.x
+# ---------------------------------------------------------------------------
+
+def relative_luminance(rgb):
+    r, g, b = (_srgb_to_linear(c) for c in rgb)
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def wcag_ratio(fg, bg):
+    """Contrast ratio 1..21, order-independent."""
+    a, b = relative_luminance(fg), relative_luminance(bg)
+    lo, hi = min(a, b), max(a, b)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+# ---------------------------------------------------------------------------
+# APCA  (W3C draft, algorithm 0.1.9 constants)
+# ---------------------------------------------------------------------------
+
+_MAIN_TRC = 2.4
+_RCO, _GCO, _BCO = 0.2126729, 0.7151522, 0.0721750
+_NORM_BG, _NORM_TXT = 0.56, 0.57
+_REV_TXT, _REV_BG = 0.62, 0.65
+_BLK_THRS, _BLK_CLMP = 0.022, 1.414
+_SCALE_BOW, _SCALE_WOB = 1.14, 1.14
+_LO_BOW_OFFSET, _LO_WOB_OFFSET = 0.027, 0.027
+_DELTA_Y_MIN, _LO_CLIP = 0.0005, 0.1
+
+
+def _apca_y(rgb):
+    y = sum(co * ((c / 255) ** _MAIN_TRC)
+            for co, c in zip((_RCO, _GCO, _BCO), rgb))
+    return y + (_BLK_THRS - y) ** _BLK_CLMP if y < _BLK_THRS else y
+
+
+def apca_lc(text_rgb, bg_rgb):
+    """Signed APCA Lc. Positive = dark text on light background (BoW),
+    negative = light text on dark (WoB). Compare |Lc| to the threshold."""
+    y_txt, y_bg = _apca_y(text_rgb), _apca_y(bg_rgb)
+    if abs(y_bg - y_txt) < _DELTA_Y_MIN:
+        return 0.0
+    if y_bg > y_txt:  # dark text on light background
+        sapc = (y_bg ** _NORM_BG - y_txt ** _NORM_TXT) * _SCALE_BOW
+        out = 0.0 if sapc < _LO_CLIP else sapc - _LO_BOW_OFFSET
+    else:             # light text on dark background
+        sapc = (y_bg ** _REV_BG - y_txt ** _REV_TXT) * _SCALE_WOB
+        out = 0.0 if sapc > -_LO_CLIP else sapc + _LO_WOB_OFFSET
+    return out * 100
+
+
+# ---------------------------------------------------------------------------
+# Remediation: adjust L, preserve C and H
+# ---------------------------------------------------------------------------
+
+def suggest_fix(fg, bg, standard, threshold, steps=200):
+    """Walk the foreground's OKLCH lightness away from the background until the
+    pair clears `threshold`, keeping chroma and hue. Returns (hex, L) or None
+    when no lightness on the axis clears it (then chroma or the background has
+    to move, which is a design decision, not a mechanical one)."""
+    L, C, H = rgb_to_oklch(fg)
+    # Move away from the background: darker text on a light ground, lighter on dark.
+    direction = -1 if relative_luminance(bg) > relative_luminance(fg) else 1
+    for i in range(1, steps + 1):
+        cand_L = L + direction * (i / steps)
+        if not 0 <= cand_L <= 1:
+            break
+        cand = oklch_to_rgb(cand_L, C, H)
+        got = abs(apca_lc(cand, bg)) if standard == "apca" else wcag_ratio(cand, bg)
+        if got >= threshold:
+            return to_hex(cand), round(cand_L, 3)
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Pairing policy  (SKILL CONVENTION)
+# ---------------------------------------------------------------------------
+
+def _colors(resolved):
+    """[(path, flat_name, role, value)] for every color token, sorted."""
+    out = []
+    for path in sorted(resolved):
+        entry = resolved[path]
+        if entry.get("type") == "color":
+            name = _flat_name(path)
+            out.append((path, name, _infer_role(name), entry.get("value")))
+    return out
+
+
+def _is_on_token(name):
+    low = name.lower()
+    return low.startswith("on-") or low.startswith("on_")
+
+
+# A trailing numeric step (`ink-950`, `amber-500`, `slate.800`) marks a palette
+# ramp primitive, not a role assignment. `ink-950` is a swatch that happens to
+# contain "ink"; `text` is the token that says where ink goes. Measuring ramp
+# steps against backgrounds produces confident nonsense — in our own token set
+# it paired `ink-950` with a near-identical `background` and demanded the ink
+# be lightened. Roles are read from semantic names only.
+_RAMP_STEP_RE = re.compile(r"[-_.]\d{2,4}$")
+
+
+def is_palette_step(name):
+    return bool(_RAMP_STEP_RE.search(name))
+
+
+def _lookup(token, resolved, by_name, by_role):
+    """Resolve a name from the contrast declaration to a token path. Accepts a
+    full path ('color.text'), a flat name ('text'), or a role ('background')."""
+    if token in resolved:
+        return token
+    low = str(token).lower()
+    if low in by_name:
+        return by_name[low]
+    hits = by_role.get(low)
+    return hits[0] if hits else None
+
+
+def build_pairs(resolved, level="auto", spec=None):
+    """Return [(fg, bg, level)] of token paths worth measuring.
+
+    When `spec` declares `pairs`, those are measured and nothing else. Otherwise
+    pairs are inferred:
+      * every text/muted color over every background color        -> body
+      * every primary/accent/success/warning/danger over every
+        background color                                          -> non-body
+      * every `on-X` color over the fill it names (only that fill) -> body
+
+    `spec["exclude"]` drops any pair touching those tokens either way. Palette
+    ramp steps (`ink-950`, `amber-500`) are skipped on both sides — see
+    `is_palette_step`. `level` of "body"/"non-body" overrides the per-pair choice.
+    """
+    spec = spec or {}
+    cols = [c for c in _colors(resolved) if not is_palette_step(c[1])]
+    by_role, by_name, role_of = {}, {}, {}
+    for path, name, role, _value in cols:
+        by_name[name.lower()] = path
+        role_of[path] = role
+        if role:
+            by_role.setdefault(role, []).append(path)
+
+    excluded = set()
+    for token in spec.get("exclude") or []:
+        path = _lookup(token, resolved, by_name, by_role)
+        if path:
+            excluded.add(path)
+
+    pairs = []
+
+    def add(fg, bg, lvl):
+        if fg != bg and fg not in excluded and bg not in excluded:
+            pairs.append((fg, bg, level if level != "auto" else lvl))
+
+    declared = spec.get("pairs")
+    if declared:
+        for entry in declared:
+            if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+                continue
+            fg = _lookup(entry[0], resolved, by_name, by_role)
+            bg = _lookup(entry[1], resolved, by_name, by_role)
+            if not fg or not bg:
+                continue
+            # A declared pair is measured at the level its foreground role
+            # implies, unless the entry names one explicitly as a third item.
+            lvl = entry[2] if len(entry) > 2 and entry[2] in THRESHOLDS else None
+            if lvl is None:
+                lvl = "non-body" if role_of.get(fg) in _NON_BODY_ROLES else "body"
+            add(fg, bg, lvl)
+        return pairs
+
+    backgrounds = by_role.get("background", [])
+
+    for path, name, role, _value in cols:
+        if _is_on_token(name):
+            # `on-primary` is ink placed on the `primary` fill — pair it with
+            # that fill, not with the page background.
+            target = name[3:].lower()
+            fill = by_name.get(target) or (by_role.get(target) or [None])[0]
+            if fill:
+                add(path, fill, "body")
+            continue
+        if role in _BODY_ROLES:
+            for bg in backgrounds:
+                add(path, bg, "body")
+        elif role in _NON_BODY_ROLES:
+            for bg in backgrounds:
+                add(path, bg, "non-body")
+
+    return pairs
+
+
+# ---------------------------------------------------------------------------
+# Report
+# ---------------------------------------------------------------------------
+
+def check(resolved, standard="both", level="auto", spec=None):
+    """Measure every pair. Returns {'results': [...], 'unmeasured': [...]}.
+
+    Each result: {fg, bg, fg_value, bg_value, level, apca, wcag, apca_pass,
+    wcag_pass, passed, fix}. `passed` reflects `standard` ("apca", "wcag", or
+    "both" = must clear both). `unmeasured` holds (path, value, reason) for
+    colors we refused to guess at.
+    """
+    results, unmeasured, cache = [], [], {}
+
+    def rgb_of(path):
+        if path not in cache:
+            value = resolved[path].get("value")
+            try:
+                cache[path] = parse_color(value)
+            except Unparseable as exc:
+                cache[path] = None
+                unmeasured.append((path, value, str(exc)))
+        return cache[path]
+
+    identical = []
+    for fg, bg, lvl in build_pairs(resolved, level=level, spec=spec):
+        fg_rgb, bg_rgb = rgb_of(fg), rgb_of(bg)
+        if fg_rgb is None or bg_rgb is None:
+            continue
+        if fg_rgb == bg_rgb:
+            # Two names for one color — an alias or a duplicated value. There is
+            # no contrast question here, and "make the ink lighter" would be
+            # actively wrong advice. Report the collision instead.
+            identical.append((fg, bg, to_hex(fg_rgb)))
+            continue
+        want = THRESHOLDS[lvl]
+        lc = apca_lc(fg_rgb, bg_rgb)
+        ratio = wcag_ratio(fg_rgb, bg_rgb)
+        apca_ok = abs(lc) >= want["apca"]
+        wcag_ok = ratio >= want["wcag"]
+        passed = {"apca": apca_ok, "wcag": wcag_ok,
+                  "both": apca_ok and wcag_ok}[standard]
+        fix = None
+        if not passed:
+            std = "wcag" if standard == "wcag" else "apca"
+            fix = suggest_fix(fg_rgb, bg_rgb, std, want[std])
+        results.append({
+            "fg": fg, "bg": bg,
+            "fg_value": to_hex(fg_rgb), "bg_value": to_hex(bg_rgb),
+            "level": lvl,
+            "apca": round(lc, 1), "wcag": round(ratio, 2),
+            "apca_pass": apca_ok, "wcag_pass": wcag_ok,
+            "passed": passed, "fix": fix,
+        })
+
+    # Deduplicate unmeasured (a color can appear in many pairs).
+    seen, uniq = set(), []
+    for item in unmeasured:
+        if item[0] not in seen:
+            seen.add(item[0])
+            uniq.append(item)
+    return {"results": results, "unmeasured": uniq, "identical": identical}
+
+
+def failures(resolved, standard="both", level="auto", spec=None):
+    """Failing pairs only, as advisory strings — the shape validate/use want."""
+    report = check(resolved, standard=standard, level=level, spec=spec)
+    out = []
+    for r in report["results"]:
+        if r["passed"]:
+            continue
+        want = THRESHOLDS[r["level"]]
+        msg = (f"contrast: {r['fg']} ({r['fg_value']}) on {r['bg']} "
+               f"({r['bg_value']}) — APCA Lc {r['apca']} "
+               f"(need {want['apca']:g}), WCAG {r['wcag']}:1 "
+               f"(need {want['wcag']:g}) for {r['level']} text")
+        if r["fix"]:
+            msg += f"; try {r['fix'][0]} (same hue and chroma, L={r['fix'][1]})"
+        out.append(msg)
+    return out
+
+
+def format_report(report, standard="both"):
+    """Human-readable text for the `contrast` command."""
+    lines = []
+    results = report["results"]
+    if not results:
+        lines.append("no measurable text/background pairs found "
+                     "(no color tokens matched the text/background roles)")
+    else:
+        fails = [r for r in results if not r["passed"]]
+        lines.append(f"{len(results)} pair(s) measured, {len(fails)} failing "
+                     f"(standard: {standard})")
+        lines.append("")
+        width = max(len(f"{r['fg']} on {r['bg']}") for r in results)
+        for r in sorted(results, key=lambda r: (r["passed"], r["fg"], r["bg"])):
+            mark = "PASS" if r["passed"] else "FAIL"
+            label = f"{r['fg']} on {r['bg']}".ljust(width)
+            lines.append(f"  {mark}  {label}  Lc {r['apca']:>6}  "
+                         f"{r['wcag']:>5}:1  [{r['level']}]")
+            if r["fix"]:
+                lines.append(f"        fix: {r['fg_value']} -> {r['fix'][0]} "
+                             f"(OKLCH L {r['fix'][1]}, chroma and hue unchanged)")
+    if report.get("identical"):
+        lines.append("")
+        lines.append("same color on both sides (an alias or a duplicated value, "
+                     "not a contrast failure):")
+        for fg, bg, value in report["identical"]:
+            lines.append(f"  {fg} and {bg} are both {value}")
+    if report["unmeasured"]:
+        lines.append("")
+        lines.append("not measured (reported, not counted as failures):")
+        for path, value, reason in report["unmeasured"]:
+            lines.append(f"  {path} = {value!r} — {reason}")
+    return "\n".join(lines) + "\n"

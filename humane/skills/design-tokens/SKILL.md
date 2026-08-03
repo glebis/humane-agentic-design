@@ -36,6 +36,7 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 | `setup-edit <dest> [--from SRC]` | Scaffold a token file at `<dest>` and validate it (refuses to overwrite). With `--from`, deterministically clone an existing set's structure + content to edit (byte-stable for a given source) instead of the blank template. Ships `templates/base.tokens.json` (minimal), `templates/monaspace.tokens.json` (a real set extracted from a live site — see *Extracting from a site*), and `templates/gsap.tokens.json` (a motion-first set: `duration` tokens under `motion.*` render as a body Motion table, and its `$extensions` brand block carries GSAP animation recipes for `--rich`). Also compiles a **DESIGN.md** next to the token file (provenance-stamped; won't clobber a hand-edited one — see *DESIGN.md output*). If a `brand-block.draft.json` (a `humane:brandkit` handoff for a set that didn't exist yet) sits in the destination directory, its `$extensions` brand block is imported into the scaffolded set. |
 | `import <css> [-o OUT]` | Import a CSS file's `:root` custom properties into DTCG, preserving variable names. Skips composites (shadow/gradient) and reports them on stderr. |
 | `validate <file> [--strict]` | Print `OK` or a list of errors; exit 1 if invalid. Also prints non-fatal `warning:` lines to stderr when the brand-style block / its `imageryStyle` is missing, or when a dimension/duration value is legitimate CSS but not DTCG-shapeable (`clamp()`/`calc()`/`var()` and bare unit strings — kept verbatim in outputs). Advisory only, never changes the exit code — except under `--strict`, which promotes the non-DTCG dimension advisories to errors (exit 1) so they can gate CI. |
+| `contrast <file> [--standard apca\|wcag\|both] [--level auto\|body\|non-body] [--json] [--no-fail] [-o OUT]` | Measure **APCA Lc** and **WCAG 2.x ratio** for every foreground/background pair in the set, and propose a fix that moves OKLCH lightness while preserving chroma and hue. Exits 1 on any failure (`--no-fail` to report without gating). See *Contrast* below. |
 | `merge <base> <override> [-o OUT]` | Layer project override on global base. |
 | `resolve <file> [-o OUT]` | Flatten aliases to concrete values (JSON map). |
 | `export-css <file> [--selector SEL] [-o OUT]` | Emit CSS custom properties. |
@@ -46,6 +47,77 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 | `generate <file> [--target gpt-image-2\|nano-banana\|all] [--subject S] [--refs DIR] [--out-dir D] [--final] [--dry-run]` | **Actually generate** on-brand images: composes the winning art-direction-prose prompt (fidelity-tested) from tokens + `$extensions` brand block and shells out to the gpt-image-2 / nano-banana skill scripts (cheap draft by default; `--final` = high/pro). With `--refs`, reads the `refs.json` manifest: each annotated image becomes a `--reference` flag plus a role-annotated prompt clause ("from reference image 1 take: palette, mood — …"). |
 | `annotate <dir> [--port N] [--no-open]` | Serve a **reference-image annotator** for a directory of images: per-image role chips (style, palette, composition, subject, texture, typography, mood) + a free-text note, with voice dictation via Groq Whisper when `GROQ_API_KEY` is set (text-only otherwise). Save writes a `refs.json` manifest next to the images (SKILL CONVENTION) — the source of truth for "what to take from each reference" in multi-reference generation. |
 | `serve <path> [--port N] [--no-open]` | Serve a generated `.html` (or an output dir) over `http://127.0.0.1` and open it. Use this to view previews — `file://` URLs are unique origins and break web-font loads, `fetch`, and extensions. |
+
+## Contrast
+
+DTCG stores colors, not relationships — nothing in the standard says which token
+is text and which is the surface behind it. `contrast` adds that layer as a
+SKILL CONVENTION and makes it executable, so a token set cannot compile with an
+unreadable role pair.
+
+Two scales, both reported:
+
+| Scale | Body text | Non-body (links, icons, badges, large text) |
+| --- | --- | --- |
+| **APCA Lc** (W3C draft, algorithm 0.1.9) | \|Lc\| ≥ 75 | \|Lc\| ≥ 60 |
+| **WCAG 2.x ratio** | 4.5:1 | 3:1 |
+
+`--standard both` (the default) requires clearing both. They genuinely disagree:
+`#747474` on white is 4.67:1 (passes WCAG AA) but Lc 72.5 (fails APCA). APCA is
+the better predictor of perceived readability; WCAG is the one auditors ask for.
+Reporting both, and letting the caller pick which gates, is the honest split.
+
+**Fixes move lightness only.** The suggestion walks OKLCH `L` away from the
+background until the pair clears, keeping `C` and `H` — so the brand hue
+survives the fix. When no lightness on that axis clears the bar, no fix is
+offered: chroma or the background has to move, and that is a design decision,
+not a mechanical one.
+
+**Unparseable colors are reported, never failed.** `var(--x)`, `currentColor`, a
+gradient, or any value carrying alpha (contrast depends on what is behind it) is
+listed as *not measured*. A verification gap is not a finding.
+
+**Palette ramp steps are skipped.** A trailing numeric step (`ink-950`,
+`amber-500`) marks a swatch, not a role assignment — `ink-950` is a color that
+happens to contain "ink"; `text` is the token that says where ink goes. Pairing
+ramp steps produced confident nonsense on real sets, so roles are read from
+semantic names only. Two names resolving to the same value are reported as a
+collision, not a contrast failure.
+
+### Declaring the pairs that actually meet
+
+Name inference cannot know intent. Our own set defines `paper-50` — a *warm
+paper surface for printed / risograph contexts* — which reads as a background by
+name but never sits behind screen text. Declare the real pairs to fix this
+permanently (SKILL CONVENTION, at the token-file root):
+
+```json
+"$extensions": {
+  "community.design-tokens.contrast": {
+    "pairs": [["text", "background"], ["muted", "background"], ["on-primary", "primary"]],
+    "exclude": ["surface", "accent"]
+  }
+}
+```
+
+- **`pairs`** — when present, these are measured and nothing else. Each entry is
+  `[foreground, background]`, optionally `[foreground, background, "body"|"non-body"]`.
+  Names resolve as a full path (`color.text`), a flat name (`text`), or a role.
+- **`exclude`** — tokens never paired in either position; applies whether pairs
+  are declared or inferred.
+- Absent entirely, pairs are inferred from roles, so existing sets keep working.
+
+### Gating
+
+- `validate <file>` and `use` print failures as `warning:` lines — advisory, exit 0.
+- `validate <file> --strict` promotes them to **errors** (exit 1), so CI can gate on them.
+- `contrast <file>` exits 1 on any failure by itself.
+
+### Themes
+
+A token file is one theme (the convention is one override file per theme, merged
+before use). So run `contrast` **after** the merge, once per theme — a palette
+verified only in light mode is a palette half-verified.
 
 ## Brand-style extensions ($extensions)
 

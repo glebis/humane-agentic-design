@@ -72,7 +72,9 @@ def validate(tree, strict=False):
 
     errors.extend(_detect_cycles(idx))
     if strict:
-        errors.extend(dimension_warnings(_safe_resolve(tree)))
+        resolved = _safe_resolve(tree)
+        errors.extend(dimension_warnings(resolved))
+        errors.extend(contrast_warnings(resolved, _contrast_spec(tree)))
     return errors
 
 
@@ -133,8 +135,28 @@ def brand_warnings(tree):
     return out
 
 
+def contrast_warnings(resolved, spec=None):
+    """Advisories for role pairs that miss the readability thresholds. SKILL
+    CONVENTION: DTCG stores no relationships, so the text/background pairs are
+    inferred from token names (see contrast.build_pairs). Colors we cannot parse
+    are reported as unmeasured by the `contrast` command, never as failures
+    here — a verification gap is not a finding."""
+    if not resolved:
+        return []
+    from . import contrast as _contrast
+    return _contrast.failures(resolved, spec=spec)
+
+
 def warnings(tree):
-    """All non-fatal advisories for a tree: the brand-style contract plus any
-    non-DTCG dimension/duration values kept verbatim. Best-effort — dimension
-    checks are skipped if the tree can't resolve."""
-    return brand_warnings(tree) + dimension_warnings(_safe_resolve(tree))
+    """All non-fatal advisories for a tree: the brand-style contract, any
+    non-DTCG dimension/duration values kept verbatim, and failing contrast
+    pairs. Best-effort — resolved checks are skipped if the tree can't resolve."""
+    resolved = _safe_resolve(tree)
+    return (brand_warnings(tree)
+            + dimension_warnings(resolved)
+            + contrast_warnings(resolved, _contrast_spec(tree)))
+
+
+def _contrast_spec(tree):
+    from . import contrast as _contrast
+    return _contrast.extract_spec(tree)

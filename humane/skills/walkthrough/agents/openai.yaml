@@ -1,0 +1,3 @@
+interface:
+  display_name: "Walkthrough"
+  short_description: "Task-based cognitive walkthrough of a real interface"

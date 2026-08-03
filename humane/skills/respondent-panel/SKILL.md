@@ -1,6 +1,6 @@
 ---
 name: respondent-panel
-description: Run a panel of independent synthetic respondents against copy, a slogan, brand values, a landing page, or any user-facing text — each in an isolated context, each a different specific person — then read the panel for convergence and divergence. Use when the user asks "how does this land", "what would people think of this", "test this tagline", "get reactions to this copy", "run a panel", or wants gut-level audience reaction rather than expert critique. Complements persona-review, which is expert stakeholder critique of a document.
+description: Run a panel of independent synthetic respondents against copy, a slogan, brand values, a landing page, or any user-facing text — each in an isolated context, each a different specific person — then read the panel for convergence and divergence. Use when the user asks "how does this land", "what would people think of this", "test this tagline", "get reactions to this copy", "run a panel", or wants gut-level audience reaction rather than expert critique. Complements persona-review, which is expert stakeholder critique of a document. Triggers on respondent panel, how does this land, what would people think, test this tagline, reactions to this copy, gut reaction, audience reaction.
 ---
 
 # Respondent Panel
@@ -27,7 +27,8 @@ finding. This skill is about getting the second one.
   arguing back. This skill is strangers glancing.
 - You want a **usability** judgement of an interface. That is `nielsen-heuristics`.
 - You want the copy **fixed**. Respondents deliberately do not rewrite; bring their
-  reactions back and revise yourself.
+  reactions back and revise yourself — `ux-writing` owns the rewrite, and knows to
+  revise against convergent findings only.
 
 ## The one rule
 
@@ -127,8 +128,8 @@ market research, and never attach a confidence percentage to it.
 
 Then offer the next step:
 
-- Revise the copy against the convergent findings and re-run the same panel — same
-  briefs, so the comparison is clean.
+- Revise the copy with `ux-writing` against the convergent findings, then re-run the
+  same panel — same briefs, so the comparison is clean.
 - Run `before-after` if the artifact is claiming a transformation.
 - Take the convergent findings to real users, if any are reachable.
 

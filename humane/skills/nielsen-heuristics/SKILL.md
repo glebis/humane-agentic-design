@@ -1,6 +1,6 @@
 ---
 name: nielsen-heuristics
-description: This skill should be used to run a formal heuristic evaluation of a design artifact against Jakob Nielsen's 10 usability heuristics, producing an evidence-backed, severity-scored report. Use it when the user wants a "heuristic evaluation", "usability review", "Nielsen heuristics check", "UX heuristic audit", or asks whether a screenshot, live URL, HTML page, codebase UI, interface description, or JTBD/spec document holds up against usability principles. Accepts five input types (screenshot/image, live URL, codebase/HTML, interface description, JTBD/spec doc) and adapts its rigor and output honestly to what is actually observable. Can render the report as plain markdown (default) or as a Tufte-style HTML report, and can export findings above a severity threshold as Linear or Beads (bd) tasks after confirmation.
+description: Run a formal heuristic evaluation of a design artifact against Jakob Nielsen's 10 usability heuristics, producing an evidence-backed, severity-scored report with honesty guards. Accepts a screenshot, live URL, codebase/HTML, interface description, or JTBD/spec doc, and adapts its rigor to what is actually observable. Renders as markdown or a Tufte-style HTML report, and can export findings as Linear or Beads tasks after confirmation. Triggers on heuristic evaluation, usability review, Nielsen heuristics check, UX heuristic audit, usability inspection.
 ---
 
 # Nielsen Heuristics Validator
@@ -11,7 +11,7 @@ Run a rigorous, evidence-disciplined heuristic evaluation against Jakob Nielsen'
 
 ## Scope guard (read first)
 
-This skill does ONE thing: a formal heuristic inspection. It does NOT run a parallel accessibility (WCAG) audit, performance audit, or general design critique. Flag an accessibility issue **only when it is also a heuristic violation** (e.g., an invisible focus state violates H1: visibility of system status). If the user wants comprehensive multi-dimension auditing, defer to the `impeccable:audit` skill instead.
+This skill does ONE thing: a formal heuristic inspection. It does NOT run a parallel accessibility (WCAG) audit, performance audit, or general design critique. Flag an accessibility issue **only when it is also a heuristic violation** (e.g., an invisible focus state violates H1: visibility of system status). If the user wants comprehensive multi-dimension auditing, defer to `humane:review`, which orchestrates this skill alongside `layout-rules`, `ux-writing`, `walkthrough`, and `design-tokens` contrast — and marks the domains it cannot cover rather than improvising them. For post-build polish specifically, `impeccable:audit` is the right tool if installed.
 
 ## Step 1 — Detect artifact type and select a mode
 
@@ -48,9 +48,37 @@ Load `references/heuristics.md` for the definition, "what to look for" probes, c
 4. If a heuristic is **not assessable** from this artifact (e.g., undo/redo on a static screenshot), mark it **N/A** and state why.
 5. If a heuristic has **no findings**, state **what was checked** ("checked X, Y, Z — no issues") — never silently bless it.
 
+## Step 3b — Restraint, caps, and what you could not check
+
+Three disciplines that apply before the report is written. They exist because a
+rubric that walks 10 heuristics feels obliged to fill all ten, and a padded
+evaluation is worse than a short one — it buries the real findings and teaches
+the reader to skim.
+
+**Cap the findings.** 15 in a full evaluation, 5 in a quick one. Never pad to
+reach the cap; **a short evaluation, or none at all, is a valid result.** If the
+artifact genuinely has more than the cap, report the highest-severity ones and
+state plainly how many you left out and on what basis.
+
+**Record what you considered and rejected.** Include 2–5 candidates you
+inspected and deliberately did not report, with the reason: the convention is
+intentional, the evidence is insufficient, the heuristic permits the current
+behavior, or the change would add complexity without user benefit. These must be
+real candidates encountered during the walk, not invented filler. If the scope
+contained fewer borderline calls, list the ones that exist and say so.
+
+**Never convert a verification gap into a finding.** If a state could not be
+reached, a flow could not be driven, or a behavior was not observable in the
+artifact, label it **Not verified** and say what remains. "I could not check the
+error state" is a coverage note, not a severity-3 finding.
+
+**Reviews do not mutate.** Treat an evaluation request as read-only. Do not edit
+source, copy, or styles unless the user also asks for the fixes to be applied.
+When they do, keep the report as the change scope and re-verify afterwards.
+
 ## Step 4 — Emit the report (choose an output format)
 
-Findings are always **grouped by heuristic** with a **max-severity rollup**, followed by **Top-3 prioritized fixes** and the **Verdict**. Two render targets:
+Findings are always **grouped by heuristic** with a **max-severity rollup**, followed by **Considered but Rejected**, **Top-3 prioritized fixes**, **Verification**, and the **Verdict**. Two render targets:
 
 - **`markdown` (default)** — emit inline using `references/report-template.md`. Use this unless the user asks for a rendered/shareable report.
 - **`tufte`** — a Tufte-style standalone HTML report. Follow `references/tufte-preset.md`: build the structured findings first, then invoke the `tufte-report` skill with that preset (which maps findings onto its strip-chart / status-strip / flyout blocks and uses `assets/jakob-nielsen.png` as the hero). Trigger when the user says "tufte report", "HTML report", "shareable report", or "make it pretty".
@@ -67,6 +95,8 @@ A single evaluator finds only ~1/3 of usability problems (Nielsen); 3–5 evalua
 - **No blockers found in heuristic inspection** — clean pass, with the explicit single-evaluator caveat.
 
 Design-risk mode produces a **risk summary** (which heuristics are most at risk, and what to specify to de-risk them) instead of a scored verdict — there are no severities to roll up.
+
+**Mapping to the shared humane verdict.** So this composes with other review skills, also state one of: `Block` (any severity-4), `Needs changes` (anything actionable below that), or `Approve` (no actionable findings **and** the claimed coverage was verified). Keep the single-evaluator caveat attached to `Approve` — it means "clean in this inspection", never "ready to ship".
 
 ## Step 5 — Export findings as tasks (optional)
 

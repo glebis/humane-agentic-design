@@ -30,3 +30,45 @@ A defect-class avoid-list for tool/dashboard UIs. Every rule is a bug or design 
 ## Conflict precedence
 
 The user's explicit words > this ruleset > project's existing system > personal taste. If a rule conflicts with an existing design system in the repo, flag it, don't silently rewrite.
+
+## What this skill does not own
+
+Each rule lives in one place. When a concern crosses a boundary, name the handoff
+rather than restating the rule here.
+
+| Concern | Owner |
+| --- | --- |
+| Measuring a color pair, and changing it | `design-tokens` (`tokens contrast`) — rule 12 says *that* it must clear the bar; the command says *whether* it does |
+| The source wording of any user-facing string | `ux-writing` — rules 5, 8, 9, 38 defer to it on wording |
+| Whether the flow is usable at all | `nielsen-heuristics` |
+| Art direction, palette, and type choice | `design-tokens` and `brandkit` |
+| Typography mechanics, motion recipes, ARIA depth | Not covered here. If `interfaces` (`better-typography`, `better-ui`, `better-accessibility`) is installed, defer to it; otherwise say the domain was not reviewed rather than improvising |
+
+## Review Output Format
+
+When reviewing an existing UI rather than building one, report findings in this
+shape so the result composes with the other humane review skills.
+
+| Severity | Location | Before | After | Why |
+| --- | --- | --- | --- | --- |
+| MEDIUM | `src/Card.tsx:28` | `border-left: 3px solid var(--accent)` | Background tint + leading color dot on the label | Rule 1: left-border accent rails |
+
+- **Severity** — `HIGH` blocks content or an action, loses state, or breaks a
+  supported viewport; `MEDIUM` harms hierarchy, adaptability, or correctness;
+  `LOW` is isolated polish.
+- **Location** — `path/to/file:line`, or the exact screen and element.
+- **Why** — name the numbered rule.
+
+One root cause is one row, listing every affected location. Cap at 15 findings;
+never pad — no findings is a valid result. Then:
+
+- **Considered but Rejected** — 2–5 real candidates you inspected and chose not
+  to report, with the reason (the project's system permits it, the deviation is
+  intentional, the evidence is thin).
+- **Verification** — which rules you actually checked and how. Rule 29 means a
+  real browser screenshot on both themes; rule 30 means an empty dataset too.
+  Anything unchecked is listed as **Not verified**, never converted into a
+  finding.
+- **Verdict** — `Block`, `Needs changes`, or `Approve`.
+
+Reviews are read-only unless the user also asked for the fixes to be applied.

@@ -53,6 +53,36 @@ alarms: most are optional, and the cycle degrades honestly without them.
 - **companions** — `interfaces` and `impeccable` are separate plugins humane
   defers to. Absent is fine; the review skills mark those domains **Not
   reviewed** rather than improvising rules they do not own.
+- **humane copies** — other installed copies of humane's own skills, and
+  whether they have drifted from this checkout. See below; this is the check
+  most likely to surprise someone.
+
+### Drift between copies
+
+*Minimize drift between copies of a skill* is a named outcome of this project,
+and it is the one failure the method cannot catch by reading a repo. A copy that
+has silently lost a file is far harder to notice than one that is merely old —
+on the machine this check was written for, `~/.codex/skills/jtbd` was missing
+`scripts/graph.py`, so Graph Mode simply did not exist on that agent and nothing
+said so.
+
+The doctor enumerates the known skill roots and the registered plugin
+marketplace, then classifies each copy it finds:
+
+| State | Meaning |
+| --- | --- |
+| linked | a symlink back into this checkout — the good case, nothing to do |
+| links to a different source | a symlink into another repo; two skills share one name |
+| missing N file(s) | named explicitly, because *which* file is the whole point |
+| identical for now | an independent copy that matches today and will drift the moment either side moves |
+
+A **registered marketplace pins a commit**, so it reports itself perfectly in
+sync with its own remote while sitting versions behind the repo. The check
+compares version and skill count against this checkout instead, which is the
+only comparison that catches it.
+
+None of this blocks. Drift is reported, never auto-repaired: re-installing over
+a copy someone is mid-edit on would be worse than the drift.
 
 ## Step 2 — Ask before configuring
 

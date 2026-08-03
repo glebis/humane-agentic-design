@@ -212,3 +212,125 @@ class DoctorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CopyDriftTests(unittest.TestCase):
+    """Drift between copies of a skill is a named outcome of this project, and
+    the one failure the method cannot catch by reading a repo."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = pathlib.Path(self.tmp.name)
+        # a canonical checkout: <root>/humane/skills/<skill>
+        self.canon = self.d / "repo" / "humane" / "skills"
+        (self.canon / "jtbd" / "scripts").mkdir(parents=True)
+        (self.canon / "jtbd" / "SKILL.md").write_text("---\nname: jtbd\n---\nbody\n")
+        (self.canon / "jtbd" / "scripts" / "graph.py").write_text("# graph\n")
+        manifest = self.canon.parent / ".claude-plugin"
+        manifest.mkdir(parents=True)
+        (manifest / "plugin.json").write_text(json.dumps({"version": "9.9.9"}))
+        self.root = self.d / "elsewhere" / "skills"
+        self.root.mkdir(parents=True)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _check(self):
+        return hs.check_humane_copies(roots=[self.root], canonical_root=self.canon,
+                                      marketplaces=self.d / "no-marketplaces")
+
+    def test_no_copies_is_clean(self):
+        states = [c["state"] for c in self._check()]
+        self.assertEqual(states, ["ok"])
+
+    def test_symlink_back_to_the_checkout_is_the_good_case(self):
+        (self.root / "jtbd").symlink_to(self.canon / "jtbd")
+        checks = self._check()
+        self.assertEqual(checks[0]["state"], "ok")
+        self.assertIn("1 linked", checks[0]["detail"])
+
+    def test_copy_missing_a_file_is_named_precisely(self):
+        """The real case: ~/.codex/skills/jtbd had lost scripts/graph.py, so
+        Graph Mode silently did not exist on that agent."""
+        dst = self.root / "jtbd"
+        (dst / "scripts").mkdir(parents=True)
+        (dst / "SKILL.md").write_text("---\nname: jtbd\n---\nbody\n")
+        checks = [c for c in self._check() if c["name"] == "humane copy"]
+        self.assertEqual(len(checks), 1)
+        self.assertIn("scripts/graph.py", checks[0]["detail"])
+        self.assertIn("missing 1 file", checks[0]["detail"])
+
+    def test_symlink_to_a_different_repo_is_flagged(self):
+        other = self.d / "other-repo" / "jtbd"
+        other.mkdir(parents=True)
+        (other / "SKILL.md").write_text("---\nname: jtbd\n---\ndifferent\n")
+        (self.root / "jtbd").symlink_to(other)
+        detail = [c for c in self._check() if c["name"] == "humane copy"][0]["detail"]
+        self.assertIn("links to a different source", detail)
+        self.assertIn("SKILL.md differs", detail)
+
+    def test_identical_independent_copy_is_still_reported(self):
+        """Identical today is not linked; it will drift the moment either moves."""
+        dst = self.root / "jtbd"
+        (dst / "scripts").mkdir(parents=True)
+        (dst / "SKILL.md").write_text((self.canon / "jtbd" / "SKILL.md").read_text())
+        (dst / "scripts" / "graph.py").write_text("# graph\n")
+        detail = [c for c in self._check() if c["name"] == "humane copy"][0]["detail"]
+        self.assertIn("identical for now", detail)
+
+    def test_build_artefacts_do_not_count_as_drift(self):
+        dst = self.root / "jtbd"
+        (dst / "scripts" / "__pycache__").mkdir(parents=True)
+        (dst / "scripts" / "__pycache__" / "x.pyc").write_text("junk")
+        (dst / "SKILL.md").write_text((self.canon / "jtbd" / "SKILL.md").read_text())
+        (dst / "scripts" / "graph.py").write_text("# graph\n")
+        detail = [c for c in self._check() if c["name"] == "humane copy"][0]["detail"]
+        self.assertNotIn("extra file", detail)
+
+    def test_drift_never_blocks(self):
+        dst = self.root / "jtbd"
+        dst.mkdir(parents=True)
+        (dst / "SKILL.md").write_text("different\n")
+        for c in self._check():
+            self.assertNotEqual(c["state"], "missing")
+
+
+class MarketplaceTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = pathlib.Path(self.tmp.name)
+        self.canon = self.d / "repo" / "humane" / "skills"
+        (self.canon / "jtbd").mkdir(parents=True)
+        (self.canon / "jtbd" / "SKILL.md").write_text("x")
+        (self.canon.parent / ".claude-plugin").mkdir(parents=True)
+        (self.canon.parent / ".claude-plugin" / "plugin.json").write_text(
+            json.dumps({"version": "0.9.0"}))
+        self.base = self.d / "marketplaces"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _install(self, version, skills):
+        d = self.base / "humane-agentic-design" / "humane"
+        (d / ".claude-plugin").mkdir(parents=True)
+        (d / ".claude-plugin" / "plugin.json").write_text(json.dumps({"version": version}))
+        for s in skills:
+            (d / "skills" / s).mkdir(parents=True)
+            (d / "skills" / s / "SKILL.md").write_text("x")
+
+    def test_pinned_old_marketplace_is_flagged(self):
+        """A registered marketplace pins a commit, so it reports itself in sync
+        with its own remote while sitting versions behind the repo."""
+        self._install("0.6.1", ["jtbd"])
+        c = hs._check_plugin_marketplaces(self.base, self.canon)[0]
+        self.assertEqual(c["state"], "optional")
+        self.assertIn("v0.6.1", c["detail"])
+        self.assertIn("v0.9.0", c["detail"])
+        self.assertIn("/plugin update", c["fix"])
+
+    def test_matching_marketplace_is_ok(self):
+        self._install("0.9.0", ["jtbd"])
+        self.assertEqual(hs._check_plugin_marketplaces(self.base, self.canon)[0]["state"], "ok")
+
+    def test_absent_marketplace_dir_is_silent(self):
+        self.assertEqual(hs._check_plugin_marketplaces(self.d / "nope", self.canon), [])

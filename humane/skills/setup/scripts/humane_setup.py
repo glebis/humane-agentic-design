@@ -25,6 +25,7 @@ win over a stray exported variable in the shell that happens to be running.
 """
 
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -212,6 +213,140 @@ def check_companions():
     return out
 
 
+def _our_skills_root():
+    """The skills/ directory this script lives in — the canonical copy."""
+    return pathlib.Path(__file__).resolve().parents[2]
+
+
+def _our_version():
+    manifest = _our_skills_root().parent / ".claude-plugin" / "plugin.json"
+    return _read_json(manifest).get("version")
+
+
+def _skill_signature(d):
+    """(relative file names, SKILL.md digest) — a cheap, stable drift signal.
+
+    Build artefacts are excluded so a copy is not called stale for lacking a
+    __pycache__ the canonical happens to have.
+    """
+    if not d.is_dir():
+        return None
+    skip = ("__pycache__", ".pytest_cache", ".git")
+    names = {
+        str(p.relative_to(d)) for p in d.rglob("*")
+        if p.is_file() and not any(s in p.parts for s in skip)
+        and p.name not in (".gitignore", ".DS_Store")
+    }
+    sk = d / "SKILL.md"
+    digest = hashlib.sha256(sk.read_bytes()).hexdigest()[:12] if sk.is_file() else ""
+    return names, digest
+
+
+def check_humane_copies(project_dir=None, roots=None, canonical_root=None,
+                        marketplaces=None):
+    """Find other installed copies of humane's own skills and report drift.
+
+    'Minimize drift between copies of a skill' is a named outcome of this
+    project, and it is the one failure the method cannot catch by reading a
+    repo: a copy that has silently lost a file is harder to notice than one
+    that is merely old. So we look.
+
+    A symlink pointing back into this checkout is the good case and is reported
+    as such. A real directory, or a symlink into a different repo, can drift —
+    and we say exactly how.
+    """
+    canonical_root = pathlib.Path(canonical_root) if canonical_root else _our_skills_root()
+    if not canonical_root.is_dir():
+        return [_ok("humane copies", "canonical skills not found; skipped")]
+    ours = {p.name: p for p in sorted(canonical_root.iterdir())
+            if p.is_dir() and (p / "SKILL.md").is_file()}
+    if not ours:
+        return [_ok("humane copies", "canonical skills not found; skipped")]
+
+    if roots is None:
+        roots = [pathlib.Path("~/.claude/skills"), pathlib.Path("~/.codex/skills"),
+                 pathlib.Path("~/.config/skills"),
+                 pathlib.Path(project_dir or ".") / ".agents" / "skills",
+                 pathlib.Path(project_dir or ".") / ".claude" / "skills"]
+    roots = [pathlib.Path(r) for r in roots]
+
+    linked, drifted = 0, []
+    for root in roots:
+        root = root.expanduser()
+        if not root.is_dir():
+            continue
+        for name, canonical in ours.items():
+            p = root / name
+            if not p.exists():
+                continue
+            target = p.resolve()
+            if target == canonical.resolve():
+                linked += 1
+                continue
+            problems = []
+            if p.is_symlink():
+                problems.append(f"links to a different source ({target})")
+            sig, ref = _skill_signature(p), _skill_signature(canonical)
+            if sig and ref:
+                missing = sorted(ref[0] - sig[0])
+                extra = sorted(sig[0] - ref[0])
+                if missing:
+                    problems.append(f"missing {len(missing)} file(s): "
+                                    + ", ".join(missing[:3])
+                                    + (" …" if len(missing) > 3 else ""))
+                if extra:
+                    problems.append(f"{len(extra)} extra file(s)")
+                if sig[1] != ref[1]:
+                    problems.append("SKILL.md differs")
+            if not problems and not p.is_symlink():
+                problems.append("independent copy, identical for now")
+            drifted.append((str(p), problems))
+
+    out = []
+    if linked:
+        out.append(_ok("humane copies", f"{linked} linked to this checkout"))
+    for path, problems in drifted:
+        out.append(_missing("humane copy", f"{path} — {'; '.join(problems)}",
+                            "re-install from this repo so one skill lives in one "
+                            "channel: npx skills add glebis/humane-agentic-design"))
+    if not linked and not drifted:
+        out.append(_ok("humane copies", "no other copies found"))
+    out.extend(_check_plugin_marketplaces(marketplaces, canonical_root))
+    return out
+
+
+def _check_plugin_marketplaces(base=None, canonical_root=None):
+    """A registered Claude Code marketplace pins a commit, so it can sit behind
+    the repo indefinitely while reporting itself perfectly in sync with its own
+    remote. Compare version and skill count against this checkout instead."""
+    base = pathlib.Path(base).expanduser() if base else \
+        pathlib.Path("~/.claude/plugins/marketplaces").expanduser()
+    canonical_root = pathlib.Path(canonical_root) if canonical_root else _our_skills_root()
+    if not base.is_dir():
+        return []
+    ours_version = _read_json(canonical_root.parent / '.claude-plugin' / 'plugin.json').get('version')
+    ours_count = len([p for p in canonical_root.iterdir()
+                      if p.is_dir() and (p / "SKILL.md").is_file()])
+    out = []
+    for entry in sorted(base.iterdir()):
+        manifest = entry / "humane" / ".claude-plugin" / "plugin.json"
+        if not manifest.is_file():
+            continue
+        version = _read_json(manifest).get("version")
+        skills_dir = entry / "humane" / "skills"
+        count = len([p for p in skills_dir.iterdir()
+                     if p.is_dir() and (p / "SKILL.md").is_file()]) if skills_dir.is_dir() else 0
+        if version == ours_version and count == ours_count:
+            out.append(_ok("plugin marketplace", f"{entry.name} v{version}, {count} skills"))
+        else:
+            out.append(_missing(
+                "plugin marketplace",
+                f"{entry.name} is at v{version} with {count} skills; "
+                f"this checkout is v{ours_version} with {ours_count}",
+                "/plugin marketplace update humane-agentic-design && /plugin update humane"))
+    return out
+
+
 def _find_skill_dir(name):
     roots = [pathlib.Path("~/.claude/skills"), pathlib.Path("~/.claude/plugins"),
              pathlib.Path("~/.codex/skills"), pathlib.Path(".agents/skills")]
@@ -228,6 +363,7 @@ def doctor(project_dir=None):
               check_project_tokens(project_dir), check_image_backend(cfg),
               check_task_export(cfg)]
     checks.extend(check_companions())
+    checks.extend(check_humane_copies(project_dir))
     return {"config": cfg, "checks": checks}
 
 

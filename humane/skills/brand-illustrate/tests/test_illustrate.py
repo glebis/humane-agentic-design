@@ -16,6 +16,18 @@ def _tree():
     return json.loads(FIXTURE.read_text())
 
 
+def _tokens_copy(d):
+    """Copy the token fixture into a temp dir and return its path.
+
+    run_batch saves the recipe *next to the token set*, so handing it the real
+    fixture path wrote brand.illustrate-recipe.json into tests/fixtures/ on
+    every run — the suite dirtied the working tree just by passing.
+    """
+    dest = pathlib.Path(d) / "brand.tokens.json"
+    dest.write_text(FIXTURE.read_text())
+    return dest
+
+
 class FakeProc:
     def __init__(self, rc=0):
         self.returncode = rc
@@ -138,7 +150,7 @@ class BackendTests(unittest.TestCase):
     def test_no_backend_message(self):
         scaffold = illustrate.build_scaffold(_tree(), {"subject": "x"})
         with tempfile.TemporaryDirectory() as d:
-            res = illustrate.run_batch(scaffold, str(FIXTURE), d, found={})
+            res = illustrate.run_batch(scaffold, str(_tokens_copy(d)), d, found={})
         self.assertFalse(res["ok"])
         self.assertEqual(res["error"], "no-backend")
         self.assertIn("gpt-image-2", res["message"])
@@ -163,7 +175,7 @@ class BackendTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as d:
             res = illustrate.run_batch(
-                scaffold, str(FIXTURE), d, runner=fake_runner,
+                scaffold, str(_tokens_copy(d)), d, runner=fake_runner,
                 found={"gpt-image-2": "/fake/gpt_image_2.py"})
             self.assertTrue(res["ok"])
             # 2 subjects x 2 platforms = 4 generations

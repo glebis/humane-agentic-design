@@ -6,3 +6,12 @@ __pycache__/
 # local tool state
 .enzyme/
 .enzyme-embeddings/
+
+# generated brand assets — regenerate from assets/cycle.svg or a
+# brand-illustrate recipe; drafts and batches do not belong in the repo
+assets/*-draft*.png
+assets/*-draft*.json
+assets/style-*.png
+assets/style-*.json
+assets/cycle-preview.png
+design.illustrate-recipe.json

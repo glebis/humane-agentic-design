@@ -97,6 +97,10 @@ class Unparseable(Exception):
 def parse_color(value):
     """Return (r, g, b) as 0-255 ints, or raise Unparseable.
 
+    Every malformed input leaves here as Unparseable, never as a ValueError:
+    callers treat Unparseable as "not measured", and an escaping ValueError
+    would turn an unreadable token into a crashed run.
+
     Accepts hex (3/4/6/8 digit), rgb()/rgba(), and oklch(). Anything carrying
     alpha is refused: contrast against a translucent color depends on what is
     behind it, which the token file does not know.
@@ -116,6 +120,15 @@ def parse_color(value):
             raise Unparseable(f"unrecognised hex length: #{m.group(1)}")
         return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))
 
+    try:
+        return _parse_body(v)
+    except Unparseable:
+        raise
+    except (ValueError, TypeError, ArithmeticError) as exc:
+        raise Unparseable(f"malformed color {v!r}: {exc}")
+
+
+def _parse_body(v):
     m = _RGB_RE.match(v)
     if m:
         parts = [p for p in re.split(r"[,\s/]+", m.group(1).strip()) if p]
@@ -141,10 +154,25 @@ def parse_color(value):
             raise Unparseable(f"cannot read oklch() components from {v!r}")
         lightness = float(parts[0][:-1]) / 100 if parts[0].endswith("%") else float(parts[0])
         chroma = float(parts[1][:-1]) * 0.4 / 100 if parts[1].endswith("%") else float(parts[1])
-        hue = float(re.sub(r"(deg|rad|turn)$", "", parts[2], flags=re.I))
+        hue = _angle_to_degrees(parts[2])
         return oklch_to_rgb(lightness, chroma, hue)
 
     raise Unparseable(f"unsupported color notation: {v!r}")
+
+
+def _angle_to_degrees(raw):
+    """CSS <angle> to degrees. deg is the default; rad, grad and turn are not.
+
+    Stripping the unit and keeping the number treats `0.25turn` as a quarter of
+    a degree instead of a quarter turn — a silently wrong hue rather than an
+    error, which is the worst kind of parsing bug.
+    """
+    text = raw.strip().lower()
+    for unit, factor in (("turn", 360.0), ("grad", 0.9), ("rad", 180.0 / math.pi),
+                         ("deg", 1.0)):
+        if text.endswith(unit):
+            return float(text[: -len(unit)]) * factor
+    return float(text)
 
 
 # ---------------------------------------------------------------------------
@@ -248,6 +276,24 @@ def apca_lc(text_rgb, bg_rgb):
 # ---------------------------------------------------------------------------
 # Remediation: adjust L, preserve C and H
 # ---------------------------------------------------------------------------
+
+def suggest_fix_multi(fg, bg, requirements, steps=200):
+    """Like suggest_fix, but the candidate must clear every named scale.
+
+    requirements: {"apca": 75.0, "wcag": 4.5}. Returns (hex, L) or None.
+    """
+    L, C, H = rgb_to_oklch(fg)
+    direction = -1 if relative_luminance(bg) > relative_luminance(fg) else 1
+    for i in range(1, steps + 1):
+        cand_L = L + direction * (i / steps)
+        if not 0 <= cand_L <= 1:
+            break
+        cand = oklch_to_rgb(cand_L, C, H)
+        if all((abs(apca_lc(cand, bg)) if scale == "apca" else wcag_ratio(cand, bg)) >= want
+               for scale, want in requirements.items()):
+            return to_hex(cand), round(cand_L, 3)
+    return None
+
 
 def suggest_fix(fg, bg, standard, threshold, steps=200):
     """Walk the foreground's OKLCH lightness away from the background until the
@@ -416,10 +462,24 @@ def check(resolved, standard="both", level="auto", spec=None):
         if fg_rgb is None or bg_rgb is None:
             continue
         if fg_rgb == bg_rgb:
-            # Two names for one color — an alias or a duplicated value. There is
-            # no contrast question here, and "make the ink lighter" would be
-            # actively wrong advice. Report the collision instead.
+            # Two names for one color. Whether that is benign depends entirely
+            # on the pair: two neutrals sharing a value is an alias worth
+            # noting, but a *declared* foreground/background pair resolving to
+            # one color means invisible text — Lc 0, ratio 1:1 — and the worst
+            # possible thing for this command to do is call it "not a contrast
+            # question" and exit 0. It is the most severe failure there is.
             identical.append((fg, bg, to_hex(fg_rgb)))
+            want = THRESHOLDS[lvl]
+            results.append({
+                "fg": fg, "bg": bg,
+                "fg_value": to_hex(fg_rgb), "bg_value": to_hex(bg_rgb),
+                "level": lvl, "apca": 0.0, "wcag": 1.0,
+                "apca_pass": False, "wcag_pass": False, "passed": False,
+                "identical": True,
+                # No lightness move on the foreground alone is "the fix" here;
+                # the pair itself is wrong. Say so instead of proposing a colour.
+                "fix": None,
+            })
             continue
         want = THRESHOLDS[lvl]
         lc = apca_lc(fg_rgb, bg_rgb)
@@ -430,8 +490,12 @@ def check(resolved, standard="both", level="auto", spec=None):
                   "both": apca_ok and wcag_ok}[standard]
         fix = None
         if not passed:
-            std = "wcag" if standard == "wcag" else "apca"
-            fix = suggest_fix(fg_rgb, bg_rgb, std, want[std])
+            # Satisfy whichever scales actually gate. Optimising for APCA alone
+            # usually clears WCAG too, but "usually" is not a guarantee, and a
+            # proposed fix that still fails the gate is worse than none.
+            need = {"apca": ["apca"], "wcag": ["wcag"],
+                    "both": ["apca", "wcag"]}[standard]
+            fix = suggest_fix_multi(fg_rgb, bg_rgb, {s: want[s] for s in need})
         results.append({
             "fg": fg, "bg": bg,
             "fg_value": to_hex(fg_rgb), "bg_value": to_hex(bg_rgb),
@@ -456,6 +520,12 @@ def failures(resolved, standard="both", level="auto", spec=None):
     out = []
     for r in report["results"]:
         if r["passed"]:
+            continue
+        if r.get("identical"):
+            out.append(f"contrast: {r['fg']} and {r['bg']} are both "
+                       f"{r['fg_value']} — the text is invisible on its own "
+                       f"background (Lc 0, 1.0:1). Point one of them at a "
+                       f"different token.")
             continue
         want = THRESHOLDS[r["level"]]
         msg = (f"contrast: {r['fg']} ({r['fg_value']}) on {r['bg']} "

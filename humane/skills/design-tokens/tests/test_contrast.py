@@ -276,12 +276,19 @@ def test_ramp_steps_are_not_paired():
     assert ("color.text", "color.background", "body") in pairs
 
 
-def test_identical_colors_are_a_collision_not_a_failure():
+def test_identical_text_and_background_is_the_worst_failure_not_a_pass():
+    """It was reported as a benign alias and exited 0 — invisible text passing
+    the gate is the single worst thing this command can do."""
     resolved = _resolved(**{"color.text": "#101010", "color.background": "#101010"})
     report = contrast.check(resolved)
-    assert report["results"] == []
     assert report["identical"] == [("color.text", "color.background", "#101010")]
-    assert contrast.failures(resolved) == []
+    result = report["results"][0]
+    assert result["passed"] is False
+    assert result["identical"] is True
+    assert (result["apca"], result["wcag"]) == (0.0, 1.0)
+    assert result["fix"] is None          # no lightness move fixes a wrong pair
+    msg = contrast.failures(resolved)
+    assert len(msg) == 1 and "invisible" in msg[0]
 
 
 def test_identical_collision_is_shown_in_the_report():
@@ -388,3 +395,45 @@ def test_graphic_is_never_inferred():
     # hand out the cheapest bar on its own.
     resolved = _resolved(**{"color.primary": "#e08b2c", "color.background": "#08080a"})
     assert all(lvl != "graphic" for _, _, lvl in contrast.build_pairs(resolved))
+
+
+# --- parsing robustness (found by an independent audit) --------------------
+
+@pytest.mark.parametrize("value,expected_hue_deg", [
+    ("oklch(0.7 0.1 90)", 90.0),
+    ("oklch(0.7 0.1 90deg)", 90.0),
+    ("oklch(0.7 0.1 0.25turn)", 90.0),
+    ("oklch(0.7 0.1 100grad)", 90.0),
+])
+def test_angle_units_are_converted_not_stripped(value, expected_hue_deg):
+    """Stripping the unit treated 0.25turn as a quarter degree — a silently
+    wrong hue, which is worse than an error."""
+    got = contrast.parse_color(value)
+    want = contrast.oklch_to_rgb(0.7, 0.1, expected_hue_deg)
+    assert got == want
+
+
+def test_radians_convert():
+    import math
+    got = contrast.parse_color(f"oklch(0.7 0.1 {math.pi/2}rad)")
+    assert got == contrast.oklch_to_rgb(0.7, 0.1, 90.0)
+
+
+@pytest.mark.parametrize("value", [
+    "rgb(a, b, c)", "oklch(x y z)", "rgb(1, 2, three)", "oklch(0.5 0.1 nonsense)",
+])
+def test_malformed_components_are_unparseable_not_a_crash(value):
+    """A bad numeric component escaped as ValueError, turning an unreadable
+    token into a crashed run instead of a 'not measured' line."""
+    with pytest.raises(contrast.Unparseable):
+        contrast.parse_color(value)
+
+
+def test_fix_under_both_clears_both_scales():
+    resolved = _resolved(**{"color.text": "#9ec5fe", "color.background": "#ffffff"})
+    r = contrast.check(resolved, standard="both")["results"][0]
+    assert r["fix"] is not None
+    rgb = contrast.parse_color(r["fix"][0])
+    bg = contrast.parse_color("#ffffff")
+    assert abs(contrast.apca_lc(rgb, bg)) >= contrast.THRESHOLDS["body"]["apca"]
+    assert contrast.wcag_ratio(rgb, bg) >= contrast.THRESHOLDS["body"]["wcag"]

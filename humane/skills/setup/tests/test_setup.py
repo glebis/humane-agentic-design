@@ -267,7 +267,7 @@ class CopyDriftTests(unittest.TestCase):
         (self.root / "jtbd").symlink_to(other)
         detail = [c for c in self._check() if c["name"] == "humane copy"][0]["detail"]
         self.assertIn("links to a different source", detail)
-        self.assertIn("SKILL.md differs", detail)
+        self.assertIn("contents differ", detail)
 
     def test_identical_independent_copy_is_still_reported(self):
         """Identical today is not linked; it will drift the moment either moves."""
@@ -334,3 +334,39 @@ class MarketplaceTests(unittest.TestCase):
 
     def test_absent_marketplace_dir_is_silent(self):
         self.assertEqual(hs._check_plugin_marketplaces(self.d / "nope", self.canon), [])
+
+
+class SignatureTests(unittest.TestCase):
+    """The signature must notice a changed script, not just changed prose."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = pathlib.Path(self.tmp.name)
+        self.canon = self.d / "repo" / "humane" / "skills"
+        (self.canon / "jtbd" / "scripts").mkdir(parents=True)
+        (self.canon / "jtbd" / "SKILL.md").write_text("prose\n")
+        (self.canon / "jtbd" / "scripts" / "graph.py").write_text("# v2\n")
+        (self.canon.parent / ".claude-plugin").mkdir(parents=True)
+        (self.canon.parent / ".claude-plugin" / "plugin.json").write_text('{"version":"1"}')
+        self.root = self.d / "elsewhere"
+        (self.root / "jtbd" / "scripts").mkdir(parents=True)
+        (self.root / "jtbd" / "SKILL.md").write_text("prose\n")          # identical prose
+        (self.root / "jtbd" / "scripts" / "graph.py").write_text("# v1\n")  # older script
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_same_prose_different_script_is_drift(self):
+        checks = hs.check_humane_copies(roots=[self.root], canonical_root=self.canon,
+                                        marketplaces=self.d / "none")
+        detail = [c for c in checks if c["name"] == "humane copy"][0]["detail"]
+        self.assertIn("same files, different contents", detail)
+
+    def test_signature_ignores_build_artefacts(self):
+        (self.root / "jtbd" / "__pycache__").mkdir()
+        (self.root / "jtbd" / "__pycache__" / "x.pyc").write_bytes(b"junk")
+        (self.root / "jtbd" / "scripts" / "graph.py").write_text("# v2\n")  # now identical
+        checks = hs.check_humane_copies(roots=[self.root], canonical_root=self.canon,
+                                        marketplaces=self.d / "none")
+        detail = [c for c in checks if c["name"] == "humane copy"][0]["detail"]
+        self.assertIn("identical for now", detail)

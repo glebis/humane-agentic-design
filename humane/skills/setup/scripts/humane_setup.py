@@ -237,9 +237,18 @@ def _skill_signature(d):
         if p.is_file() and not any(s in p.parts for s in skip)
         and p.name not in (".gitignore", ".DS_Store")
     }
-    sk = d / "SKILL.md"
-    digest = hashlib.sha256(sk.read_bytes()).hexdigest()[:12] if sk.is_file() else ""
-    return names, digest
+    # Hash every file, not just SKILL.md: a copy whose scripts have changed
+    # while the prose stayed put is exactly the drift that is hardest to spot
+    # by eye, and the earlier signature called it identical.
+    h = hashlib.sha256()
+    for rel in sorted(names):
+        f = d / rel
+        try:
+            h.update(rel.encode())
+            h.update(f.read_bytes())
+        except OSError:
+            h.update(b"<unreadable>")
+    return names, h.hexdigest()[:12]
 
 
 def check_humane_copies(project_dir=None, roots=None, canonical_root=None,
@@ -296,8 +305,10 @@ def check_humane_copies(project_dir=None, roots=None, canonical_root=None,
                                     + (" …" if len(missing) > 3 else ""))
                 if extra:
                     problems.append(f"{len(extra)} extra file(s)")
-                if sig[1] != ref[1]:
-                    problems.append("SKILL.md differs")
+                if sig[1] != ref[1] and not missing and not extra:
+                    problems.append("same files, different contents")
+                elif sig[1] != ref[1]:
+                    problems.append("contents differ")
             if not problems and not p.is_symlink():
                 problems.append("independent copy, identical for now")
             drifted.append((str(p), problems))

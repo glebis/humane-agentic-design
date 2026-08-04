@@ -526,6 +526,11 @@ def backend_search_report():
 
 
 def pick_backend(requested, found):
+    # An explicit environment override outranks the recipe's stored choice:
+    # it is the knob a user reaches for to redirect a run they are watching.
+    env_name, _ = _env_override()
+    if env_name:
+        return env_name if env_name in found else None
     if requested and requested != "auto":
         return requested if requested in found else None
     # auto: prefer gpt-image-2 (has a seed flag for coherence), else nano-banana
@@ -619,7 +624,9 @@ def _recipe_path(tokens_path):
 
 def build_command(script, backend, prompt, out_path, platform, size, draft,
                   seed=None, refs=None, anchor=None):
-    cmd = ["python3", script]
+    # A backend discovered on PATH is an executable; only a .py script needs
+    # an interpreter in front of it.
+    cmd = ["python3", script] if str(script).endswith(".py") else [str(script)]
     flag, (w, h) = platform.get("flag"), (platform["w"], platform["h"])
     if backend == "gpt-image-2":
         if flag:
@@ -707,7 +714,12 @@ def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.r
 
     recipe = save_recipe(scaffold, tokens_path)
     sheet = write_contact_sheet(batch_dir, outputs)
-    return {"ok": True, "backend": backend, "batch_dir": str(batch_dir),
+    # A non-zero return code from the generator means that image does not
+    # exist. Reporting ok:true over a batch of failures is a false success —
+    # the caller writes a contact sheet full of missing files and believes it.
+    failed = [o for o in outputs if o.get("returncode")]
+    return {"ok": not failed, "generated": True, "failed": len(failed),
+            "backend": backend, "batch_dir": str(batch_dir),
             "outputs": outputs, "metadata": str(batch_dir / "metadata.json"),
             "recipe": recipe, "contact_sheet": sheet}
 
@@ -959,12 +971,20 @@ def main(argv=None):
         tree = _load_json(tokens_path)
         scaffold = build_scaffold(tree, answers)
         result = run_batch(scaffold, tokens_path, args.out_dir, dry_run=args.dry_run)
-        if not result["ok"]:
-            print(result["message"], file=sys.stderr)
-            return 2
         print(json.dumps({k: v for k, v in result.items()
                           if k in ("backend", "batch_dir", "metadata", "recipe",
-                                   "contact_sheet")}, indent=2))
+                                   "contact_sheet", "prompts", "generated",
+                                   "failed")}, indent=2))
+        if not result.get("generated", True):
+            # Soft landing: no backend, prompts written. Not a failure.
+            print(result["message"], file=sys.stderr)
+            return 0
+        if not result["ok"]:
+            failed = [o for o in result.get("outputs", []) if o.get("returncode")]
+            print(f"{len(failed)} image(s) failed to generate:", file=sys.stderr)
+            for o in failed:
+                print(f"  rc={o['returncode']}  {o['file']}", file=sys.stderr)
+            return 1
         return 0
 
     return 0

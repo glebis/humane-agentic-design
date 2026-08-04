@@ -73,7 +73,7 @@ Foundational failures first, so polish never hides them:
 | 2 | Usability principles | `nielsen-heuristics` | — |
 | 3 | Structure and defect classes | `layout-rules` | — |
 | 4 | Interface copy | `ux-writing` | — |
-| 5 | Color and contrast | `design-tokens` (`tokens contrast`) | The project has no token set — then say contrast was checked by eye, or not at all |
+| 5 | Color and contrast | `design-tokens` (`tokens contrast`) | The project has no token set — then report contrast **Not measured**, naming the pairs you could not check. Never substitute an eyeball estimate for a measurement |
 
 Apply each owner's principles, but **ignore its standalone Review Output
 Format** — this skill owns the final response, and its format, severity scale,

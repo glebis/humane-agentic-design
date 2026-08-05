@@ -150,8 +150,71 @@ def test_level_override_forces_one_threshold():
 
 
 def test_no_self_pairs():
-    resolved = _resolved(**{"color.background": "#ffffff"})
+    # A set that can actually produce a self-pair if the filter regresses: `text`
+    # is a foreground and would otherwise be walked against every background.
+    # The previous fixture held only a background, so it passed either way.
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    assert contrast.build_pairs(resolved)  # the fixture is not vacuous
     assert all(fg != bg for fg, bg, _ in contrast.build_pairs(resolved))
+
+
+def test_declared_self_pair_is_reported_not_silently_dropped():
+    """`["text", "text"]` produced no results, no error, and exit 0 — a green
+    gate over a declaration that cannot be satisfied."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"pairs": [["text", "text"]]})
+    assert report["results"] == []
+    assert report["undeclared"]
+    assert "no contrast with itself" in report["undeclared"][0][2]
+
+
+@pytest.mark.parametrize("bad", ["bad", {}, {"text": "background"}, 7])
+def test_malformed_pairs_declaration_measures_nothing_and_says_so(bad):
+    """A `pairs` key of the wrong shape is still a declaration. Falling through
+    to inference would measure the whole set the author was narrowing, and pass."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"pairs": bad})
+    assert report["results"] == []
+    assert any("must be a list" in why for _, _, why in report["undeclared"])
+
+
+def test_malformed_exclude_is_reported_not_a_crash():
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"exclude": 1})
+    assert any(where == "exclude" for _, where, _ in report["undeclared"])
+
+
+def test_unhashable_declared_name_is_reported_not_a_crash():
+    """A declaration is user data; `token in resolved` raises TypeError on a
+    list, turning a bad file into a crashed run."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"pairs": [[[], "background"]]})
+    assert report["undeclared"]
+
+
+def test_unknown_level_skips_the_pair_it_reports_as_unmeasured():
+    """Reporting "NOT measured" while measuring it anyway — possibly against a
+    laxer bar than the author intended — is a contradiction in one run."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"pairs": [["text", "background", "boddy"]]})
+    assert report["results"] == []
+    assert any("unknown level" in why for _, _, why in report["undeclared"])
+
+
+def test_same_group_preference_works_from_either_side():
+    """An exact background must disambiguate a short foreground name, not only
+    the reverse. Otherwise `["on-primary", "color.z.primary"]` measures group a's
+    ink against group z's fill — two tokens that never meet."""
+    resolved = _resolved(**{
+        "color.a.on-primary": "#ffffff", "color.a.primary": "#111111",
+        "color.z.on-primary": "#eeeeee", "color.z.primary": "#222222",
+    })
+    assert contrast.build_pairs(
+        resolved, spec={"pairs": [["on-primary", "color.z.primary"]]}
+    ) == [("color.z.on-primary", "color.z.primary", "body")]
+    assert contrast.build_pairs(
+        resolved, spec={"pairs": [["color.a.on-primary", "primary"]]}
+    ) == [("color.a.on-primary", "color.a.primary", "body")]
 
 
 # --- report ----------------------------------------------------------------

@@ -80,6 +80,11 @@ def _read_json(path):
         data = json.loads(p.read_text())
     except json.JSONDecodeError as exc:
         return {}, ConfigUnreadable(p, f"invalid JSON ({exc.msg}, line {exc.lineno})")
+    except UnicodeDecodeError as exc:
+        # `read_text` decodes before json ever sees the bytes, so a file saved
+        # as UTF-16 or with a stray byte raised out of here and crashed the
+        # doctor — the one command whose job is to explain a broken setup.
+        return {}, ConfigUnreadable(p, f"is not valid UTF-8 ({exc.reason})")
     except OSError as exc:
         return {}, ConfigUnreadable(p, f"cannot be read ({exc.strerror or exc})")
     if not isinstance(data, dict):
@@ -204,19 +209,36 @@ def check_project_tokens(project_dir=None):
                     "tokens setup-edit design.tokens.json")
 
 
-def check_image_backend(cfg):
+def check_image_backend(cfg, project_dir=None):
     """Delegates to brand-illustrate's own resolver — one source of truth for
-    where backends live, rather than a second list that drifts."""
-    found, how = _probe_backends()
-    if found:
-        names = ", ".join(f"{k}" for k in sorted(found))
-        return _ok("image backend", f"{names} ({how})")
-    return _missing("image backend", "none found",
-                    "optional — brand-illustrate writes prompts.md without one; "
-                    "install gpt-image-2 or nano-banana to generate in place")
+    where backends live, rather than a second list that drifts.
+
+    The check must judge the backend the user *chose*, not merely whether any
+    backend exists. Reporting `ok` because gpt-image-2 is installed, while the
+    config selects nano-banana, tells the user their setup is fine right up
+    until the run picks a backend that is not there.
+    """
+    found, how = _probe_backends(project_dir)
+    if not found:
+        return _missing("image backend", "none found",
+                        "optional — brand-illustrate writes prompts.md without one; "
+                        "install gpt-image-2 or nano-banana to generate in place")
+    names = ", ".join(sorted(found))
+    wanted = str(cfg["image_backend"]["value"] or "auto").split(":", 1)[0].strip()
+    if wanted and wanted != "auto" and wanted not in found:
+        return _missing(
+            "image backend",
+            f"configured as {wanted!r} ({cfg['image_backend']['source']}), "
+            f"but only {names} found",
+            f"install {wanted}, point HUMANE_IMAGE_BACKEND at its script, "
+            f"or set image_backend to one of: {names}, or auto")
+    detail = f"{names} ({how})"
+    if wanted and wanted != "auto":
+        detail = f"{wanted} selected; {detail}"
+    return _ok("image backend", detail)
 
 
-def _probe_backends():
+def _probe_backends(project_dir=None):
     """Import brand-illustrate's probe if it is reachable; otherwise say so."""
     here = pathlib.Path(__file__).resolve()
     candidates = [here.parents[2] / "brand-illustrate" / "scripts"]
@@ -225,7 +247,10 @@ def _probe_backends():
             sys.path.insert(0, str(c))
             try:
                 import illustrate  # noqa: E402
-                return illustrate.probe_backends(), "via brand-illustrate"
+                # Pass the directory being diagnosed. Without it, `doctor
+                # --project-dir /elsewhere` reads a humane.json from the shell's
+                # cwd and reports on a project nobody asked about.
+                return illustrate.probe_backends(project_dir), "via brand-illustrate"
             except Exception:
                 break
             finally:
@@ -337,7 +362,14 @@ def check_humane_copies(project_dir=None, roots=None, canonical_root=None,
             continue
         for name, canonical in ours.items():
             p = root / name
-            if not p.exists():
+            # `exists()` follows the link, so a *dangling* symlink read as
+            # "not installed" and the doctor reported no other copies — the
+            # loudest possible broken install, silently invisible.
+            if not p.exists() and not p.is_symlink():
+                continue
+            if p.is_symlink() and not p.exists():
+                drifted.append((p, [f"is a broken symlink (points at "
+                                    f"{os.readlink(p)}, which does not exist)"]))
                 continue
             target = p.resolve()
             if target == canonical.resolve():
@@ -422,7 +454,8 @@ def _find_skill_dir(name):
 def doctor(project_dir=None):
     cfg = resolve_config(project_dir)
     checks = [check_python(), check_corpus(cfg), check_tokens(cfg),
-              check_project_tokens(project_dir), check_image_backend(cfg),
+              check_project_tokens(project_dir),
+              check_image_backend(cfg, project_dir),
               check_task_export(cfg)]
     checks.extend(check_companions())
     checks.extend(check_humane_copies(project_dir))

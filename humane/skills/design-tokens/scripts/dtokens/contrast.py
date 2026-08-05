@@ -378,9 +378,15 @@ def _lookup(token, resolved, by_name, by_role, near=None):
     about the wrong pair, which is worse than no number. When `near` is given,
     a candidate in the same group is preferred before falling back.
     """
+    # A declaration is user data: it can hold a list, a dict, or None where a
+    # name belongs. `token in resolved` raises TypeError on an unhashable one,
+    # which turns a bad declaration into a crashed run — the same failure mode
+    # parse_color was fixed for.
+    if not isinstance(token, str):
+        return None
     if token in resolved:
         return token
-    low = str(token).lower()
+    low = token.lower()
     hits = by_name.get(low) or by_role.get(low) or []
     if not hits:
         return None
@@ -428,7 +434,13 @@ def build_pairs(resolved, level="auto", spec=None, unresolved=None):
             by_role.setdefault(role, []).append(path)
 
     excluded = set()
-    for token in spec.get("exclude") or []:
+    exclude_spec = spec.get("exclude")
+    if exclude_spec is not None and not isinstance(exclude_spec, (list, tuple)):
+        # `"exclude": 1` would otherwise raise TypeError from iteration.
+        unresolved.append((repr(exclude_spec), "exclude",
+                           "must be a list of token names; ignored"))
+        exclude_spec = []
+    for token in exclude_spec or []:
         path = _lookup(token, resolved, by_name, by_role)
         if path:
             excluded.add(path)
@@ -445,14 +457,30 @@ def build_pairs(resolved, level="auto", spec=None, unresolved=None):
     # absent declaration. Falling through to inference there would measure a set
     # the author explicitly emptied, which is the opposite of what they wrote.
     declared = spec.get("pairs")
-    if declared is not None and isinstance(declared, (list, tuple)):
+    if declared is not None and not isinstance(declared, (list, tuple)):
+        # A `pairs` key of the wrong shape is still a *declaration*. Falling
+        # through to inference here would measure the whole set the author was
+        # trying to narrow, and exit 0 on it — a green gate produced by a typo.
+        unresolved.append((repr(declared), "pairs",
+                           "must be a list of [foreground, background] entries; "
+                           "nothing was measured"))
+        return pairs
+    if declared is not None:
         for entry in declared:
             if not isinstance(entry, (list, tuple)) or len(entry) < 2:
                 unresolved.append((repr(entry), "pairs",
                                    "not a [foreground, background] entry"))
                 continue
+            # Resolve the unambiguous side first and use it as the group hint for
+            # the other. Passing `near` only to the background meant an exact
+            # background could not disambiguate a short foreground name, so
+            # `["on-primary", "color.z.primary"]` measured `color.a.on-primary`
+            # against `color.z.primary` — a confident number about two tokens
+            # that never meet.
             fg = _lookup(entry[0], resolved, by_name, by_role)
             bg = _lookup(entry[1], resolved, by_name, by_role, near=fg)
+            if bg:
+                fg = _lookup(entry[0], resolved, by_name, by_role, near=bg)
             # A declared pair that does not resolve is the one case that must
             # never pass quietly: the author named it *because* it is the pair
             # that matters, so dropping it leaves the gate green over the very
@@ -462,6 +490,14 @@ def build_pairs(resolved, level="auto", spec=None, unresolved=None):
                 unresolved.append((" / ".join(missing), "pairs",
                                    "no such color token"))
                 continue
+            if fg == bg:
+                # Both names point at one token. There is no pair to measure,
+                # and staying silent means a declaration of `["text", "text"]`
+                # yields no results, no error, and exit 0.
+                unresolved.append((f"{entry[0]} / {entry[1]}", "pairs",
+                                   f"both names resolve to {fg} — a token has no "
+                                   f"contrast with itself"))
+                continue
             # A declared pair is measured at the level its foreground role
             # implies, unless the entry names one explicitly as a third item.
             lvl = None
@@ -469,12 +505,14 @@ def build_pairs(resolved, level="auto", spec=None, unresolved=None):
                 if entry[2] in THRESHOLDS:
                     lvl = entry[2]
                 else:
-                    # A misspelled level would otherwise fall back to the
-                    # inferred one — quietly measuring against a bar the author
-                    # did not choose.
+                    # Skip the pair rather than fall back to the inferred level.
+                    # Measuring it anyway against a bar the author did not choose,
+                    # while the report says "NOT measured", is a contradiction in
+                    # a single run — and the fallback bar may be the laxer one.
                     unresolved.append((
                         str(entry[2]), "pairs",
                         f"unknown level; expected one of {', '.join(sorted(THRESHOLDS))}"))
+                    continue
             if lvl is None:
                 # An `on-X` token is ink by definition, whatever fill name it
                 # carries: `on-primary` infers the role "primary" and would

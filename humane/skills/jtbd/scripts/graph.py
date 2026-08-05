@@ -29,6 +29,9 @@ HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "templates" / "graph.html"
 
 
+_ABSENT = object()  # "this layer does not set the key" — distinct from a null value
+
+
 def _corpus_root(project_dir=None):
     """Where the corpus lives, per the `corpus_root` setting.
 
@@ -44,18 +47,32 @@ def _corpus_root(project_dir=None):
     `setup doctor` is the place that explains a broken config, not the viewer.
     """
     def _get(path):
+        """The key's value, or _ABSENT when this layer does not set it.
+
+        Setup resolves by key *presence* (`if key in project`), so a layer that
+        sets `corpus_root` to "" wins there. Resolving by truthiness here would
+        skip to the next layer instead — the two would disagree about the same
+        config file, which is exactly the divergence this duplication is warned
+        about. `None` is not usable as the sentinel: JSON `null` is a value the
+        file can legitimately hold.
+        """
         try:
             data = json.loads(Path(path).expanduser().read_text())
-        except (OSError, ValueError):
-            return None
-        return data.get("corpus_root") if isinstance(data, dict) else None
+        except (OSError, ValueError, UnicodeDecodeError):
+            return _ABSENT
+        if not isinstance(data, dict) or "corpus_root" not in data:
+            return _ABSENT
+        return data["corpus_root"]
 
     for candidate in (Path(project_dir or ".") / "humane.json",
                       Path("~/.humane/config.json")):
         value = _get(candidate)
-        if value:
-            return Path(value).expanduser()
-    return Path(os.environ.get("HUMANE_CORPUS_ROOT") or "~/jtbd").expanduser()
+        if value is not _ABSENT:
+            return Path(str(value)).expanduser()
+    env = os.environ.get("HUMANE_CORPUS_ROOT")
+    # Setup treats an empty environment variable as unset (`os.environ.get(...)`
+    # under a truthiness test), so match that rather than resolving to Path("").
+    return Path(env or "~/jtbd").expanduser()
 
 
 DEFAULT_ROOT = _corpus_root()

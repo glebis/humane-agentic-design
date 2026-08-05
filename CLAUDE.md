@@ -43,7 +43,12 @@ Cross-boundary cases, resolved:
   `design-tokens` owns measuring the pair and changing the color. A review that
   eyeballs contrast instead of running `tokens contrast` is doing it wrong.
 - `ux-writing` owns what a string says; `layout-rules` owns whether the layout
-  has room for it once translated, and how it renders.
+  has room for it once translated, and how it renders. Several rules in the
+  `layout-rules` file are wording rules by nature (5, 8, 9, 38 — summary lines,
+  linking named entities, empty states, copy slop). They stay in that file
+  because that is where the avoid-list lives, but **`ux-writing` owns them**:
+  it performs the rewrite and reports the finding. A review that routes them to
+  `layout-rules` reviews the same sentence twice under two owners.
 - `nielsen-heuristics` judges whether the flow works; `layout-rules` judges
   whether the implementation contains known defect classes. An issue that is
   both is reported once, by the skill that owns the underlying rule.
@@ -104,7 +109,10 @@ it findings and let its format, severity scale, cap, and verdict win:
 1. **Findings** — one table: Severity | Location | Before | After | Why. One
    root cause is one row, listing every affected location. Cite
    `path/to/file:line` or the exact screen and element. Cap at 15 (5 for a quick
-   pass) and never pad — no findings is a valid result.
+   pass) and never pad — no findings is a valid result. A skill may add columns
+   **standalone** when it carries information no other domain has — `walkthrough`
+   adds Step(s) and Question — provided it says so and drops them under `review`,
+   whose format wins. It may never remove or rename one of the five.
 2. **Considered but Rejected** — 2–5 real candidates inspected and not reported,
    with the reason. Not filler.
 3. **Verification** — what was actually checked, and how. Anything unchecked is

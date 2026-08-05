@@ -177,6 +177,75 @@ class MalformedConfigTests(unittest.TestCase):
         self.global_cfg.write_text("{broken")
         self.assertEqual(set(hs.resolve_config(self.d)), set(hs.SETTINGS))
 
+    def test_non_utf8_config_is_reported_not_a_crash(self):
+        """read_text decodes before json sees the bytes, so a UTF-16 file raised
+        UnicodeDecodeError straight out of the doctor — the one command whose
+        job is to explain a broken setup."""
+        self.global_cfg.write_bytes(b"\xff\xfe{\x00}\x00")
+        problems = hs.config_problems(self.d)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("UTF-8", problems[0]["reason"])
+
+
+class ImageBackendCheckTests(unittest.TestCase):
+    """The doctor must judge the backend the user *chose*, not merely whether
+    any backend exists."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = pathlib.Path(self.tmp.name)
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def _cfg(self, value, source="humane.json"):
+        cfg = {k: {"value": v[1], "source": "default"} for k, v in hs.SETTINGS.items()}
+        cfg["image_backend"] = {"value": value, "source": source}
+        return cfg
+
+    def test_configured_backend_missing_is_reported_missing(self):
+        with unittest.mock.patch.object(
+                hs, "_probe_backends",
+                lambda project_dir=None: ({"gpt-image-2": "/g"}, "test")):
+            check = hs.check_image_backend(self._cfg("nano-banana"), self.d)
+        # Reporting ok here tells the user their setup is fine right up until
+        # the run reaches for a backend that is not installed. It stays
+        # `optional` (brand-illustrate still writes prompts.md), but it must not
+        # read as a clean check.
+        self.assertEqual(check["state"], "optional")
+        self.assertIn("nano-banana", check["detail"])
+        self.assertIn("humane.json", check["detail"])
+
+    def test_configured_backend_present_is_ok_and_named(self):
+        with unittest.mock.patch.object(
+                hs, "_probe_backends",
+                lambda project_dir=None: ({"nano-banana": "/n"}, "test")):
+            check = hs.check_image_backend(self._cfg("nano-banana"), self.d)
+        self.assertEqual(check["state"], "ok")
+        self.assertIn("nano-banana selected", check["detail"])
+
+    def test_auto_accepts_whatever_is_installed(self):
+        with unittest.mock.patch.object(
+                hs, "_probe_backends",
+                lambda project_dir=None: ({"gpt-image-2": "/g"}, "test")):
+            self.assertEqual(
+                hs.check_image_backend(self._cfg("auto", "default"), self.d)["state"], "ok")
+
+    def test_a_configured_path_form_is_matched_on_its_name(self):
+        with unittest.mock.patch.object(
+                hs, "_probe_backends",
+                lambda project_dir=None: ({"nano-banana": "/n"}, "test")):
+            self.assertEqual(
+                hs.check_image_backend(self._cfg("nano-banana:/n/script.py"),
+                                       self.d)["state"], "ok")
+
+    def test_no_backend_at_all_is_still_optional(self):
+        with unittest.mock.patch.object(
+                hs, "_probe_backends", lambda project_dir=None: ({}, "test")):
+            self.assertEqual(
+                hs.check_image_backend(self._cfg("auto", "default"), self.d)["state"],
+                "optional")
+
 
 class CheckTests(unittest.TestCase):
     def setUp(self):
@@ -315,6 +384,15 @@ class CopyDriftTests(unittest.TestCase):
         checks = self._check()
         self.assertEqual(checks[0]["state"], "ok")
         self.assertIn("1 linked", checks[0]["detail"])
+
+    def test_dangling_symlink_is_reported_not_treated_as_absent(self):
+        """`exists()` follows the link, so a broken install read as "not
+        installed" and the doctor reported no other copies — the loudest
+        possible breakage, silently invisible."""
+        (self.root / "jtbd").symlink_to(self.d / "gone" / "jtbd")
+        checks = [c for c in self._check() if c["name"] == "humane copy"]
+        self.assertEqual(len(checks), 1)
+        self.assertIn("broken symlink", checks[0]["detail"])
 
     def test_copy_missing_a_file_is_named_precisely(self):
         """The real case: ~/.codex/skills/jtbd had lost scripts/graph.py, so

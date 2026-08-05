@@ -512,14 +512,28 @@ def load_refs(refs_dir):
 # ---------------------------------------------------------------------------
 # Backend probing + command building
 # ---------------------------------------------------------------------------
-def probe_backends():
+def _is_runnable(path):
+    """A backend must be a *file* we can actually execute.
+
+    `.exists()` is true for a directory, so `HUMANE_IMAGE_BACKEND=name:/tmp` was
+    reported as found and `override_valid`, and the run then tried to execute a
+    directory. A `.py` script only needs to be readable (we put `python3` in
+    front of it); anything else has to carry the executable bit.
+    """
+    p = pathlib.Path(path).expanduser()
+    if not p.is_file():
+        return False
+    return p.suffix == ".py" or os.access(p, os.X_OK)
+
+
+def probe_backends(project_dir=None):
     """Return {backend_name: script-path-or-executable}. See the precedence
     note at _SKILL_ROOTS; discovery never assumes a single agent's layout."""
     found = {}
 
     # 1. explicit override
-    env_name, env_path = _env_override()
-    if env_name and env_path and pathlib.Path(env_path).expanduser().exists():
+    env_name, env_path = _env_override(project_dir)
+    if env_name and env_path and _is_runnable(env_path):
         found[env_name] = str(pathlib.Path(env_path).expanduser())
 
     roots = _skill_roots()
@@ -529,7 +543,7 @@ def probe_backends():
         # 2-3. a skill checkout under any known root
         for root in roots:
             cand = root / name / "scripts" / spec["script"]
-            if cand.exists():
+            if cand.is_file():
                 found[name] = str(cand)
                 break
         else:
@@ -540,32 +554,31 @@ def probe_backends():
     return found
 
 
-def backend_search_report():
+def backend_search_report(project_dir=None):
     """What was searched and what was found — for `backends` and for setup's
     doctor. Reporting the probed locations turns 'no backend' from a dead end
     into something the user can act on."""
-    env_name, env_path = _env_override()
-    configured, source = _config_value()
+    env_name, env_path = _env_override(project_dir)
+    configured, source = _config_value(project_dir)
     return {
-        "found": probe_backends(),
+        "found": probe_backends(project_dir),
         "env": {"HUMANE_IMAGE_BACKEND": os.environ.get("HUMANE_IMAGE_BACKEND") or None,
                 "HUMANE_SKILLS_DIR": os.environ.get("HUMANE_SKILLS_DIR") or None},
         # Which value won and which file supplied it — "why did it pick that?"
         # must be answerable without guessing at four layers.
         "configured": configured,
         "configured_source": source,
-        "override_valid": bool(env_name and env_path
-                               and pathlib.Path(env_path).expanduser().exists()),
+        "override_valid": bool(env_name and env_path and _is_runnable(env_path)),
         "roots_searched": [str(r) for r in _skill_roots()],
         "backends_known": sorted(_BACKENDS),
     }
 
 
-def pick_backend(requested, found):
+def pick_backend(requested, found, project_dir=None):
     # An explicit configured backend outranks the recipe's stored choice: it is
     # the knob a user reaches for to redirect a run. `auto` is not a choice, so
     # it leaves the recipe's own preference intact.
-    env_name, _ = _env_override()
+    env_name, _ = _env_override(project_dir)
     if env_name:
         return env_name if env_name in found else None
     if requested and requested != "auto":
@@ -616,6 +629,10 @@ def prompts_only(scaffold, out_dir, tokens_path=None, reason="no-backend"):
             entries.append({
                 "file": None, "platform": plat["name"],
                 "size": f"{plat['w']}x{plat['h']}", "subject": item["subject"],
+                # Same per-entry schema as run_batch, so a reader does not have
+                # to know which path produced the file. No backend ran, so no
+                # size was requested of one — null, not True.
+                "size_requested": None,
                 "prompt": item["prompt"], "command": None, "returncode": None,
             })
 
@@ -713,9 +730,9 @@ def _slug(text):
 # Batch run
 # ---------------------------------------------------------------------------
 def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.run,
-              found=None):
-    found = probe_backends() if found is None else found
-    backend = pick_backend(scaffold.get("backend"), found)
+              found=None, project_dir=None):
+    found = probe_backends(project_dir) if found is None else found
+    backend = pick_backend(scaffold.get("backend"), found, project_dir)
     if not backend:
         # No generator available. Emit the prompts rather than throwing the
         # batch away — see prompts_only.
@@ -1005,7 +1022,8 @@ def main(argv=None):
             print(f"\nimage_backend={report['configured']}  "
                   f"(from {report['configured_source']})")
         if env["HUMANE_IMAGE_BACKEND"]:
-            state = "valid" if report["override_valid"] else "set, but the path does not exist"
+            state = ("valid" if report["override_valid"]
+                     else "set, but the path is not a runnable script")
             print(f"HUMANE_IMAGE_BACKEND={env['HUMANE_IMAGE_BACKEND']}  ({state})")
         if env["HUMANE_SKILLS_DIR"]:
             print(f"HUMANE_SKILLS_DIR={env['HUMANE_SKILLS_DIR']}")

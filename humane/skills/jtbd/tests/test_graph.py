@@ -5,11 +5,12 @@ import os
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 
-from graph import _list, build, find_bundles, read_quotes, score, shape, tier
+from graph import _corpus_root, _list, build, find_bundles, read_quotes, score, shape, tier
 
 
 class TestScoring(unittest.TestCase):
@@ -165,3 +166,70 @@ class TestShape(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CorpusRootTests(unittest.TestCase):
+    """`corpus_root` is owned by `setup`; this resolver is a deliberate duplicate
+    of its precedence, so the duplication is what has to be pinned. A divergence
+    means one command honours the user's configured root and the next ignores it.
+    """
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = Path(self.tmp.name)
+        self.home = self.d / "home"
+        (self.home / ".humane").mkdir(parents=True)
+        self._env = unittest.mock.patch.dict(
+            os.environ, {"HOME": str(self.home), "HUMANE_CORPUS_ROOT": ""}, clear=False)
+        self._env.start()
+
+    def tearDown(self):
+        self._env.stop()
+        self.tmp.cleanup()
+
+    def _global(self, payload):
+        (self.home / ".humane" / "config.json").write_text(json.dumps(payload))
+
+    def _project(self, payload):
+        (self.d / "humane.json").write_text(json.dumps(payload))
+
+    def test_default_when_nothing_is_set(self):
+        self.assertEqual(_corpus_root(self.d), self.home / "jtbd")
+
+    def test_environment_is_used_when_no_file_sets_it(self):
+        with unittest.mock.patch.dict(os.environ, {"HUMANE_CORPUS_ROOT": "/env/root"}):
+            self.assertEqual(_corpus_root(self.d), Path("/env/root"))
+
+    def test_global_file_outranks_environment(self):
+        self._global({"corpus_root": "/global/root"})
+        with unittest.mock.patch.dict(os.environ, {"HUMANE_CORPUS_ROOT": "/env/root"}):
+            self.assertEqual(_corpus_root(self.d), Path("/global/root"))
+
+    def test_project_file_outranks_global(self):
+        self._global({"corpus_root": "/global/root"})
+        self._project({"corpus_root": "/project/root"})
+        self.assertEqual(_corpus_root(self.d), Path("/project/root"))
+
+    def test_a_layer_that_sets_the_key_wins_even_when_the_value_is_falsey(self):
+        """setup resolves by key presence (`if key in project`). Resolving by
+        truthiness here would skip an explicitly-empty value and fall through to
+        the environment — the two would disagree about the same file."""
+        self._project({"corpus_root": ""})
+        with unittest.mock.patch.dict(os.environ, {"HUMANE_CORPUS_ROOT": "/env/root"}):
+            self.assertNotEqual(_corpus_root(self.d), Path("/env/root"))
+
+    def test_a_layer_that_omits_the_key_defers(self):
+        self._project({"language": "ru"})
+        with unittest.mock.patch.dict(os.environ, {"HUMANE_CORPUS_ROOT": "/env/root"}):
+            self.assertEqual(_corpus_root(self.d), Path("/env/root"))
+
+    def test_unreadable_config_defers_instead_of_crashing(self):
+        """`setup doctor` explains a broken config; the viewer just proceeds."""
+        (self.d / "humane.json").write_text("{not json")
+        self.assertEqual(_corpus_root(self.d), self.home / "jtbd")
+        (self.d / "humane.json").write_bytes(b"\xff\xfe{}")
+        self.assertEqual(_corpus_root(self.d), self.home / "jtbd")
+
+    def test_tilde_is_expanded(self):
+        self._project({"corpus_root": "~/elsewhere"})
+        self.assertEqual(_corpus_root(self.d), self.home / "elsewhere")

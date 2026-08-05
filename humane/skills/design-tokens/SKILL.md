@@ -81,8 +81,15 @@ listed as *not measured*. A verification gap is not a finding.
 `amber-500`) marks a swatch, not a role assignment — `ink-950` is a color that
 happens to contain "ink"; `text` is the token that says where ink goes. Pairing
 ramp steps produced confident nonsense on real sets, so roles are read from
-semantic names only. Two names resolving to the same value are reported as a
-collision, not a contrast failure.
+semantic names only.
+
+**Two names resolving to the same value fail.** A declared foreground and
+background that carry one color is invisible text — Lc 0 at 1.0:1 — and the
+worst thing this command could do is call it a benign alias and exit 0. It is
+reported as the most severe failure there is, with no proposed fix: no
+lightness move on the foreground repairs a pair that is wrong in itself.
+Two *unrelated* neutrals sharing a hex are still listed, but they only reach
+the gate when the set declares them as a pair.
 
 ### Declaring the pairs that actually meet
 

@@ -24,7 +24,7 @@ you are holding first, and say so in the output.
 | Artifact | What to run |
 | --- | --- |
 | Screen, flow, feature, running app, UI source | The full pipeline below |
-| **Document** — README, docs page, PRD, spec, proposal | The **document pipeline**: `ux-writing` for the prose, `layout-rules` for structure and hierarchy only (rules 1–5, 8–9, 38–39), plus `persona-review` if the reader's objections matter more than the wording. Skip `walkthrough`, `nielsen-heuristics`, and contrast — mark them `N/A (not an interface)`, not `Clear` |
+| **Document** — README, docs page, PRD, spec, proposal | The **document pipeline**: `ux-writing` for the prose, `layout-rules` for structure and hierarchy only (rules 1–4, 39), plus `persona-review` if the reader's objections matter more than the wording. Skip `walkthrough`, `nielsen-heuristics`, and contrast — mark them `N/A (not an interface)`, not `Clear` |
 | **Copy in isolation** — a tagline, a hero, brand values | Not a review. Hand it to `respondent-panel`, and to `ux-writing` for the rewrite |
 | **Spec for an unbuilt interface** | `nielsen-heuristics` design-risk mode, which produces unscored risk flags. Never severity-score a thing that does not run |
 | Token set with no UI | `design-tokens contrast` alone |
@@ -32,6 +32,14 @@ you are holding first, and say so in the output.
 A document still gets the full contract — findings table, considered-but-rejected,
 verification, verdict — just over fewer domains. State the reduced pipeline in
 Scope and Coverage so the reader knows what was and was not possible.
+
+**Why 1–4 and 39, and not 5, 8, 9, 38.** Those four are wording rules living in
+the `layout-rules` file — "a summary line must add a conclusion", "link the
+entity", "empty states teach", "copy slop". `ux-writing` owns wording, and it
+already covers each of them. Routing them here would review the same sentence
+twice under two owners and risk two different rewrites of it. Send anything
+about what a string *says* to `ux-writing`; keep `layout-rules` on structure,
+hierarchy, and the boldness budget.
 
 **If the artifact is a document that describes an interface** (a README for a UI
 tool, a design doc), review the document *as a document*. Do not review the
@@ -156,10 +164,18 @@ Mode, exact scope, stack and conventions, and any boundary. Then:
 
 | Domain | Evidence inspected | Result |
 | --- | --- | --- |
-| Task completion | Task walked, states reached | Findings count · `Clear` · `Not reviewed` |
+| Task completion | Task walked, states reached | Findings count · `Clear` · `Not reviewed` · `N/A` |
 
-List every domain, including the ones humane does not own. `Clear` means
-inspected with nothing actionable; `Not reviewed` must say why.
+List every domain, including the ones humane does not own. The four results are
+not interchangeable, and collapsing them is how a review overstates itself:
+
+- **Findings count** — inspected, and this many things were found.
+- **`Clear`** — inspected, nothing actionable. An assertion about the artifact.
+- **`Not reviewed`** — *could* have applied here, but was not run. Must say why
+  (skill unavailable, no runtime, out of scope). An admission of a gap.
+- **`N/A`** — does not apply to this artifact at all, e.g. task completion on a
+  README. Write it as `N/A (not an interface)`. Never `Clear`: nothing was
+  inspected, so there is nothing to declare clean.
 
 ### Findings
 

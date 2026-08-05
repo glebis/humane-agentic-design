@@ -304,6 +304,40 @@ class ConfiguredBackendTests(unittest.TestCase):
                     {"HUMANE_IMAGE_BACKEND": "gpt-image-2"}, clear=False):
                 self.assertEqual(illustrate._config_value()[0], "nano-banana")
 
+    def test_a_directory_is_not_a_backend(self):
+        """`.exists()` is true for a directory, so `name:/tmp` was reported as
+        found and override_valid — then the run tried to execute a directory."""
+        with _no_configured_backend() as d:
+            (d / "humane.json").write_text(
+                json.dumps({"image_backend": f"gpt-image-2:{d}"}))
+            self.assertNotIn("gpt-image-2:" + str(d),
+                             str(illustrate.probe_backends().get("gpt-image-2")))
+            self.assertFalse(illustrate.backend_search_report()["override_valid"])
+
+    def test_a_non_python_backend_must_be_executable(self):
+        """A .py script gets `python3` in front of it; anything else is run
+        directly and has to carry the executable bit."""
+        with _no_configured_backend() as d:
+            plain = d / "gen"
+            plain.write_text("#!/bin/sh\n")
+            self.assertFalse(illustrate._is_runnable(plain))
+            plain.chmod(0o755)
+            self.assertTrue(illustrate._is_runnable(plain))
+            script = d / "gen.py"
+            script.write_text("# stub\n")  # not chmod'ed
+            self.assertTrue(illustrate._is_runnable(script))
+
+    def test_probe_reads_the_project_dir_it_is_given(self):
+        """setup's doctor passes --project-dir; without threading it through,
+        the probe read a humane.json from the shell's cwd instead."""
+        with _no_configured_backend() as d:
+            elsewhere = d / "elsewhere"
+            elsewhere.mkdir()
+            (elsewhere / "humane.json").write_text(
+                json.dumps({"image_backend": "nano-banana"}))
+            self.assertEqual(illustrate._config_value(elsewhere)[0], "nano-banana")
+            self.assertIsNone(illustrate._config_value(d)[0])
+
     def test_unparseable_config_does_not_crash_generation(self):
         """setup doctor explains a broken config; the generator just proceeds."""
         with _no_configured_backend() as d:
@@ -355,6 +389,22 @@ class BatchRunTests(unittest.TestCase):
             self.assertFalse(by_plat["spot-ui"]["size_requested"])
             # og-image maps to nano's `blog` platform at exactly 1200x630.
             self.assertTrue(by_plat["og-image"]["size_requested"])
+
+    def test_no_backend_entries_carry_the_documented_schema(self):
+        """SKILL.md says every metadata entry carries `size_requested`. The
+        no-backend path is the one most likely to be read by hand, and it
+        omitted the field entirely."""
+        answers = {"subject": "beacon", "count": 1, "platforms": ["og-image"],
+                   "backend": "auto"}
+        scaffold = illustrate.build_scaffold(_tree(), answers)
+        with tempfile.TemporaryDirectory() as d:
+            res = illustrate.prompts_only(scaffold, d)
+            meta = json.loads(pathlib.Path(res["metadata"]).read_text())
+            self.assertTrue(meta["outputs"])
+            for entry in meta["outputs"]:
+                self.assertIn("size_requested", entry)
+                # No backend ran, so no size was requested of one.
+                self.assertIsNone(entry["size_requested"])
 
     def test_gpt_image_2_can_always_be_asked_for_a_size(self):
         for name in ("spot-ui", "og-image"):

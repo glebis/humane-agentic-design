@@ -44,10 +44,12 @@ them — that is `nielsen-heuristics`.
 This is the step that separates this skill from a style guide, and it is not
 optional when a corpus exists.
 
-1. **Look for `~/jtbd/<slug>/jtbd.json`.** If one exists, read it. If several
-   projects exist, ask which. If none exists, say so plainly in the output —
-   the copy is then written from assumption, and that is a fact the reader
-   should have.
+1. **Look for `<corpus_root>/<slug>/jtbd.json`.** `corpus_root` is the `setup`
+   setting (default `~/jtbd`); read the configured value rather than assuming
+   the default, or a user who moved their corpus gets "no corpus found" and
+   copy written from assumption. If one exists, read it. If several projects
+   exist, ask which. If none exists, say so plainly in the output — the copy is
+   then written from assumption, and that is a fact the reader should have.
 2. **Mine the switch forces**, because each one tells you what a specific class
    of string has to accomplish:
 

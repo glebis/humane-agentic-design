@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """Build and serve a visual graph over one or more jtbd.json bundles.
 
-Reads the artifacts the skill already writes (~/jtbd/<slug>/jtbd.json), shapes
+Reads the artifacts the skill already writes (<corpus_root>/<slug>/jtbd.json), shapes
 them into a single data.json, drops the viewer next to it and serves the pair.
 Stdlib only, no build step, nothing leaves the machine.
 
-    python3 scripts/graph.py                    # every project under ~/jtbd
+    python3 scripts/graph.py                    # every project under the corpus root
     python3 scripts/graph.py ~/jtbd/my-thing    # one project (dir or file)
     python3 scripts/graph.py --no-serve         # just write the bundle
     python3 scripts/graph.py --port 8811
+
+The default root follows the `corpus_root` setting owned by `setup`; pass a
+path to override it for one run.
 """
 from __future__ import annotations
 
@@ -24,7 +27,38 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 TEMPLATE = HERE.parent / "templates" / "graph.html"
-DEFAULT_ROOT = Path.home() / "jtbd"
+
+
+def _corpus_root(project_dir=None):
+    """Where the corpus lives, per the `corpus_root` setting.
+
+    `setup` owns this setting and its precedence — project `humane.json` >
+    `~/.humane/config.json` > `HUMANE_CORPUS_ROOT` > `~/jtbd`. It is re-read
+    here rather than imported because skills install independently: jtbd may be
+    present on a machine where `setup` is not, and a hard import would make the
+    graph unopenable for that user. Keep the order identical to setup's table;
+    a divergence here means a user's configured root is honoured by one command
+    and ignored by the next, which is worse than not supporting it at all.
+
+    Only this one key is read, and an unparseable file is skipped silently —
+    `setup doctor` is the place that explains a broken config, not the viewer.
+    """
+    def _get(path):
+        try:
+            data = json.loads(Path(path).expanduser().read_text())
+        except (OSError, ValueError):
+            return None
+        return data.get("corpus_root") if isinstance(data, dict) else None
+
+    for candidate in (Path(project_dir or ".") / "humane.json",
+                      Path("~/.humane/config.json")):
+        value = _get(candidate)
+        if value:
+            return Path(value).expanduser()
+    return Path(os.environ.get("HUMANE_CORPUS_ROOT") or "~/jtbd").expanduser()
+
+
+DEFAULT_ROOT = _corpus_root()
 
 
 def score(importance, satisfaction):
@@ -287,7 +321,8 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("target", nargs="?", default=str(DEFAULT_ROOT),
-                    help="a jtbd.json, a project dir, or a root of project dirs (default ~/jtbd)")
+                    help="a jtbd.json, a project dir, or a root of project dirs "
+                         f"(default {DEFAULT_ROOT})")
     ap.add_argument("--out", default=None, help="where to write the viewer (default <target>/.graph)")
     ap.add_argument("--lang", choices=LANGS, default="auto",
                     help="interface language the viewer opens with (default auto: follow the browser). "

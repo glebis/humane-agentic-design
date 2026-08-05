@@ -39,6 +39,19 @@ Project beats environment deliberately: a repo that pins its corpus root should
 win over a variable that happens to be exported in the shell. Set a value in the
 project file when it belongs to the project, and globally when it belongs to you.
 
+**A config file that will not parse is not a missing config file.** If
+`humane.json` or `~/.humane/config.json` exists but holds invalid JSON, every
+setting it should have supplied would otherwise fall through to the layer below
+while `doctor` reported `source: default` — the one question this layer promises
+to answer, answered wrongly. Instead:
+
+- `doctor` and `config` print `!! <path> exists but <reason>` and mark every
+  value **suspect**; `config` exits non-zero so a script cannot read a full
+  table and conclude all is well.
+- `config --set` **refuses to write** to an unparseable file. Merging into it
+  would silently discard the settings it currently holds, including ones the
+  call never mentioned. Fix or move the file first.
+
 ## Step 1 — Run the doctor and read it aloud
 
 Run `doctor` and walk the output with the user. Report gaps as facts, not
@@ -109,9 +122,15 @@ these reaches outside the repo, and two of them need money or credentials.
 
 | Gap | Command | Note |
 | --- | --- | --- |
-| `interfaces` | `/plugin marketplace add jakubkrehel/skills` then `/plugin install interfaces@interfaces` | Claude Code plugin |
-| `impeccable` | `/plugin install impeccable` | Claude Code plugin |
+| `interfaces` | `/plugin marketplace add jakubkrehel/skills` then `/plugin install interfaces@interfaces` | **Claude Code only** — see below |
+| `impeccable` | `/plugin install impeccable` | **Claude Code only** — see below |
 | humane on another agent | `npx skills add glebis/humane-agentic-design` | **interactive** — four prompts: agents, scope, method, confirmation. Choose scope deliberately (see below) |
+
+**The two companion rows are Claude Code slash commands.** `/plugin` does not
+exist on other agents, and this skill does not know a non-Claude install path for
+either companion — do not improvise one. On another agent, report the companion
+as unavailable and let the review mark those domains **Not reviewed**; a made-up
+install command is worse than a named gap.
 | image generator | install `gpt-image-2` or `nano-banana` into any skills dir | needs `OPENAI_API_KEY` or `GEMINI_API_KEY` |
 | token base | `tokens setup-edit ~/design-tokens/base.tokens.json` | runs the `design-tokens` questionnaire |
 | task export | install the `linear` or `bd` CLI | or set `task_export=none` |

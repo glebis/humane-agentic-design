@@ -363,6 +363,117 @@ def test_unknown_names_in_the_spec_are_skipped_not_fatal():
     assert pairs == [("color.text", "color.background", "body")]
 
 
+def test_unknown_names_are_reported_not_silently_dropped():
+    """An author names a pair *because* it is the one that matters. Dropping a
+    typo'd name without a word leaves the gate green over exactly the pair it
+    was told to check."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    problems = []
+    contrast.build_pairs(
+        resolved,
+        spec={"pairs": [["text", "nope"], ["text", "background"], ["bad"]]},
+        unresolved=problems)
+    reported = " ".join(f"{n} {w} {why}" for n, w, why in problems)
+    assert "nope" in reported
+    assert "not a [foreground, background] entry" in reported
+
+
+def test_check_surfaces_undeclared_names_and_failures_mentions_them():
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    report = contrast.check(resolved, spec={"pairs": [["text", "nope"]]})
+    assert report["undeclared"]
+    # The measured pair passes, but the run is not clean.
+    assert any("nope" in msg for msg in contrast.failures(resolved,
+                                                          spec={"pairs": [["text", "nope"]]}))
+
+
+def test_unknown_exclude_name_is_reported():
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    problems = []
+    contrast.build_pairs(resolved, spec={"exclude": ["surfase"]}, unresolved=problems)
+    assert any("surfase" in name for name, _, _ in problems)
+
+
+def test_misspelled_level_is_reported_not_silently_downgraded():
+    """A bad level would otherwise fall back to the inferred one, measuring
+    against a bar the author never chose."""
+    resolved = _resolved(**{"color.text": "#111111", "color.background": "#ffffff"})
+    problems = []
+    contrast.build_pairs(resolved,
+                         spec={"pairs": [["text", "background", "boddy"]]},
+                         unresolved=problems)
+    assert any("boddy" in name for name, _, _ in problems)
+
+
+def test_empty_pairs_list_measures_nothing_rather_than_inferring():
+    """`pairs: []` is a declaration that nothing meets, not an absent
+    declaration. Falling back to inference measures a set the author
+    deliberately emptied."""
+    resolved = _resolved(**{
+        "color.text": "#e9e6df", "color.background": "#08080a",
+        "color.muted": "#7d7d86",
+    })
+    assert contrast.build_pairs(resolved, spec={"pairs": []}) == []
+    # ...while an absent `pairs` key still infers, so existing sets keep working.
+    assert contrast.build_pairs(resolved, spec={}) != []
+    # And the report says *which* reason applies, not the wrong one.
+    report = contrast.check(resolved, spec={"pairs": []})
+    assert report["declared_empty"] is True
+    assert "empty `pairs` array" in contrast.format_report(report)
+    assert not contrast.check(resolved, spec={})["declared_empty"]
+
+
+def test_on_token_pairs_with_the_fill_in_its_own_group():
+    """Flat leaf names are not unique. `brand.on-primary` is ink on
+    `brand.primary`; measuring it against `chart.primary` because that path
+    sorted later is a confident number about the wrong pair."""
+    resolved = _resolved(**{
+        "color.chart.primary": "#ffffff",
+        "color.brand.primary": "#1d4ed8",
+        "color.brand.on-primary": "#ffffff",
+    })
+    pairs = contrast.build_pairs(resolved)
+    on_pairs = [p for p in pairs if p[0] == "color.brand.on-primary"]
+    assert on_pairs == [("color.brand.on-primary", "color.brand.primary", "body")]
+
+
+def test_nested_on_token_is_detected_at_any_depth():
+    """`_flat_name` joins groups, so `color.brand.on-primary` arrives as
+    `brand-on-primary`. A prefix test misses it and the ink gets measured
+    against the page background instead of its fill."""
+    assert contrast._is_on_token("brand-on-primary")
+    assert contrast._is_on_token("on-primary")
+    assert contrast._on_target("brand-on-primary") == "primary"
+    assert contrast._on_target("on-surface-variant") == "surface-variant"
+    assert not contrast._is_on_token("onyx-500")
+
+
+def test_declared_on_token_is_body_like_the_inferred_one():
+    """Declaring a pair must not buy a laxer bar for the same ink. `on-primary`
+    infers the role "primary", which would put it on the non-body threshold
+    while inference holds the identical pair to body."""
+    resolved = _resolved(**{
+        "color.primary": "#1d4ed8", "color.on-primary": "#ffffff",
+    })
+    declared = contrast.build_pairs(
+        resolved, spec={"pairs": [["on-primary", "primary"]]})
+    inferred = [p for p in contrast.build_pairs(resolved)
+                if p[0] == "color.on-primary"]
+    assert declared[0][2] == "body"
+    assert declared == inferred
+
+
+def test_declared_pair_prefers_a_same_group_background():
+    resolved = _resolved(**{
+        "color.chart.primary": "#ffffff",
+        "color.brand.primary": "#1d4ed8",
+        "color.brand.on-primary": "#ffffff",
+    })
+    pairs = contrast.build_pairs(
+        resolved, spec={"pairs": [["color.brand.on-primary", "primary"]]})
+    assert pairs == [("color.brand.on-primary", "color.brand.primary", "body")]
+
+
 def test_spec_silences_the_print_surface_false_positive():
     # The real case from our own design.tokens.json: paper-50 is a print
     # surface, so text-on-surface is not a screen pair at all.

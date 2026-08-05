@@ -35,7 +35,9 @@ The most common way this method fails is walking the flow the designer built
 instead of the job the person has. Guard against it by taking the task from
 outside the interface.
 
-1. **Read `~/jtbd/<slug>/jtbd.json`.** Prefer a task derived from an
+1. **Read `<corpus_root>/<slug>/jtbd.json`** — `corpus_root` is the `setup`
+   setting, default `~/jtbd`; read the configured value, not the default.
+   Prefer a task derived from an
    `odi.outcomes[]` entry — those already carry a `stage` (one of
    define/locate/prepare/confirm/execute/monitor/modify/conclude) and a `touch`
    (the surface it lives on). An underserved outcome (high importance, low
@@ -147,6 +149,12 @@ it affected:
 
 | Severity | Step(s) | Question | Location | Before | After | Why |
 | --- | --- | --- | --- | --- | --- | --- |
+
+`Step(s)` and `Question` are this skill's two additions to the shared five-column
+findings table — they carry where in the walk the break happened and which of the
+four questions failed, which no other domain has. **Under `review`, drop them**:
+that skill owns the consolidated format, and a wider table cannot merge with the
+others. Fold the step and question into *Why* instead of losing them.
 
 - `HIGH` — the task cannot be completed, or completes wrongly without the person
   noticing.

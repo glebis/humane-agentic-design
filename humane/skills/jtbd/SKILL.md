@@ -31,7 +31,7 @@ Pick one at the start. Ask the user only if ambiguous.
 | **Interview** (default) | live conversation | full artifact bundle |
 | **Transcript ingest** | path to a voice interview transcript | full artifact bundle + confidence flags |
 | **Review mining** | path to reviews (CSV/JSON) | `review-brief.md` pre-seed → then Interview |
-| **Update** | path to existing `~/jtbd/<slug>/jtbd.json` | updated artifact bundle |
+| **Update** | path to existing `<corpus_root>/<slug>/jtbd.json` | updated artifact bundle |
 
 ## Scope discipline
 
@@ -234,8 +234,8 @@ Trigger on "show me the graph", "visualise this", "open the JTBD graph", "compar
 "where are the opportunities", or after writing a bundle when the user wants to look at it.
 
 ```bash
-python3 scripts/graph.py                    # every project under ~/jtbd
-python3 scripts/graph.py ~/jtbd/<slug>      # one project
+python3 scripts/graph.py                    # every project under the corpus root
+python3 scripts/graph.py <corpus_root>/<slug>   # one project
 python3 scripts/graph.py --lang ru          # open in Russian
 python3 scripts/graph.py --no-serve         # write .graph/ and stop
 python3 scripts/graph.py --port 8811
@@ -278,12 +278,12 @@ that says so; a project with no quotes is called out in Evidence as assertion ra
 finding; missing switch forces are counted. Use it as a review step before handing the bundle
 downstream — if a view is empty, that is the pass to run next.
 
-With several projects under `~/jtbd`, the Project rail switches between them or shows all at
+With several projects under the corpus root, the Project rail switches between them or shows all at
 once, so outcomes from different projects sit on one landscape for portfolio comparison.
 
 ### Corpus level
 
-An optional `~/jtbd/corpus.json` (read from `<target>/corpus.json`, else the default root)
+An optional `corpus.json` at the corpus root (read from `<target>/corpus.json`, else that root)
 ties the bundles into a portfolio. All fields are optional; a missing file yields empty lists
 and the viewer still works.
 
@@ -325,7 +325,7 @@ Where **Graph Mode** is for interactive review, this writes a static one-page Ma
 python3 scripts/report.py exec-summary <slug>          # one project → <root>/<slug>/exec-summary.md
 python3 scripts/report.py exec-summary --all           # whole corpus → <root>/exec-summary.md
 python3 scripts/report.py exec-summary <slug> --lang ru # Russian headings
-python3 scripts/report.py exec-summary <slug> --out PATH --root ~/jtbd
+python3 scripts/report.py exec-summary <slug> --out PATH   # --root overrides corpus_root
 ```
 
 Single-project output: title + hook, the job triple as one paragraph, top 3 opportunities
@@ -347,14 +347,15 @@ only the report's headings — statements and quotes stay as captured.
 2. Draft `jtbd.json` and show it to the user for review.
 3. Ask: "Anything to adjust? Want to add extended fields (before/after, scenarios, guardrails, ODI)?"
 4. Apply edits.
-5. Create output folder: `~/jtbd/<project-slug>/`. If it exists, ask overwrite or rename.
+5. Create output folder: `<corpus_root>/<project-slug>/` — the `setup` setting, default
+   `~/jtbd`. If it exists, ask overwrite or rename.
 6. Write three files using templates:
    - `jtbd.json` — source of truth.
    - `one-pager.md` — stakeholder-shareable summary (from `templates/one-pager.md`).
    - `messaging-angles.md` — copy angles derived from Switch forces (from `templates/messaging-angles.md`).
    - `gtm-brief.md` — positioning, channels, experiments (from `templates/gtm-brief.md`). Only generated when switch forces are fully captured (no `"unknown"` values).
 7. Report all paths.
-8. Offer the visual review: "Want to see it? `python3 scripts/graph.py ~/jtbd/<slug>` opens the graph — it also shows what's still thin." Add `--lang ru` when the session is in Russian. See **Graph Mode**.
+8. Offer the visual review: "Want to see it? `python3 scripts/graph.py <corpus_root>/<slug>` opens the graph — it also shows what's still thin." Add `--lang ru` when the session is in Russian. See **Graph Mode**.
 
 ## Downstream pipeline (superpowers integration)
 

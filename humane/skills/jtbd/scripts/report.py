@@ -4,8 +4,8 @@
 Starts with the executive summary: a one-page read for someone who has three
 minutes. Single project or whole-corpus. Stdlib only.
 
-    python3 scripts/report.py exec-summary <slug> [--root ~/jtbd] [--out PATH] [--lang en|ru]
-    python3 scripts/report.py exec-summary --all  [--root ~/jtbd] [--out PATH] [--lang en|ru]
+    python3 scripts/report.py exec-summary <slug> [--root DIR] [--out PATH] [--lang en|ru]
+    python3 scripts/report.py exec-summary --all  [--root DIR] [--out PATH] [--lang en|ru]
 
 Honesty guards match the skill's ethos: creator-estimate scores carry a visible
 caveat, partial/unknown forces are shown as such, and nothing is dressed up with
@@ -457,7 +457,8 @@ def build_parser():
     es = sub.add_parser("exec-summary", help="One-page executive summary.")
     es.add_argument("slug", nargs="?", help="Project slug under --root.")
     es.add_argument("--all", action="store_true", help="Whole-corpus summary.")
-    es.add_argument("--root", default=str(DEFAULT_ROOT), help="Corpus root (default ~/jtbd).")
+    es.add_argument("--root", default=str(DEFAULT_ROOT),
+                    help=f"Corpus root (default {DEFAULT_ROOT}, from the corpus_root setting).")
     es.add_argument("--out", help="Output path (default <root>/<slug>/exec-summary.md).")
     es.add_argument("--lang", choices=["en", "ru"], default="en", help="Report chrome language.")
     es.set_defaults(func=cmd_exec_summary)

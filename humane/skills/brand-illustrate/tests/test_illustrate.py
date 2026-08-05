@@ -1,6 +1,8 @@
 """Tests for the brand-illustrate adapter. Stdlib unittest, no network, no spend."""
 
+import contextlib
 import json
+import os
 import pathlib
 import sys
 import tempfile
@@ -181,8 +183,11 @@ class BackendTests(unittest.TestCase):
 
 class BackendResolutionTests(unittest.TestCase):
     def test_env_override_wins_and_is_reported(self):
-        with tempfile.TemporaryDirectory() as d:
-            script = pathlib.Path(d) / "my_generator.py"
+        # No config file in play — this asserts the env layer beats *discovery*.
+        # A config file legitimately beats the env var (setup: global > env);
+        # that ordering is covered in ConfiguredBackendTests.
+        with _no_configured_backend() as d:
+            script = d / "my_generator.py"
             script.write_text("# stub\n")
             env = {"HUMANE_IMAGE_BACKEND": f"gpt-image-2:{script}"}
             with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
@@ -191,17 +196,18 @@ class BackendResolutionTests(unittest.TestCase):
                 self.assertTrue(illustrate.backend_search_report()["override_valid"])
 
     def test_env_override_pointing_nowhere_is_ignored_not_fatal(self):
-        env = {"HUMANE_IMAGE_BACKEND": "gpt-image-2:/nope/missing.py"}
-        with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
-            report = illustrate.backend_search_report()
-            self.assertFalse(report["override_valid"])
+        with _no_configured_backend():
+            env = {"HUMANE_IMAGE_BACKEND": "gpt-image-2:/nope/missing.py"}
+            with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
+                report = illustrate.backend_search_report()
+                self.assertFalse(report["override_valid"])
 
     def test_custom_skills_dir_is_searched(self):
-        with tempfile.TemporaryDirectory() as d:
-            script = pathlib.Path(d) / "nano-banana" / "scripts" / "nano_banana.py"
+        with _no_configured_backend() as home:
+            script = home / "nano-banana" / "scripts" / "nano_banana.py"
             script.parent.mkdir(parents=True)
             script.write_text("# stub\n")
-            env = {"HUMANE_SKILLS_DIR": d, "HUMANE_IMAGE_BACKEND": ""}
+            env = {"HUMANE_SKILLS_DIR": str(home), "HUMANE_IMAGE_BACKEND": ""}
             with unittest.mock.patch.dict(illustrate.os.environ, env, clear=False):
                 self.assertEqual(illustrate.probe_backends().get("nano-banana"),
                                  str(script))
@@ -215,10 +221,97 @@ class BackendResolutionTests(unittest.TestCase):
 
     def test_pick_backend_auto_prefers_seeded(self):
         found = {"nano-banana": "/n", "gpt-image-2": "/g"}
-        self.assertEqual(illustrate.pick_backend("auto", found), "gpt-image-2")
-        self.assertEqual(illustrate.pick_backend("nano-banana", found), "nano-banana")
-        self.assertIsNone(illustrate.pick_backend("missing", found))
+        with _no_configured_backend():
+            self.assertEqual(illustrate.pick_backend("auto", found), "gpt-image-2")
+            self.assertEqual(illustrate.pick_backend("nano-banana", found), "nano-banana")
+            self.assertIsNone(illustrate.pick_backend("missing", found))
 
+
+@contextlib.contextmanager
+def _no_configured_backend():
+    """Run with no image_backend from any layer: an empty env var, a cwd holding
+    no humane.json, and HOME pointed somewhere empty. Without this a developer's
+    own ~/.humane/config.json decides the result and the suite passes by
+    accident. HOME is what must be patched — `Path.expanduser` reads the
+    environment variable and ignores a patched `Path.home`."""
+    with tempfile.TemporaryDirectory() as d:
+        prior = os.getcwd()
+        os.chdir(d)
+        try:
+            with unittest.mock.patch.dict(
+                    illustrate.os.environ,
+                    {"HUMANE_IMAGE_BACKEND": "", "HOME": d}, clear=False):
+                yield pathlib.Path(d)
+        finally:
+            os.chdir(prior)
+
+
+class ConfiguredBackendTests(unittest.TestCase):
+    """`image_backend` is a documented setting with four layers. Reading only
+    the environment made `config --set image_backend=...` a silent no-op."""
+
+    def test_project_humane_json_selects_the_backend(self):
+        with _no_configured_backend() as d:
+            (d / "humane.json").write_text('{"image_backend": "nano-banana"}')
+            found = {"nano-banana": "/n", "gpt-image-2": "/g"}
+            # ...even though auto would have preferred gpt-image-2.
+            self.assertEqual(illustrate.pick_backend("auto", found), "nano-banana")
+            self.assertEqual(illustrate._config_value()[0], "nano-banana")
+
+    def test_project_file_outranks_the_environment(self):
+        with _no_configured_backend() as d:
+            (d / "humane.json").write_text('{"image_backend": "nano-banana"}')
+            with unittest.mock.patch.dict(
+                    illustrate.os.environ,
+                    {"HUMANE_IMAGE_BACKEND": "gpt-image-2"}, clear=False):
+                self.assertEqual(illustrate._config_value()[0], "nano-banana")
+
+    def test_environment_still_applies_when_no_file_says_otherwise(self):
+        with _no_configured_backend():
+            with unittest.mock.patch.dict(
+                    illustrate.os.environ,
+                    {"HUMANE_IMAGE_BACKEND": "nano-banana"}, clear=False):
+                found = {"nano-banana": "/n", "gpt-image-2": "/g"}
+                self.assertEqual(illustrate.pick_backend("auto", found), "nano-banana")
+
+    def test_auto_is_not_a_choice_and_leaves_the_recipe_alone(self):
+        with _no_configured_backend() as d:
+            (d / "humane.json").write_text('{"image_backend": "auto"}')
+            found = {"nano-banana": "/n", "gpt-image-2": "/g"}
+            # The recipe asked for nano-banana; a configured "auto" must not
+            # override it, or the default value would silently beat the recipe.
+            self.assertEqual(illustrate.pick_backend("nano-banana", found),
+                             "nano-banana")
+
+    def test_configured_backend_may_carry_a_path(self):
+        with _no_configured_backend() as d:
+            script = d / "gen.py"
+            script.write_text("# stub\n")
+            (d / "humane.json").write_text(
+                json.dumps({"image_backend": f"gpt-image-2:{script}"}))
+            self.assertEqual(illustrate.probe_backends()["gpt-image-2"], str(script))
+
+    def test_global_config_outranks_the_environment(self):
+        """setup's documented order is project > global > env. A machine-wide
+        choice the user wrote down beats a variable that happens to be exported
+        in whatever shell the run started from."""
+        with _no_configured_backend() as home:
+            (home / ".humane").mkdir()
+            (home / ".humane" / "config.json").write_text(
+                '{"image_backend": "nano-banana"}')
+            with unittest.mock.patch.dict(
+                    illustrate.os.environ,
+                    {"HUMANE_IMAGE_BACKEND": "gpt-image-2"}, clear=False):
+                self.assertEqual(illustrate._config_value()[0], "nano-banana")
+
+    def test_unparseable_config_does_not_crash_generation(self):
+        """setup doctor explains a broken config; the generator just proceeds."""
+        with _no_configured_backend() as d:
+            (d / "humane.json").write_text("{not json")
+            self.assertEqual(illustrate._config_value()[0], None)
+
+
+class BatchRunTests(unittest.TestCase):
     def test_run_batch_writes_metadata_and_sheet(self):
         answers = {"subject": "grid lighthouse", "count": 2,
                    "platforms": ["og-image", "square-post"], "backend": "gpt-image-2"}
@@ -229,7 +322,9 @@ class BackendResolutionTests(unittest.TestCase):
             calls.append(cmd)
             return FakeProc(0)
 
-        with tempfile.TemporaryDirectory() as d:
+        # The scaffold asks for gpt-image-2; a configured backend would rightly
+        # outrank it, so neutralise the config layers to test the batch itself.
+        with _no_configured_backend(), tempfile.TemporaryDirectory() as d:
             res = illustrate.run_batch(
                 scaffold, str(_tokens_copy(d)), d, runner=fake_runner,
                 found={"gpt-image-2": "/fake/gpt_image_2.py"})
@@ -243,6 +338,28 @@ class BackendResolutionTests(unittest.TestCase):
             self.assertTrue(pathlib.Path(res["contact_sheet"]).exists())
             # gpt-image-2 command carries the seed for series coherence
             self.assertIn("--seed", calls[0])
+
+    def test_nano_flagless_preset_is_recorded_as_unsized(self):
+        """nano-banana has no free-form size flag, so `spot-ui` comes back at the
+        backend's default. Nothing resizes it — the batch must say so instead of
+        printing the target size as though it had been honoured."""
+        answers = {"subject": "beacon", "count": 1,
+                   "platforms": ["spot-ui", "og-image"], "backend": "nano-banana"}
+        scaffold = illustrate.build_scaffold(_tree(), answers)
+        with _no_configured_backend(), tempfile.TemporaryDirectory() as d:
+            res = illustrate.run_batch(
+                scaffold, str(_tokens_copy(d)), d, runner=lambda cmd: FakeProc(0),
+                found={"nano-banana": "/fake/nano_banana.py"})
+            self.assertEqual(res["unsized_platforms"], ["spot-ui"])
+            by_plat = {o["platform"]: o for o in res["outputs"]}
+            self.assertFalse(by_plat["spot-ui"]["size_requested"])
+            # og-image maps to nano's `blog` platform at exactly 1200x630.
+            self.assertTrue(by_plat["og-image"]["size_requested"])
+
+    def test_gpt_image_2_can_always_be_asked_for_a_size(self):
+        for name in ("spot-ui", "og-image"):
+            plat = dict(illustrate.PLATFORMS[name], name=name)
+            self.assertTrue(illustrate._size_was_requested("gpt-image-2", plat))
 
     def test_command_uses_size_for_flagless_platform(self):
         spot = {"name": "spot-ui", "w": 512, "h": 512, "flag": None}

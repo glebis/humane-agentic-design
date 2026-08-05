@@ -1,6 +1,6 @@
 ---
 name: brand-illustrate
-description: Turn design tokens into a coherent, on-brand illustration set through a short step-by-step questionnaire, then generate with whichever image backend is installed (gpt-image-2 / nano-banana). Assembles the prompt scaffold from the token palette + brand block, merges layout-rules de-slop negatives, resizes to platform presets, saves a reusable recipe, and hands the batch to review. Use for "brand illustrations", "on-brand images", "an illustration set", "generate images matching my brand / tokens", "illustrate this section on-brand". Triggers on brand illustrations, on-brand images, illustration set, generate images matching my brand, illustrate this section on-brand, contact sheet.
+description: Turn design tokens into a coherent, on-brand illustration set through a short step-by-step questionnaire, then generate with whichever image backend is installed (gpt-image-2 / nano-banana). Assembles the prompt scaffold from the token palette + brand block, merges layout-rules de-slop negatives, requests platform preset sizes, saves a reusable recipe, and hands the batch to review. Use for "brand illustrations", "on-brand images", "an illustration set", "generate images matching my brand / tokens", "illustrate this section on-brand". Triggers on brand illustrations, on-brand images, illustration set, generate images matching my brand, illustrate this section on-brand, contact sheet.
 ---
 
 # brand-illustrate
@@ -27,10 +27,13 @@ Discovery makes no assumption about which agent you run. First hit wins:
 
 | # | Source | |
 | --- | --- | --- |
-| 1 | `HUMANE_IMAGE_BACKEND=<name>:/path/to/script` | explicit override, always wins |
+| 1 | The `image_backend` setting as `<name>` or `<name>:/path/to/script` | project `humane.json` > `~/.humane/config.json` > `HUMANE_IMAGE_BACKEND`; `auto` means "no explicit choice" |
 | 2 | `HUMANE_SKILLS_DIR=/one:/two` | extra skill roots to search |
 | 3 | Known agent skill roots | `~/.claude/skills`, `~/.codex/skills`, `~/.config/skills`, project `.agents/skills` and `.claude/skills`, and the plugin's own tree |
 | 4 | `PATH` | a generator packaged as a plain executable |
+
+Row 1 is the layered setting `setup` owns, not the environment variable alone —
+a config file legitimately outranks a variable exported in the calling shell.
 
 `scripts/illustrate.py backends -v` prints what was found and every location
 searched — use it before concluding anything is missing.
@@ -98,12 +101,30 @@ Offer the presets (multi-select):
 
 Multiple are fine — each subject renders at every chosen size.
 
+**A preset is a size *requested* of the backend, never a resize.** Nothing in
+this skill resizes an image — that would need an image library, and these
+scripts are stdlib only. gpt-image-2 takes any exact size. nano-banana takes
+only its own named platforms, which match the first four presets exactly but
+have no equivalent for `spot-ui` — that image returns at nano's default size.
+Each entry in `metadata.json` carries `size_requested`, and a run reports
+`unsized_platforms`. When it is non-empty, say so rather than handing over an
+image for a slot that needs exact pixels; switch to gpt-image-2 for that preset,
+or resize it in a real image tool.
+
 ### Step 5 — Backend & budget
 
-"Which generator, and draft or final?" Backends: `gpt-image-2` (has a seed flag —
-best for a coherent series), `nano-banana` (native reference-image style transfer),
-or `auto` (prefers gpt-image-2 for the seed). Budget: `draft` (cheap, ~$0.006/img
-on gpt-image-2) first, `final` only once a direction is approved.
+"Which generator, and draft or final?" Backends: `gpt-image-2` (accepts a seed
+flag, though see *Coherence, honestly* — it is recorded, not yet sent),
+`nano-banana` (native reference-image style transfer), or `auto` (prefers
+gpt-image-2). Budget: `draft` (cheap, ~$0.006/img on gpt-image-2) first, `final`
+only once a direction is approved.
+
+The backend also comes from the `image_backend` setting owned by `setup` —
+project `humane.json` > `~/.humane/config.json` > `HUMANE_IMAGE_BACKEND` >
+`auto`. A configured value other than `auto` outranks a stored recipe's choice,
+because that is what a user reaches for to redirect a run. `auto` is not a
+choice and leaves the recipe alone. `scripts/illustrate.py backends` prints
+which value won and which layer supplied it.
 
 ### Step 6 — Reference images *(optional)*
 
@@ -182,12 +203,19 @@ After generation, offer review:
 
 ## Coherence, honestly
 
-- **gpt-image-2** carries a real `--seed`; the whole set reuses one seed so variants
-  stay a family. A default seed is injected when the user gives none, so a re-run
-  reproduces the batch.
+- **gpt-image-2** accepts a `--seed`, and the whole set reuses one so the intent
+  is recorded; a default is injected when the user gives none. **This does not
+  currently reproduce a batch.** The generator we shell out to takes the seed,
+  prints it, and writes it to `metadata.json`, but its request builder marks the
+  parameter *reserved for future API support* and never sends it. So the seed is
+  a faithful record of what was asked for and nothing more. Do not promise a
+  re-run will return the same images — check whether the installed generator
+  sends the seed before telling a user otherwise.
 - **nano-banana** has no seed. The adapter anchors the series instead: the first
   successful image becomes a `--reference` for the rest. Coherence is strong but
   not pixel-deterministic — say so if the user expects exact reproduction.
+- In short: **neither backend reproduces a batch exactly today.** Coherence
+  within a run is real; reproduction across runs is not.
 
 ## Guardrails (do not violate)
 

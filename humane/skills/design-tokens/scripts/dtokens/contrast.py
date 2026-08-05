@@ -330,8 +330,28 @@ def _colors(resolved):
 
 
 def _is_on_token(name):
-    low = name.lower()
-    return low.startswith("on-") or low.startswith("on_")
+    """True for an ink-on-fill token, at any nesting depth.
+
+    `_flat_name` joins every group after the first, so `color.brand.on-primary`
+    arrives as `brand-on-primary` — a prefix test alone misses it, and the token
+    then falls through to role inference and gets measured against the *page
+    background* instead of the fill it is painted on. Match the final segment
+    instead, which is where the `on-` convention actually lives.
+    """
+    leaf = re.split(r"[-_.]", str(name).lower())
+    for i, part in enumerate(leaf):
+        if part == "on" and i + 1 < len(leaf):
+            return True
+    return str(name).lower().startswith(("on-", "on_"))
+
+
+def _on_target(name):
+    """The fill an `on-X` token names: everything after the `on` segment."""
+    parts = re.split(r"[-_.]", str(name).lower())
+    for i, part in enumerate(parts):
+        if part == "on" and i + 1 < len(parts):
+            return "-".join(parts[i + 1:])
+    return None
 
 
 # A trailing numeric step (`ink-950`, `amber-500`, `slate.800`) marks a palette
@@ -347,23 +367,40 @@ def is_palette_step(name):
     return bool(_RAMP_STEP_RE.search(name))
 
 
-def _lookup(token, resolved, by_name, by_role):
+def _lookup(token, resolved, by_name, by_role, near=None):
     """Resolve a name from the contrast declaration to a token path. Accepts a
-    full path ('color.text'), a flat name ('text'), or a role ('background')."""
+    full path ('color.text'), a flat name ('text'), or a role ('background').
+
+    `near` is a path whose group should win a tie. Flat names are not unique —
+    `color.brand.primary` and `color.chart.primary` share the leaf `primary` —
+    and silently taking whichever sorted last means `on-primary` can be measured
+    against a fill it was never painted on. That produces a confident number
+    about the wrong pair, which is worse than no number. When `near` is given,
+    a candidate in the same group is preferred before falling back.
+    """
     if token in resolved:
         return token
     low = str(token).lower()
-    if low in by_name:
-        return by_name[low]
-    hits = by_role.get(low)
-    return hits[0] if hits else None
+    hits = by_name.get(low) or by_role.get(low) or []
+    if not hits:
+        return None
+    if len(hits) > 1 and near:
+        group = near.rsplit(".", 1)[0]
+        for path in hits:
+            if path.rsplit(".", 1)[0] == group:
+                return path
+    return hits[0]
 
 
-def build_pairs(resolved, level="auto", spec=None):
+def build_pairs(resolved, level="auto", spec=None, unresolved=None):
     """Return [(fg, bg, level)] of token paths worth measuring.
 
-    When `spec` declares `pairs`, those are measured and nothing else. Otherwise
-    pairs are inferred:
+    `unresolved` is an optional list that collects
+    `(name, where, why)` for every declared token that could not be resolved, so
+    the caller can report it rather than drop it.
+
+    When `spec` declares `pairs`, those are measured and nothing else — including
+    when the list is empty. Otherwise pairs are inferred:
       * every text/muted color over every background color        -> body
       * every primary/accent/success/warning/danger over every
         background color                                          -> non-body
@@ -374,10 +411,18 @@ def build_pairs(resolved, level="auto", spec=None):
     `is_palette_step`. `level` of "body"/"non-body" overrides the per-pair choice.
     """
     spec = spec or {}
+    unresolved = [] if unresolved is None else unresolved
     cols = [c for c in _colors(resolved) if not is_palette_step(c[1])]
     by_role, by_name, role_of = {}, {}, {}
     for path, name, role, _value in cols:
-        by_name[name.lower()] = path
+        # Index both the flat name (`brand-primary`) and the bare final segment
+        # (`primary`), each to every path that carries it — not just the last
+        # one seen. A declaration says `["on-primary", "primary"]`, not
+        # `["brand-on-primary", "brand-primary"]`, so the short form has to
+        # resolve; and because it is ambiguous across groups, `_lookup` needs
+        # every candidate in order to prefer the one in the same group.
+        for key in {name.lower(), path.rsplit(".", 1)[-1].lower()}:
+            by_name.setdefault(key, []).append(path)
         role_of[path] = role
         if role:
             by_role.setdefault(role, []).append(path)
@@ -387,6 +432,8 @@ def build_pairs(resolved, level="auto", spec=None):
         path = _lookup(token, resolved, by_name, by_role)
         if path:
             excluded.add(path)
+        else:
+            unresolved.append((str(token), "exclude", "no such color token"))
 
     pairs = []
 
@@ -394,20 +441,50 @@ def build_pairs(resolved, level="auto", spec=None):
         if fg != bg and fg not in excluded and bg not in excluded:
             pairs.append((fg, bg, level if level != "auto" else lvl))
 
+    # `pairs` **present but empty** is a declaration that nothing meets, not an
+    # absent declaration. Falling through to inference there would measure a set
+    # the author explicitly emptied, which is the opposite of what they wrote.
     declared = spec.get("pairs")
-    if declared:
+    if declared is not None and isinstance(declared, (list, tuple)):
         for entry in declared:
             if not isinstance(entry, (list, tuple)) or len(entry) < 2:
+                unresolved.append((repr(entry), "pairs",
+                                   "not a [foreground, background] entry"))
                 continue
             fg = _lookup(entry[0], resolved, by_name, by_role)
-            bg = _lookup(entry[1], resolved, by_name, by_role)
+            bg = _lookup(entry[1], resolved, by_name, by_role, near=fg)
+            # A declared pair that does not resolve is the one case that must
+            # never pass quietly: the author named it *because* it is the pair
+            # that matters, so dropping it leaves the gate green over the very
+            # thing it was told to check. Report it as unmeasured.
             if not fg or not bg:
+                missing = [str(t) for t, p in ((entry[0], fg), (entry[1], bg)) if not p]
+                unresolved.append((" / ".join(missing), "pairs",
+                                   "no such color token"))
                 continue
             # A declared pair is measured at the level its foreground role
             # implies, unless the entry names one explicitly as a third item.
-            lvl = entry[2] if len(entry) > 2 and entry[2] in THRESHOLDS else None
+            lvl = None
+            if len(entry) > 2:
+                if entry[2] in THRESHOLDS:
+                    lvl = entry[2]
+                else:
+                    # A misspelled level would otherwise fall back to the
+                    # inferred one — quietly measuring against a bar the author
+                    # did not choose.
+                    unresolved.append((
+                        str(entry[2]), "pairs",
+                        f"unknown level; expected one of {', '.join(sorted(THRESHOLDS))}"))
             if lvl is None:
-                lvl = "non-body" if role_of.get(fg) in _NON_BODY_ROLES else "body"
+                # An `on-X` token is ink by definition, whatever fill name it
+                # carries: `on-primary` infers the role "primary" and would
+                # otherwise be held to the non-body bar here while inference
+                # holds the very same pair to `body` — the same ink measured
+                # more leniently just because someone declared it.
+                if _is_on_token(_flat_name(fg)):
+                    lvl = "body"
+                else:
+                    lvl = "non-body" if role_of.get(fg) in _NON_BODY_ROLES else "body"
             add(fg, bg, lvl)
         return pairs
 
@@ -416,9 +493,12 @@ def build_pairs(resolved, level="auto", spec=None):
     for path, name, role, _value in cols:
         if _is_on_token(name):
             # `on-primary` is ink placed on the `primary` fill — pair it with
-            # that fill, not with the page background.
-            target = name[3:].lower()
-            fill = by_name.get(target) or (by_role.get(target) or [None])[0]
+            # that fill, not with the page background. `near=path` keeps the
+            # match inside the same group, so `brand.on-primary` resolves to
+            # `brand.primary` and not to a `chart.primary` that merely shares
+            # the leaf name.
+            target = _on_target(name)
+            fill = _lookup(target, resolved, by_name, by_role, near=path) if target else None
             if fill:
                 add(path, fill, "body")
             continue
@@ -442,9 +522,12 @@ def check(resolved, standard="both", level="auto", spec=None):
     Each result: {fg, bg, fg_value, bg_value, level, apca, wcag, apca_pass,
     wcag_pass, passed, fix}. `passed` reflects `standard` ("apca", "wcag", or
     "both" = must clear both). `unmeasured` holds (path, value, reason) for
-    colors we refused to guess at.
+    colors we refused to guess at, and `undeclared` holds (name, where, why) for
+    names in the contrast declaration that match no token — a typo in a declared
+    pair must not read as a clean run.
     """
     results, unmeasured, cache = [], [], {}
+    undeclared = []
 
     def rgb_of(path):
         if path not in cache:
@@ -457,7 +540,8 @@ def check(resolved, standard="both", level="auto", spec=None):
         return cache[path]
 
     identical = []
-    for fg, bg, lvl in build_pairs(resolved, level=level, spec=spec):
+    for fg, bg, lvl in build_pairs(resolved, level=level, spec=spec,
+                                   unresolved=undeclared):
         fg_rgb, bg_rgb = rgb_of(fg), rgb_of(bg)
         if fg_rgb is None or bg_rgb is None:
             continue
@@ -511,7 +595,10 @@ def check(resolved, standard="both", level="auto", spec=None):
         if item[0] not in seen:
             seen.add(item[0])
             uniq.append(item)
-    return {"results": results, "unmeasured": uniq, "identical": identical}
+    declared = (spec or {}).get("pairs")
+    return {"results": results, "unmeasured": uniq, "identical": identical,
+            "undeclared": undeclared,
+            "declared_empty": isinstance(declared, (list, tuple)) and not declared}
 
 
 def failures(resolved, standard="both", level="auto", spec=None):
@@ -535,6 +622,12 @@ def failures(resolved, standard="both", level="auto", spec=None):
         if r["fix"]:
             msg += f"; try {r['fix'][0]} (same hue and chroma, L={r['fix'][1]})"
         out.append(msg)
+    for name, where, why in report.get("undeclared") or []:
+        # An author names a pair precisely because it is the one that matters.
+        # If the name is wrong, silence would leave the gate green over exactly
+        # the pair it was told to check.
+        out.append(f"contrast: {where} names {name} — {why}. That pair was "
+                   f"not measured.")
     return out
 
 
@@ -543,8 +636,15 @@ def format_report(report, standard="both"):
     lines = []
     results = report["results"]
     if not results:
-        lines.append("no measurable text/background pairs found "
-                     "(no color tokens matched the text/background roles)")
+        # Say which of the two reasons applies. "No tokens matched the roles"
+        # sent to someone who wrote `pairs: []` is a wrong answer to "why did it
+        # measure nothing?".
+        if report.get("declared_empty"):
+            lines.append("no pairs measured: the contrast declaration lists an "
+                         "empty `pairs` array, so nothing was checked")
+        else:
+            lines.append("no measurable text/background pairs found "
+                         "(no color tokens matched the text/background roles)")
     else:
         fails = [r for r in results if not r["passed"]]
         lines.append(f"{len(results)} pair(s) measured, {len(fails)} failing "
@@ -561,8 +661,11 @@ def format_report(report, standard="both"):
                              f"(OKLCH L {r['fix'][1]}, chroma and hue unchanged)")
     if report.get("identical"):
         lines.append("")
-        lines.append("same color on both sides (an alias or a duplicated value, "
-                     "not a contrast failure):")
+        # These are counted among the failures above. The header used to call
+        # them "not a contrast failure", which contradicted the gate that fails
+        # them — a declared pair resolving to one color is invisible text.
+        lines.append("same color on both sides — invisible text, "
+                     "counted as failures above:")
         for fg, bg, value in report["identical"]:
             lines.append(f"  {fg} and {bg} are both {value}")
     if report["unmeasured"]:
@@ -570,4 +673,10 @@ def format_report(report, standard="both"):
         lines.append("not measured (reported, not counted as failures):")
         for path, value, reason in report["unmeasured"]:
             lines.append(f"  {path} = {value!r} — {reason}")
+    if report.get("undeclared"):
+        lines.append("")
+        lines.append("named in the contrast declaration but not found "
+                     "(these pairs were NOT measured):")
+        for name, where, why in report["undeclared"]:
+            lines.append(f"  {where}: {name} — {why}")
     return "\n".join(lines) + "\n"

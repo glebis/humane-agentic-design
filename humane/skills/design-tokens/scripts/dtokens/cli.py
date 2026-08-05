@@ -88,7 +88,11 @@ def _cmd_contrast(args):
     else:
         _emit(contrast_mod.format_report(report, args.standard), args.out)
     failing = [r for r in report["results"] if not r["passed"]]
-    return 1 if failing and not args.no_fail else 0
+    # A declared pair whose name does not resolve was never measured. Exiting 0
+    # there would let a typo in the declaration read as a clean gate — the same
+    # false success as passing an unmeasured pair.
+    gating = failing or report.get("undeclared")
+    return 1 if gating and not args.no_fail else 0
 
 
 def _cmd_merge(args):
@@ -411,9 +415,13 @@ def _build_parser():
     sc.add_argument("file")
     sc.add_argument("--standard", choices=("apca", "wcag", "both"), default="both",
                     help="which scale decides pass/fail (default: both must clear)")
-    sc.add_argument("--level", choices=("auto", "body", "non-body"), default="auto",
+    sc.add_argument("--level", choices=("auto", "body", "non-body", "graphic"),
+                    default="auto",
                     help="threshold to apply; auto picks per pair from the "
-                         "foreground's inferred role (default: auto)")
+                         "foreground's inferred role. `graphic` is for color "
+                         "that is never text (fills, rules, chart marks) and is "
+                         "never inferred — a token's name cannot tell you "
+                         "whether it is painted as type (default: auto)")
     sc.add_argument("--json", action="store_true", help="emit the raw report as JSON")
     sc.add_argument("--no-fail", action="store_true",
                     help="always exit 0; report without gating")

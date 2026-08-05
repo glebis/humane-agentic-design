@@ -109,10 +109,41 @@ _BACKENDS = {
 }
 
 
-def _env_override():
-    """HUMANE_IMAGE_BACKEND as 'name' or 'name:/path/to/script'."""
+def _config_value(project_dir=None):
+    """The raw `image_backend` setting and where it came from, or (None, None).
+
+    `setup` owns this setting: project `humane.json` > `~/.humane/config.json` >
+    `HUMANE_IMAGE_BACKEND` > `auto`. It is re-read here rather than imported
+    because skills install independently — brand-illustrate may sit on a machine
+    without `setup`, and a hard import would break generation outright. Keep this
+    order identical to setup's table.
+
+    Reading only the environment (as this did) made the documented setting a
+    no-op: `config --set image_backend=nano-banana` wrote a file nobody read,
+    and the run silently went to whichever backend `auto` preferred.
+    """
+    def _get(path):
+        try:
+            data = json.loads(pathlib.Path(path).expanduser().read_text())
+        except (OSError, ValueError):
+            return None
+        return data.get("image_backend") if isinstance(data, dict) else None
+
+    for candidate in (pathlib.Path(project_dir or ".") / "humane.json",
+                      pathlib.Path("~/.humane/config.json")):
+        value = _get(candidate)
+        if value:
+            return str(value).strip(), str(candidate)
     raw = os.environ.get("HUMANE_IMAGE_BACKEND", "").strip()
-    if not raw:
+    return (raw, "$HUMANE_IMAGE_BACKEND") if raw else (None, None)
+
+
+def _env_override(project_dir=None):
+    """The configured backend as (name, path). Accepts 'auto', 'name', or
+    'name:/path/to/script'. 'auto' means "no explicit choice" — it resolves to
+    (None, None) so the recipe's own preference still applies."""
+    raw, _source = _config_value(project_dir)
+    if not raw or raw == "auto":
         return None, None
     name, _, path = raw.partition(":")
     return name.strip() or None, (path.strip() or None)
@@ -514,10 +545,15 @@ def backend_search_report():
     doctor. Reporting the probed locations turns 'no backend' from a dead end
     into something the user can act on."""
     env_name, env_path = _env_override()
+    configured, source = _config_value()
     return {
         "found": probe_backends(),
         "env": {"HUMANE_IMAGE_BACKEND": os.environ.get("HUMANE_IMAGE_BACKEND") or None,
                 "HUMANE_SKILLS_DIR": os.environ.get("HUMANE_SKILLS_DIR") or None},
+        # Which value won and which file supplied it — "why did it pick that?"
+        # must be answerable without guessing at four layers.
+        "configured": configured,
+        "configured_source": source,
         "override_valid": bool(env_name and env_path
                                and pathlib.Path(env_path).expanduser().exists()),
         "roots_searched": [str(r) for r in _skill_roots()],
@@ -526,8 +562,9 @@ def backend_search_report():
 
 
 def pick_backend(requested, found):
-    # An explicit environment override outranks the recipe's stored choice:
-    # it is the knob a user reaches for to redirect a run they are watching.
+    # An explicit configured backend outranks the recipe's stored choice: it is
+    # the knob a user reaches for to redirect a run. `auto` is not a choice, so
+    # it leaves the recipe's own preference intact.
     env_name, _ = _env_override()
     if env_name:
         return env_name if env_name in found else None
@@ -622,6 +659,16 @@ def _recipe_path(tokens_path):
     return str(p.with_name(p.name.replace(".tokens.json", "") + ".illustrate-recipe.json"))
 
 
+def _size_was_requested(backend, platform):
+    """Could this backend be asked for this preset's exact pixel size?
+
+    gpt-image-2 takes a free-form --size, so always. nano-banana takes only a
+    named platform, so only when the preset maps to one — `spot-ui` does not,
+    and that image returns at the backend's default size.
+    """
+    return backend == "gpt-image-2" or bool(platform.get("flag"))
+
+
 def build_command(script, backend, prompt, out_path, platform, size, draft,
                   seed=None, refs=None, anchor=None):
     # A backend discovered on PATH is an executable; only a .py script needs
@@ -638,6 +685,12 @@ def build_command(script, backend, prompt, out_path, platform, size, draft,
         if seed is not None:
             cmd += ["--seed", str(seed)]
     else:  # nano-banana
+        # nano-banana takes a named platform but no free-form --size, so a
+        # preset without an exact platform match cannot have its size requested
+        # at all — the image comes back at the backend's own default. Nothing
+        # here resizes it (that would need an image library, and these scripts
+        # are stdlib only), so the size is recorded as not-requested rather than
+        # quietly reported as if it had been honoured. See size_requested.
         if flag:
             cmd += ["--platform", flag]
         cmd += ["--model", "flash" if draft else "pro"]
@@ -698,6 +751,11 @@ def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.r
             outputs.append({
                 "file": str(out_path), "platform": plat["name"],
                 "size": f"{plat['w']}x{plat['h']}", "subject": item["subject"],
+                # Whether that size was actually asked of the backend. gpt-image-2
+                # always takes one; nano-banana only via a named platform. Calling
+                # the target size the delivered size when it was never requested
+                # is the kind of quiet lie that shows up as a squashed OG image.
+                "size_requested": _size_was_requested(backend, plat),
                 "prompt": item["prompt"], "command": cmd, "returncode": rc,
             })
 
@@ -718,8 +776,13 @@ def run_batch(scaffold, tokens_path, out_dir, dry_run=False, runner=subprocess.r
     # exist. Reporting ok:true over a batch of failures is a false success —
     # the caller writes a contact sheet full of missing files and believes it.
     failed = [o for o in outputs if o.get("returncode")]
+    # Images whose target size could not be asked for. Not a failure — the image
+    # exists and is on-brand — but the caller must not paste it into a slot that
+    # needs exact pixels without checking it first.
+    unsized = sorted({o["platform"] for o in outputs if not o["size_requested"]})
     return {"ok": not failed, "generated": True, "failed": len(failed),
             "backend": backend, "batch_dir": str(batch_dir),
+            "unsized_platforms": unsized,
             "outputs": outputs, "metadata": str(batch_dir / "metadata.json"),
             "recipe": recipe, "contact_sheet": sheet}
 
@@ -936,9 +999,14 @@ def main(argv=None):
             path = found.get(name)
             print(f"  {'OK  ' if path else 'none'}  {name:14} {path or '-'}")
         env = report["env"]
+        if report["configured"]:
+            # Which layer won. "Why did it pick that one?" should never require
+            # the user to guess across four of them.
+            print(f"\nimage_backend={report['configured']}  "
+                  f"(from {report['configured_source']})")
         if env["HUMANE_IMAGE_BACKEND"]:
             state = "valid" if report["override_valid"] else "set, but the path does not exist"
-            print(f"\nHUMANE_IMAGE_BACKEND={env['HUMANE_IMAGE_BACKEND']}  ({state})")
+            print(f"HUMANE_IMAGE_BACKEND={env['HUMANE_IMAGE_BACKEND']}  ({state})")
         if env["HUMANE_SKILLS_DIR"]:
             print(f"HUMANE_SKILLS_DIR={env['HUMANE_SKILLS_DIR']}")
         if args.verbose:

@@ -55,21 +55,62 @@ SETTINGS = {
 # Config
 # ---------------------------------------------------------------------------
 
+class ConfigUnreadable(Exception):
+    """A config file exists but could not be parsed. Carries the path."""
+
+    def __init__(self, path, reason):
+        super().__init__(f"{path}: {reason}")
+        self.path, self.reason = str(path), str(reason)
+
+
 def _read_json(path):
+    """Return (dict, problem). A missing file is ({}, None) — that is normal.
+
+    A file that exists but will not parse is NOT normal, and returning {} for it
+    is the bug this signature exists to prevent: every setting would silently
+    fall through to the layer below while `doctor` reported `source: default`,
+    which is exactly the "why is it using that path?" question the config layer
+    promises to answer. The caller decides whether to warn or refuse; nobody
+    gets to pretend the file was not there.
+    """
     p = pathlib.Path(path).expanduser()
     if not p.is_file():
-        return {}
+        return {}, None
     try:
         data = json.loads(p.read_text())
-        return data if isinstance(data, dict) else {}
-    except (json.JSONDecodeError, OSError):
-        return {}
+    except json.JSONDecodeError as exc:
+        return {}, ConfigUnreadable(p, f"invalid JSON ({exc.msg}, line {exc.lineno})")
+    except OSError as exc:
+        return {}, ConfigUnreadable(p, f"cannot be read ({exc.strerror or exc})")
+    if not isinstance(data, dict):
+        return {}, ConfigUnreadable(p, f"top level is {type(data).__name__}, expected an object")
+    return data, None
+
+
+def _config_layers(project_dir=None):
+    """((project, global) dicts, [problem dicts]) — the raw layers plus what
+    could not be read. Split out so `resolve_config` stays a clean
+    {setting: {...}} map and problems never masquerade as a setting."""
+    project, project_problem = _read_json(pathlib.Path(project_dir or ".") / PROJECT_CONFIG)
+    glob, global_problem = _read_json(GLOBAL_CONFIG)
+    problems = [{"path": p.path, "reason": p.reason}
+                for p in (project_problem, global_problem) if p]
+    return (project, glob), problems
+
+
+def config_problems(project_dir=None):
+    """Config files that exist but cannot be parsed. Empty is the normal case."""
+    return _config_layers(project_dir)[1]
 
 
 def resolve_config(project_dir=None):
-    """Return {key: {value, source}} across every layer."""
-    project = _read_json(pathlib.Path(project_dir or ".") / PROJECT_CONFIG)
-    glob = _read_json(GLOBAL_CONFIG)
+    """Return {key: {value, source}} across every layer.
+
+    A setting resolved while some layer was unreadable is marked `suspect`: its
+    source is only correct if that file held nothing for it, and that is exactly
+    what cannot be known. Callers report the problems via `config_problems`.
+    """
+    (project, glob), problems = _config_layers(project_dir)
     out = {}
     for key, (env_var, default, _desc) in SETTINGS.items():
         if key in project:
@@ -80,6 +121,8 @@ def resolve_config(project_dir=None):
             out[key] = {"value": os.environ[env_var], "source": f"${env_var}"}
         else:
             out[key] = {"value": default, "source": "default"}
+        if problems:
+            out[key]["suspect"] = True
     return out
 
 
@@ -90,7 +133,15 @@ def write_config(updates, scope="global", project_dir=None):
     else:
         path = GLOBAL_CONFIG.expanduser()
     path.parent.mkdir(parents=True, exist_ok=True)
-    current = _read_json(path)
+    current, problem = _read_json(path)
+    if problem:
+        # Merging into {} here would write a clean file over the user's broken
+        # one — losing every setting it held, including ones this call never
+        # mentioned. A typo in their JSON must not cost them the file.
+        raise ValueError(
+            f"refusing to write: {problem.path} exists but {problem.reason}. "
+            "Fix or move that file first — merging into it now would silently "
+            "discard whatever it currently holds.")
     unknown = [k for k in updates if k not in SETTINGS]
     if unknown:
         raise ValueError(f"unknown setting(s): {', '.join(sorted(unknown))}. "
@@ -220,7 +271,7 @@ def _our_skills_root():
 
 def _our_version():
     manifest = _our_skills_root().parent / ".claude-plugin" / "plugin.json"
-    return _read_json(manifest).get("version")
+    return _read_json(manifest)[0].get("version")
 
 
 def _skill_signature(d):
@@ -335,7 +386,7 @@ def _check_plugin_marketplaces(base=None, canonical_root=None):
     canonical_root = pathlib.Path(canonical_root) if canonical_root else _our_skills_root()
     if not base.is_dir():
         return []
-    ours_version = _read_json(canonical_root.parent / '.claude-plugin' / 'plugin.json').get('version')
+    ours_version = _read_json(canonical_root.parent / '.claude-plugin' / 'plugin.json')[0].get('version')
     ours_count = len([p for p in canonical_root.iterdir()
                       if p.is_dir() and (p / "SKILL.md").is_file()])
     out = []
@@ -343,7 +394,7 @@ def _check_plugin_marketplaces(base=None, canonical_root=None):
         manifest = entry / "humane" / ".claude-plugin" / "plugin.json"
         if not manifest.is_file():
             continue
-        version = _read_json(manifest).get("version")
+        version = _read_json(manifest)[0].get("version")
         skills_dir = entry / "humane" / "skills"
         count = len([p for p in skills_dir.iterdir()
                      if p.is_dir() and (p / "SKILL.md").is_file()]) if skills_dir.is_dir() else 0
@@ -375,7 +426,8 @@ def doctor(project_dir=None):
               check_task_export(cfg)]
     checks.extend(check_companions())
     checks.extend(check_humane_copies(project_dir))
-    return {"config": cfg, "checks": checks}
+    return {"config": cfg, "checks": checks,
+            "problems": config_problems(project_dir)}
 
 
 # ---------------------------------------------------------------------------
@@ -388,10 +440,18 @@ _MARK = {"ok": "ok  ", "missing": "MISS", "optional": "--  "}
 def render(report):
     cfg, lines = report["config"], []
     lines.append("configuration")
-    width = max(len(k) for k in cfg)
+    width = max(len(k) for k in SETTINGS)
     for key in SETTINGS:
         entry = cfg[key]
-        lines.append(f"  {key.ljust(width)}  {str(entry['value']):<44}  {entry['source']}")
+        mark = " (suspect)" if entry.get("suspect") else ""
+        lines.append(f"  {key.ljust(width)}  {str(entry['value']):<44}  {entry['source']}{mark}")
+    for problem in report.get("problems") or []:
+        # Loud, and above the environment section: every value printed above is
+        # only trustworthy if this file held nothing for it, and nobody can tell.
+        lines.append(f"  !! {problem['path']} exists but {problem['reason']}.")
+        lines.append("     Every value above is marked suspect until it parses. "
+                     "Fix the file or move it aside; `config --set` refuses to "
+                     "overwrite it.")
     lines.append("")
     lines.append("environment")
     width = max(len(c["name"]) for c in report["checks"])
@@ -456,14 +516,21 @@ def main(argv=None):
                 return 2
             print(f"wrote {path}")
         cfg = resolve_config(args.project_dir)
+        problems = config_problems(args.project_dir)
         if args.json:
-            print(json.dumps(cfg, indent=2))
+            print(json.dumps({"config": cfg, "problems": problems}, indent=2))
         else:
-            width = max(len(k) for k in cfg)
+            width = max(len(k) for k in SETTINGS)
             for key in SETTINGS:
                 e = cfg[key]
-                print(f"  {key.ljust(width)}  {str(e['value']):<44}  {e['source']}")
-        return 0
+                mark = " (suspect)" if e.get("suspect") else ""
+                print(f"  {key.ljust(width)}  {str(e['value']):<44}  {e['source']}{mark}")
+            for problem in problems:
+                print(f"  !! {problem['path']} exists but {problem['reason']}. "
+                      "Values above are suspect.", file=sys.stderr)
+        # An unreadable config is a non-zero exit: a script that greps this
+        # output must not read a full table and conclude all is well.
+        return 1 if problems else 0
 
     return 2
 

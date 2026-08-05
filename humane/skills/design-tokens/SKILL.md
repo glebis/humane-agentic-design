@@ -36,7 +36,7 @@ Run via `scripts/tokens <command>` (or `PYTHONPATH=scripts python3 -m dtokens.cl
 | `setup-edit <dest> [--from SRC]` | Scaffold a token file at `<dest>` and validate it (refuses to overwrite). With `--from`, deterministically clone an existing set's structure + content to edit (byte-stable for a given source) instead of the blank template. Ships `templates/base.tokens.json` (minimal), `templates/monaspace.tokens.json` (a real set extracted from a live site — see *Extracting from a site*), and `templates/gsap.tokens.json` (a motion-first set: `duration` tokens under `motion.*` render as a body Motion table, and its `$extensions` brand block carries GSAP animation recipes for `--rich`). Also compiles a **DESIGN.md** next to the token file (provenance-stamped; won't clobber a hand-edited one — see *DESIGN.md output*). If a `brand-block.draft.json` (a `humane:brandkit` handoff for a set that didn't exist yet) sits in the destination directory, its `$extensions` brand block is imported into the scaffolded set. |
 | `import <css> [-o OUT]` | Import a CSS file's `:root` custom properties into DTCG, preserving variable names. Skips composites (shadow/gradient) and reports them on stderr. |
 | `validate <file> [--strict]` | Print `OK` or a list of errors; exit 1 if invalid. Also prints non-fatal `warning:` lines to stderr when the brand-style block / its `imageryStyle` is missing, or when a dimension/duration value is legitimate CSS but not DTCG-shapeable (`clamp()`/`calc()`/`var()` and bare unit strings — kept verbatim in outputs). Advisory only, never changes the exit code — except under `--strict`, which promotes the non-DTCG dimension advisories to errors (exit 1) so they can gate CI. |
-| `contrast <file> [--standard apca\|wcag\|both] [--level auto\|body\|non-body] [--json] [--no-fail] [-o OUT]` | Measure **APCA Lc** and **WCAG 2.x ratio** for every foreground/background pair in the set, and propose a fix that moves OKLCH lightness while preserving chroma and hue. Exits 1 on any failure (`--no-fail` to report without gating). See *Contrast* below. |
+| `contrast <file> [--standard apca\|wcag\|both] [--level auto\|body\|non-body\|graphic] [--json] [--no-fail] [-o OUT]` | Measure **APCA Lc** and **WCAG 2.x ratio** for every foreground/background pair in the set, and propose a fix that moves OKLCH lightness while preserving chroma and hue. Exits 1 on any failure (`--no-fail` to report without gating). See *Contrast* below. |
 | `merge <base> <override> [-o OUT]` | Layer project override on global base. |
 | `resolve <file> [-o OUT]` | Flatten aliases to concrete values (JSON map). |
 | `export-css <file> [--selector SEL] [-o OUT]` | Emit CSS custom properties. |
@@ -101,11 +101,30 @@ permanently (SKILL CONVENTION, at the token-file root):
 ```
 
 - **`pairs`** — when present, these are measured and nothing else. Each entry is
-  `[foreground, background]`, optionally `[foreground, background, "body"|"non-body"]`.
-  Names resolve as a full path (`color.text`), a flat name (`text`), or a role.
+  `[foreground, background]`, optionally
+  `[foreground, background, "body"|"non-body"|"graphic"]`.
+  Names resolve as a full path (`color.text`), a flat name (`brand-primary`), a
+  bare final segment (`primary`), or a role. Where a short name is ambiguous
+  across groups, a candidate in the **same group** wins — so
+  `color.brand.on-primary` pairs with `color.brand.primary`, never with a
+  `color.chart.primary` that merely shares the leaf.
 - **`exclude`** — tokens never paired in either position; applies whether pairs
   are declared or inferred.
+- **`pairs: []`** measures **nothing**. An empty list is a declaration that no
+  pair meets, not an absent declaration — it does not fall back to inference.
 - Absent entirely, pairs are inferred from roles, so existing sets keep working.
+- **A name that resolves to no token is reported, never dropped.** A typo in a
+  declared pair prints under *named in the contrast declaration but not found*
+  and exits non-zero. Silence there would leave the gate green over exactly the
+  pair you asked it to check. The same applies to an unknown level.
+
+**Levels.** `body` (Lc 75 / 4.5:1) is text read in quantity; `non-body`
+(Lc 60 / 3:1) covers links, icons, badges, and large display text; `graphic`
+(Lc 45 / 3:1) is color that is **never** text — a fill, a rule, a chart mark.
+`graphic` must be declared, per pair or via `--level graphic`: inference never
+assigns it, because a token's name cannot tell you whether it is painted as
+type. An `on-X` token is always measured as `body` — it is ink by definition,
+whichever fill it names.
 
 ### Gating
 

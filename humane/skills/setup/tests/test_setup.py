@@ -110,6 +110,73 @@ class ConfigWriteTests(unittest.TestCase):
             hs.write_config({"corpse_root": "/x"}, "global", self.d)
         self.assertIn("corpse_root", str(ctx.exception))
 
+    def test_write_refuses_to_clobber_an_unparseable_file(self):
+        """Merging into {} would write a clean file over the user's broken one,
+        discarding settings this call never mentioned."""
+        broken = self.d / "g.json"
+        broken.write_text('{"language": "ru",}')  # trailing comma
+        with self.assertRaises(ValueError) as ctx:
+            hs.write_config({"task_export": "beads"}, "global", self.d)
+        self.assertIn("refusing to write", str(ctx.exception))
+        # The original bytes survive untouched.
+        self.assertEqual(broken.read_text(), '{"language": "ru",}')
+
+
+class MalformedConfigTests(unittest.TestCase):
+    """A config file that exists but will not parse is not the same thing as no
+    config file. Reverting to defaults without a word is the failure mode that
+    makes `doctor` untrustworthy: it prints `source: default` for a setting the
+    user believes they set."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = pathlib.Path(self.tmp.name)
+        self.global_cfg = self.d / "global.json"
+        self._patch = unittest.mock.patch.object(hs, "GLOBAL_CONFIG", self.global_cfg)
+        self._patch.start()
+
+    def tearDown(self):
+        self._patch.stop()
+        self.tmp.cleanup()
+
+    def test_absent_file_is_not_a_problem(self):
+        self.assertEqual(hs.config_problems(self.d), [])
+
+    def test_invalid_json_is_reported_with_path_and_reason(self):
+        self.global_cfg.write_text('{"language": "ru",}')
+        problems = hs.config_problems(self.d)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("global.json", problems[0]["path"])
+        self.assertIn("invalid JSON", problems[0]["reason"])
+
+    def test_non_object_top_level_is_reported(self):
+        self.global_cfg.write_text('["not", "an", "object"]')
+        self.assertIn("expected an object", hs.config_problems(self.d)[0]["reason"])
+
+    def test_resolved_values_are_marked_suspect(self):
+        self.global_cfg.write_text("{oops")
+        cfg = hs.resolve_config(self.d)
+        for key in hs.SETTINGS:
+            self.assertTrue(cfg[key].get("suspect"), key)
+
+    def test_clean_config_marks_nothing_suspect(self):
+        self.global_cfg.write_text('{"language": "ru"}')
+        cfg = hs.resolve_config(self.d)
+        self.assertFalse(cfg["language"].get("suspect"))
+
+    def test_doctor_carries_the_problem_into_its_report_and_render(self):
+        (self.d / hs.PROJECT_CONFIG).write_text("{broken")
+        report = hs.doctor(self.d)
+        self.assertEqual(len(report["problems"]), 1)
+        out = hs.render(report)
+        self.assertIn("exists but", out)
+        self.assertIn("suspect", out)
+
+    def test_config_keys_stay_exactly_the_settings(self):
+        """Problems live on the report, never inside the settings map."""
+        self.global_cfg.write_text("{broken")
+        self.assertEqual(set(hs.resolve_config(self.d)), set(hs.SETTINGS))
+
 
 class CheckTests(unittest.TestCase):
     def setUp(self):

@@ -19,8 +19,12 @@ Generate emotionally precise Before/After grids that capture the felt transforma
 
 | Mode | Input | Flow |
 |------|-------|------|
-| **Chained** (preferred) | Path to `~/jtbd/<slug>/jtbd.json` | Auto-map → present draft → sharpen |
+| **Chained** (preferred) | Path to `<corpus_root>/<slug>/jtbd.json` | Auto-map → present draft → sharpen |
 | **Standalone** | None | Quick interview (3 questions) → draft → sharpen |
+
+`<corpus_root>` throughout is the `setup` setting of that name — default
+`~/jtbd`, but read the configured value. Writing to the default when the user
+has moved their corpus scatters the bundle across two roots.
 
 ---
 
@@ -125,7 +129,7 @@ Then proceed to Step 2 (Draft) using the interview answers as dimension seeds.
 | **Label** | First-person felt state | First-person felt state |
 ```
 
-### JSON structure (produced on request or when saving to `~/jtbd/<slug>/`)
+### JSON structure (produced on request or when saving to `<corpus_root>/<slug>/`)
 
 ```json
 {
@@ -172,9 +176,9 @@ Column widths auto-fit content. Max 34 chars per cell, wrap with indentation.
 
 ### Save location
 
-When chained from JTBD: save as `~/jtbd/<slug>/before-after.json` and `~/jtbd/<slug>/before-after.md` alongside the existing bundle.
+When chained from JTBD: save as `<corpus_root>/<slug>/before-after.json` and `<corpus_root>/<slug>/before-after.md` alongside the existing bundle.
 
-When standalone: save to `~/jtbd/<slug>/` (ask user for slug if not obvious).
+When standalone: save to `<corpus_root>/<slug>/` (ask user for slug if not obvious).
 
 ---
 
@@ -206,7 +210,7 @@ Mood: Calm authority. Not corporate — editorial. Think Kinfolk meets informati
 2. For each: pick a representative icon concept + the shortest quote from that cell
 3. Compose the prompt: style directive + structured content
 4. Generate using available image tool (nano-banana preferred, ChatGPT fallback)
-5. Save as `~/jtbd/<slug>/before-after-visual.png`
+5. Save as `<corpus_root>/<slug>/before-after-visual.png`
 
 ### Icon concepts mapping
 

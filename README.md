@@ -41,6 +41,16 @@ A dependency-free Python core over [DTCG Format Module 2025.10](https://www.desi
 - **Checks contrast, executably:** `tokens contrast <file>` measures every text/background role pair on both **APCA Lc** and the **WCAG ratio**, and proposes a fix that moves OKLCH lightness only, so your hue survives. The two disagree often enough to matter — `#747474` on white passes 4.5:1 and still fails APCA. Advisory by default, a hard error under `validate --strict`, so CI can gate on it. Colors it cannot parse are reported as *not measured*, never as failures.
 - **Reach for it when:** starting any project that will have a UI, or consolidating a brand that currently lives in a Figma file and three people's heads.
 
+### 3b. `type-specimen` — the typeface, before it becomes a token
+
+A foundry's specimen proves a font *can* look good. It says nothing about whether your prices align in your table at your size. This skill builds one standalone HTML page that sets every shortlisted family in **your product's own copy** — the real headline, the real price column, the real empty-state sentence — and loads them live from Google Fonts.
+
+- **Per family:** a display line and figures, a weight ladder built from the weights the family actually ships, prose in columns, a data table, list rows, uppercase and small caps, per-character glyph coverage, and the variable axes it exposes.
+- **Edit in place, once:** click any specimen text in any card and retype it. The edit writes to a single source of truth and lands in every family at once — so you are always comparing typefaces, never accidentally comparing copy. **Copy link** encodes the whole shortlist into the URL.
+- **Script coverage is checked, not assumed:** Google Fonts serves a family whether or not it has your Cyrillic. Declare `scriptRange` and families missing it get badged instead of silently rendering in fallback.
+- **Reach for it when:** shortlisting fonts, or before a family enters `design-tokens`. It chooses; `design-tokens` owns it from there, including any contrast remediation.
+- **Honest about itself:** it produces evidence, not a verdict. There is no score, no ranking, and coverage claims are limited to the glyph sets you actually asked it to test.
+
 ### 4. `layout-rules` — execution constraints
 
 An avoid-list of **39 defect classes** for tool, dashboard, viewer, and admin UIs — every one of them a bug or design smell actually caught in a real build-and-audit cycle, not a style opinion. Sections cover structure & hierarchy, footers/metrics/copy, tables & lists, color & contrast, URL state, JS traps, interaction correctness, accessibility & touch, i18n & theming, and de-slop.
@@ -132,6 +142,7 @@ Start a new product idea and let the cycle carry it end to end. The steps are th
 1. **Capture the job** — `humane:jtbd`. Say `describe my project with humane:jtbd`, or paste customer reviews or an interview transcript. Produces `~/jtbd/<slug>/jtbd.json`, the corpus every later step reads. Ask for the ODI pass while you're here: each outcome gets importance / satisfaction and one of the eight process stages, so "underserved" becomes a number. Honest scores beat flattering ones — `creator-estimate` is a valid, labeled source.
 2. **Pressure-test with people** — `humane:persona-review` on the brief for expert objections, then `humane:respondent-panel` on the copy for gut reactions from people who have read none of your reasoning.
 3. **Set the system** — `humane:design-tokens` turns the brand into DTCG tokens and compiled CSS variables before any layout exists. Run `tokens contrast` once per theme and fix what it flags.
+   If the typeface is still open, settle it first with `humane:type-specimen`: it sets the shortlist in your own copy on one page, so the family enters the token set having already been seen doing the job.
 4. **Build under constraints** — load `humane:layout-rules` before writing any HTML/CSS and treat its avoid-list as hard rules.
 5. **Write the words** — `humane:ux-writing` turns the corpus into interface copy: the anxiety force shapes the confirmation, the quotes supply the vocabulary.
 6. **Audit it** — `humane:nielsen-heuristics` for the formal usability inspection.

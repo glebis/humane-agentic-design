@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__TITLE__</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+:root{
+  --canvas:#000; --page:#171310; --surface:#171717;
+  --ink:#E6E1DA; --title:#fff; --heading:#B0A9A1; --muted:#8F8880; --faint:#55504A;
+  --accent:#FF995E; --accent-fill:rgba(255,153,94,.18);
+  --hairline:rgba(255,255,255,.10);
+  --ui:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+
+  /* specimen theming — driven by the controls panel */
+  --spec-bg:#000; --spec-fg:#E6E1DA; --spec-title:#fff;
+  --spec-surface:rgba(255,255,255,.06);
+  --spec-muted:rgba(230,225,218,.62);
+  --spec-line:rgba(255,255,255,.14);
+  --spec-size:16px; --spec-weight:400; --spec-lh:1.55; --spec-ls:0em;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.55 var(--ui);
+  -webkit-font-smoothing:antialiased}
+h1{color:var(--title);font-size:22px;margin:0;letter-spacing:.01em}
+a{color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* ─ editable specimen slots ─
+   No hover cue until the pointer is on one: the grid is meant to be read, and
+   a page of dotted underlines would compete with the type it is showing. */
+[data-tk]{cursor:text;border-radius:4px}
+[data-tk]:hover{box-shadow:0 0 0 4px var(--spec-surface);background:var(--spec-surface)}
+[data-tk][data-editing]{background:var(--spec-surface);outline:none;
+  box-shadow:0 0 0 4px var(--spec-surface),inset 0 0 0 1px var(--accent)}
+@media (prefers-reduced-motion:no-preference){
+  [data-tk]{transition:background .12s ease,box-shadow .12s ease}
+}
+
+/* ─ shell ─ */
+.shell{display:grid;grid-template-columns:340px 1fr;align-items:start;min-height:100vh}
+.panel{position:sticky;top:0;max-height:100vh;overflow-y:auto;overscroll-behavior:contain;
+  background:#0E0B09;border-right:1px solid var(--hairline);padding:18px 18px 60px}
+.main{padding:22px 26px 120px;min-width:0}
+@media (max-width:1000px){
+  .shell{grid-template-columns:1fr}
+  .panel{position:static;max-height:none;border-right:0;border-bottom:1px solid var(--hairline)}
+}
+
+/* ─ panel controls ─ */
+.phead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 14px}
+fieldset{border:0;border-top:1px solid var(--hairline);margin:0;padding:14px 0 4px}
+fieldset>legend{color:var(--heading);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  font-weight:700;padding:0}
+details.sect{border-top:1px solid var(--hairline)}
+details.sect>summary{cursor:pointer;list-style:none;padding:12px 0 10px;color:var(--heading);
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;
+  display:flex;justify-content:space-between;align-items:center}
+details.sect>summary::-webkit-details-marker{display:none}
+details.sect>summary::after{content:"+";color:var(--faint);font-size:14px}
+details.sect[open]>summary::after{content:"–"}
+details.sect>.body{padding:0 0 16px}
+
+label{display:block;color:var(--muted);font-size:12px;margin:0 0 4px}
+textarea,input[type=text],input[type=search],select{
+  width:100%;font:inherit;font-size:13px;color:var(--ink);background:#000;
+  border:1px solid var(--hairline);border-radius:8px;padding:8px 10px}
+textarea{resize:vertical;line-height:1.5}
+input[type=color]{width:34px;height:28px;padding:0;border:1px solid var(--hairline);
+  border-radius:6px;background:#000;cursor:pointer}
+.field{margin:0 0 10px}
+button{font:inherit;font-size:13px;color:var(--accent);background:var(--accent-fill);
+  border:0;border-radius:999px;padding:7px 14px;cursor:pointer}
+button:hover{background:rgba(255,153,94,.30)}
+button[aria-pressed=true]{background:var(--accent);color:#000}
+button.ghost{background:transparent;color:var(--muted);border:1px solid var(--hairline)}
+button.ghost:hover{color:var(--ink);border-color:var(--faint)}
+.btnrow{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0 0}
+
+.slider{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center;margin:0 0 9px}
+.slider label{grid-column:1/-1;margin:0;display:flex;justify-content:space-between}
+.slider label b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);grid-column:1/-1}
+
+/* swatches */
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 0}
+.sw{width:26px;height:26px;border-radius:7px;border:1px solid var(--hairline);cursor:pointer;
+  padding:0;background-clip:padding-box;position:relative}
+.sw[aria-pressed=true]{outline:2px solid var(--accent);outline-offset:2px}
+.palrow{display:flex;gap:6px;align-items:center;margin:0 0 6px}
+.palrow input[type=text]{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.palrow button{padding:5px 9px;font-size:12px}
+
+.contrast{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 0}
+.cbox{background:#000;border:1px solid var(--hairline);border-radius:9px;padding:8px 10px}
+.cbox .k{color:var(--muted);font-size:10px;letter-spacing:.07em;text-transform:uppercase}
+.cbox .v{font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.cbox .n{font-size:11px;color:var(--faint)}
+.ok{color:#7BD88F}.warn{color:#E1AE42}.bad{color:#FF6B6B}
+.preview-pair{margin:10px 0 0;border-radius:9px;padding:10px 12px;border:1px solid var(--hairline)}
+.preview-pair .a{font-size:19px;font-weight:700}
+.preview-pair .b{font-size:12px}
+
+.hint{color:var(--faint);font-size:11px;line-height:1.45;margin:5px 0 0}
+
+/* ─ main ─ */
+.mhead{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+  margin:0 0 6px}
+.count{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.groupbar{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0 20px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:18px}
+.card{background:var(--spec-bg);border:1px solid var(--spec-line);border-radius:14px;
+  padding:18px;min-width:0;color:var(--spec-fg)}
+.card.dead{opacity:.55}
+.card.full{grid-column:1/-1}
+.chead .expand{flex:none;margin-left:auto;font-size:11px;padding:4px 11px;background:transparent;
+  color:var(--spec-muted);border:1px solid var(--spec-line);white-space:nowrap}
+.chead .expand:hover{color:var(--accent);border-color:var(--accent)}
+
+.wline{display:flex;align-items:baseline;gap:12px;padding:3px 0;
+  font-size:calc(var(--spec-size)*1.05);color:var(--spec-title);line-height:1.35}
+.wline .wnum{font-family:var(--ui);font-size:10px;font-weight:400;color:var(--spec-muted);
+  width:26px;flex:none;font-variant-numeric:tabular-nums}
+.wline .wsample{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wline .wname{font-family:var(--ui);font-size:10px;font-weight:400;color:var(--spec-muted);flex:none}
+/* A family can carry two badges at once (failed to load, wrong script, variable).
+   The header has to survive that: the name block wraps its own badges, the note
+   gives up its width first, and the button is never encroached on. */
+.chead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;
+  gap:6px 10px;
+  font-family:var(--ui);margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid var(--spec-line)}
+.chead .fname{display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+  flex:1 1 auto;min-width:0;
+  color:var(--accent);font-size:13px;font-weight:700;letter-spacing:.03em}
+.chead .tag{color:var(--spec-muted);font-size:11px;text-align:right;line-height:1.35;
+  flex:0 1 auto;min-width:0;overflow-wrap:anywhere}
+.badge{display:inline-block;font-family:var(--ui);font-size:10px;letter-spacing:.05em;
+  text-transform:uppercase;border:1px solid currentColor;border-radius:999px;
+  padding:1px 7px;margin:0;white-space:nowrap}
+.badge.err{color:#FF6B6B}
+.badge.var{color:var(--accent)}
+
+.spec{font-family:var(--ff),system-ui,sans-serif;
+  font-size:var(--spec-size);font-weight:var(--spec-weight);
+  line-height:var(--spec-lh);letter-spacing:var(--spec-ls)}
+.spec section{padding:14px 0 0;margin:14px 0 0;border-top:1px solid var(--spec-line)}
+.spec section:first-child{border-top:0;margin:0;padding:0}
+.slab{font-family:var(--ui);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--spec-muted);font-weight:700;margin:0 0 8px;letter-spacing:.08em}
+
+.display{font-size:calc(var(--spec-size)*1.7);line-height:1.15;color:var(--spec-title);
+  font-weight:700;margin:0 0 6px;text-wrap:balance}
+.num{font-size:calc(var(--spec-size)*3);font-weight:700;color:var(--spec-title);
+  font-variant-numeric:tabular-nums;line-height:1;letter-spacing:-.01em;margin:0}
+.headline{font-size:calc(var(--spec-size)*1.2);font-weight:700;color:var(--spec-title);
+  line-height:1.25;margin:0 0 8px;text-wrap:balance}
+.cols{columns:20em;column-gap:26px;column-rule:1px solid var(--spec-line);
+  font-size:calc(var(--spec-size)*.88)}
+.cols p{margin:0 0 .7em}
+.caps{text-transform:uppercase;letter-spacing:.12em;color:var(--spec-title);
+  font-size:calc(var(--spec-size)*.95);margin:0 0 6px}
+.smallcaps{font-variant-caps:small-caps;font-size:calc(var(--spec-size)*.95);color:var(--spec-muted)}
+
+table{width:100%;border-collapse:collapse;font-size:calc(var(--spec-size)*.85);
+  font-variant-numeric:tabular-nums}
+th{text-align:left;color:var(--spec-muted);font-weight:400;font-size:calc(var(--spec-size)*.72);
+  letter-spacing:.06em;text-transform:uppercase;padding:0 0 6px;border-bottom:1px solid var(--spec-line)}
+td{padding:6px 0;border-bottom:1px solid var(--spec-line);color:var(--spec-fg)}
+td.r,th.r{text-align:right;white-space:nowrap}
+
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+  background:var(--spec-surface);border-radius:10px;padding:10px 13px;margin:0 0 6px}
+.row .n{color:var(--spec-title);font-size:calc(var(--spec-size)*.95)}
+.row .n .dot{display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--accent);margin-right:8px;vertical-align:middle}
+.row .d{color:var(--spec-muted);font-size:calc(var(--spec-size)*.82);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+
+.abc{font-size:calc(var(--spec-size)*.82);word-break:break-word;line-height:1.5;
+  color:var(--spec-fg);margin:0 0 5px}
+.glyphs{display:flex;flex-wrap:wrap;gap:5px}
+.gl{min-width:30px;text-align:center;font-size:calc(var(--spec-size)*1);
+  border:1px solid var(--spec-line);border-radius:6px;padding:3px 5px;line-height:1.2}
+.gl.miss{color:#FF6B6B;border-color:rgba(255,107,107,.55);
+  background:repeating-linear-gradient(45deg,rgba(255,107,107,.12) 0 4px,transparent 4px 8px)}
+.axes{font-family:var(--ui);font-size:11px;color:var(--spec-muted);line-height:1.5}
+.axes code{color:var(--accent)}
+
+.empty{color:var(--muted);padding:40px 0;text-align:center}
+footer{margin:50px 0 0;padding-top:18px;border-top:1px solid var(--hairline);
+  color:var(--faint);font-size:12px;line-height:1.7;max-width:80ch}
+footer b{color:var(--heading)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+<a class="sr" href="#specimens" data-i18n="skip">Skip to specimens</a>
+<div class="shell">
+
+<aside class="panel" id="panel" aria-label="Specimen controls">
+  <div class="phead">
+    <h1 data-i18n="h1">Type specimen</h1>
+    <span class="count" id="count"></span>
+  </div>
+
+  <div class="field">
+    <label for="q" data-i18n="search">Search by family name</label>
+    <input type="search" id="q" placeholder="e.g. Onest" data-i18n-ph="searchPh" autocomplete="off">
+  </div>
+
+  <details class="sect" open>
+    <summary data-i18n="secFamilies">Families</summary>
+    <div class="body">
+      <label for="families" data-i18n-html="familiesHelp">One per line. <code>::</code> separates group and note.</label>
+      <textarea id="families" rows="13" spellcheck="false"></textarea>
+      <p class="hint" data-i18n-html="familiesHint">Format: <code>Golos Text :: sf :: Paratype</code>. Names must match the Google Fonts catalogue.</p>
+      <div class="btnrow">
+        <button id="applyFamilies" data-i18n="apply">Apply</button>
+        <button class="ghost" id="resetFamilies" data-i18n="resetList">Restore list</button>
+      </div>
+    </div>
+  </details>
+
+  <details class="sect">
+    <summary data-i18n="secTexts">Specimen texts</summary>
+    <div class="body">
+      <p class="hint" style="margin:0 0 12px" data-i18n="editHint">Click any specimen text to edit it — the edit applies to every family.</p>
+      <div id="textFields"></div>
+    </div>
+  </details>
+
+  <details class="sect" open>
+    <summary data-i18n="secColor">Background and text</summary>
+    <div class="body">
+      <div class="btnrow" style="margin:0 0 10px">
+        <button id="mDark" class="ghost" data-i18n="dark">Dark</button>
+        <button id="mLight" class="ghost" data-i18n="light">Light</button>
+      </div>
+      <div class="palrow">
+        <input type="color" id="bgPick" aria-label="Background colour">
+        <input type="text" id="bgHex" aria-label="Background, hex" spellcheck="false">
+        <span class="hint" style="margin:0" data-i18n="bg">bg</span>
+      </div>
+      <div class="palrow">
+        <input type="color" id="fgPick" aria-label="Text colour">
+        <input type="text" id="fgHex" aria-label="Text, hex" spellcheck="false">
+        <span class="hint" style="margin:0" data-i18n="fg">text</span>
+      </div>
+
+      <label style="margin-top:10px" data-i18n="palette">Palette — click sets bg, Alt+click sets text</label>
+      <div class="swatches" id="swatches"></div>
+      <div class="btnrow">
+        <input type="text" id="newHex" placeholder="#RRGGBB" style="flex:1;min-width:110px" spellcheck="false">
+        <button id="addSw" data-i18n="add">Add</button>
+        <button class="ghost" id="delSw" data-i18n="del">Remove selected</button>
+      </div>
+
+      <div class="contrast">
+        <div class="cbox"><div class="k">WCAG</div><div class="v" id="wcag">—</div><div class="n" id="wcagN"></div></div>
+        <div class="cbox"><div class="k">APCA Lc</div><div class="v" id="apca">—</div><div class="n" id="apcaN"></div></div>
+      </div>
+      <div class="preview-pair" id="cpreview">
+        <div class="a" id="cpA"></div>
+        <div class="b" id="cpB"></div>
+      </div>
+    </div>
+  </details>
+
+  <details class="sect" open>
+    <summary data-i18n="secType">Type settings</summary>
+    <div class="body">
+      <div class="slider"><label for="sSize"><span data-i18n="size">Size</span> <b id="vSize"></b></label><input type="range" id="sSize" min="11" max="30" step="1"></div>
+      <div class="slider"><label for="sWeight"><span data-i18n="weight">Weight</span> <b id="vWeight"></b></label><input type="range" id="sWeight" min="100" max="900" step="100"></div>
+      <div class="slider"><label for="sLh"><span data-i18n="lh">Line height</span> <b id="vLh"></b></label><input type="range" id="sLh" min="1" max="2.2" step="0.05"></div>
+      <div class="slider"><label for="sLs"><span data-i18n="ls">Tracking</span> <b id="vLs"></b></label><input type="range" id="sLs" min="-0.05" max="0.2" step="0.005"></div>
+    </div>
+  </details>
+
+  <details class="sect">
+    <summary data-i18n="secBlocks">Blocks in the full card</summary>
+    <div class="body" id="sectionToggles"></div>
+  </details>
+
+  <fieldset>
+    <legend data-i18n="secState">State</legend>
+    <div class="btnrow">
+      <button id="share" data-i18n="share">Copy link</button>
+      <button class="ghost" id="reset" data-i18n="resetAll">Reset all</button>
+    </div>
+    <p class="hint" id="shareNote" data-i18n="stateNote">Settings persist in localStorage and in the page URL.</p>
+  </fieldset>
+</aside>
+
+<main class="main" id="specimens">
+  <div class="mhead">
+    <div class="groupbar" id="groupbar">
+      <button class="filt" data-g="all" aria-pressed="true" data-i18n="all">All</button>
+    </div>
+    <div class="groupbar">
+      <button class="ghost" id="openAll" data-i18n="openAll">Expand all</button>
+      <button class="ghost" id="closeAll" data-i18n="closeAll">Collapse all</button>
+    </div>
+  </div>
+  <div class="grid" id="grid"></div>
+  <p class="empty" id="empty" hidden data-i18n="none">Nothing found.</p>
+  <footer id="footnotes"></footer>
+</main>
+</div>
+
+<script>
+"use strict";
+
+const LOCALES = {
+  en: {
+    skip:"Skip to specimens", h1:"Type specimen", search:"Search by family name",
+    searchPh:"e.g. Onest", secFamilies:"Families",
+    familiesHelp:"One per line. <code>::</code> separates group and note.",
+    familiesHint:"Format: <code>Golos Text :: sf :: Paratype</code>. Names must match the Google Fonts catalogue.",
+    apply:"Apply", resetList:"Restore list", secTexts:"Specimen texts",
+    secColor:"Background and text", dark:"Dark", light:"Light", bg:"bg", fg:"text",
+    palette:"Palette — click sets bg, Alt+click sets text", add:"Add", del:"Remove selected",
+    secType:"Type settings", secBlocks:"Blocks in the full card", secState:"State",
+    share:"Copy link", resetAll:"Reset all",
+    stateNote:"Settings persist in localStorage and in the page URL.",
+    linkCopied:"Link copied.", copyManually:"Copy the page URL manually.",
+    all:"All", openAll:"Expand all", closeAll:"Collapse all", none:"Nothing found.",
+    size:"Size", weight:"Weight", lh:"Line height", ls:"Tracking", loading:"loading…",
+    expand:"Details", collapse:"Collapse",
+    badgeDead:"failed to load", badgeNoScript:"script missing", badgeVariable:"variable",
+    singleWeight:"Single weight", variableAxis:"variable axis", staticFont:"static",
+    smallCaps:"small-caps", glyphYes:"present", glyphNo:"not in the font",
+    slabWeights:"Weights", slabProse:"Prose", slabCaps:"Uppercase and small caps",
+    slabTable:"Table", slabRows:"List rows", slabAlphabet:"Alphabets",
+    slabGlyphs:"Glyph coverage", slabAxes:"Axes",
+    wcagAAA:"AAA for body text", wcagAA:"AA for body text",
+    wcagLarge:"large text only", wcagFail:"fails",
+    apcaAny:"any text", apcaBody:"body text", apcaMin:"18px/600 and up",
+    apcaLarge:"large text only", apcaNo:"unreadable",
+    swatch:"Colour",
+    editHint:"Click any specimen text to edit it — the edit applies to every family.",
+    editing:"editing — Esc cancels, Tab or click away commits",
+    sections: [["display","Display line and figures"],["weights","Weights"],
+      ["prose","Prose in columns"],["caps","Small caps"],["table","Data table"],
+      ["rows","List rows"],["alphabet","Alphabets"],["glyphs","Glyph coverage"],
+      ["axes","Variable axes"]],
+    textLabels: {display:"Display line", timer:"Figures", headline:"Headline",
+      weights:"Weight-ladder line", prose:"Prose (set in columns)", caps:"Small-caps line",
+      rows:"List rows — name :: value", table:"Table rows — cell :: cell :: cell",
+      tableHead:"Table columns — label :: label :: label", alphabet:"Alphabets and digits"},
+  },
+  ru: {
+    skip:"К образцам", h1:"Стенд шрифтов", search:"Поиск по названию",
+    searchPh:"напр. Onest", secFamilies:"Список гарнитур",
+    familiesHelp:"По одной в строке. Через <code>::</code> — группа и заметка.",
+    familiesHint:"Формат: <code>Golos Text :: sf :: Paratype</code>. Имена — как в каталоге Google Fonts.",
+    apply:"Применить", resetList:"Вернуть исходные", secTexts:"Тексты образцов",
+    secColor:"Фон и текст", dark:"Тёмная", light:"Светлая", bg:"фон", fg:"текст",
+    palette:"Палитра — клик = фон, Alt+клик = текст", add:"Добавить", del:"Удалить выбранный",
+    secType:"Типографика", secBlocks:"Блоки развёрнутой карточки", secState:"Состояние",
+    share:"Скопировать ссылку", resetAll:"Сбросить всё",
+    stateNote:"Настройки сохраняются в localStorage и в адресе страницы.",
+    linkCopied:"Ссылка скопирована.", copyManually:"Скопируйте адрес страницы вручную.",
+    all:"Все", openAll:"Раскрыть все", closeAll:"Свернуть все", none:"Ничего не найдено.",
+    size:"Кегль", weight:"Насыщенность", lh:"Интерлиньяж", ls:"Трекинг", loading:"загрузка…",
+    expand:"Подробно", collapse:"Свернуть",
+    badgeDead:"не загрузился", badgeNoScript:"нет нужного алфавита", badgeVariable:"переменный",
+    singleWeight:"Одно начертание", variableAxis:"переменная ось", staticFont:"статический",
+    smallCaps:"капитель", glyphYes:"есть", glyphNo:"нет в гарнитуре",
+    slabWeights:"Начертания", slabProse:"Проза", slabCaps:"Прописные и капитель",
+    slabTable:"Таблица", slabRows:"Строки списка", slabAlphabet:"Алфавиты",
+    slabGlyphs:"Покрытие знаков", slabAxes:"Оси",
+    wcagAAA:"AAA для текста", wcagAA:"AA для текста",
+    wcagLarge:"только крупный", wcagFail:"не проходит",
+    apcaAny:"любой текст", apcaBody:"основной текст", apcaMin:"от 18px/600",
+    apcaLarge:"только крупный", apcaNo:"нечитаемо",
+    swatch:"Цвет",
+    editHint:"Кликните по любому тексту образца — правка применится ко всем гарнитурам.",
+    editing:"правка — Esc отменяет, Tab или клик вне сохраняет",
+    sections: [["display","Крупная строка и цифры"],["weights","Начертания"],
+      ["prose","Проза в колонках"],["caps","Капитель"],["table","Таблица"],
+      ["rows","Строки списка"],["alphabet","Алфавиты"],["glyphs","Покрытие знаков"],
+      ["axes","Оси переменного шрифта"]],
+    textLabels: {display:"Крупная строка", timer:"Цифры", headline:"Заголовок",
+      weights:"Строка для лестницы начертаний", prose:"Проза (в колонках)", caps:"Строка капителью",
+      rows:"Строки списка — имя :: значение", table:"Строки таблицы — ячейка :: ячейка :: ячейка",
+      tableHead:"Колонки таблицы — заголовок :: заголовок :: заголовок",
+      alphabet:"Алфавиты и цифры"},
+  },
+};
+
+/* Injected by `specimen build`. Everything product-specific lives here. */
+const CFG = __CONFIG__;
+
+const L = Object.assign({}, LOCALES.en, LOCALES[CFG.locale] || {});
+document.documentElement.lang = CFG.locale;
+document.title = CFG.title;
+for(const n of document.querySelectorAll("[data-i18n]"))
+  if(L[n.dataset.i18n]) n.textContent = L[n.dataset.i18n];
+for(const n of document.querySelectorAll("[data-i18n-html]"))
+  if(L[n.dataset.i18nHtml]) n.innerHTML = L[n.dataset.i18nHtml];
+for(const n of document.querySelectorAll("[data-i18n-ph]"))
+  if(L[n.dataset.i18nPh]) n.placeholder = L[n.dataset.i18nPh];
+
+const DEFAULT_FAMILIES = CFG.families.map(f => [f.name, f.group || "", f.note || ""]);
+const DEFAULT_TEXTS = CFG.texts;
+const DEFAULT_PALETTE = CFG.palette;
+const GLYPH_SETS = CFG.glyphSets;
+const TEXT_LABELS = L.textLabels;
+
+const SECTIONS = L.sections;
+
+const DEFAULTS = () => ({
+  families: DEFAULT_FAMILIES.map(f=>f.join(" :: ")).join("\n"),
+  texts: {...DEFAULT_TEXTS},
+  palette: [...DEFAULT_PALETTE],
+  bg:CFG.bg, fg:CFG.fg,
+  size:CFG.size, weight:CFG.weight, lh:CFG.lh, ls:CFG.ls,
+  group:"all", q:"", open:[],
+  sections: Object.fromEntries(SECTIONS.map(([k])=>[k,true])),
+});
+
+/* The preview card answers "is this font worth a look" — nothing else belongs in it. */
+const PREVIEW_SECTIONS = ["display","weights"];
+
+let S = DEFAULTS();
+const $ = s => document.querySelector(s);
+const el = (t,c) => { const n=document.createElement(t); if(c) n.className=c; return n; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ── state persistence ───────────────────────────────────── */
+const LS = "humane.specimen." + CFG.id;
+function encode(o){ return btoa(String.fromCharCode(...new TextEncoder().encode(JSON.stringify(o)))).replace(/=+$/,""); }
+function decode(s){
+  try{ const bin=atob(s); const b=Uint8Array.from(bin,c=>c.charCodeAt(0));
+       return JSON.parse(new TextDecoder().decode(b)); }catch{ return null; }
+}
+function load(){
+  const fromHash = location.hash.startsWith("#s=") ? decode(location.hash.slice(3)) : null;
+  const fromLS = (()=>{ try{ return JSON.parse(localStorage.getItem(LS)||"null"); }catch{ return null; } })();
+  const src = fromHash || fromLS;
+  if(src) S = {...DEFAULTS(), ...src,
+    texts:{...DEFAULT_TEXTS, ...(src.texts||{})},
+    sections:{...DEFAULTS().sections, ...(src.sections||{})}};
+}
+let saveT;
+function save(){
+  clearTimeout(saveT);
+  saveT = setTimeout(()=>{
+    try{ localStorage.setItem(LS, JSON.stringify(S)); }catch{}
+    history.replaceState(null,"","#s="+encode(S));
+  }, 200);
+}
+
+/* ── colour maths ────────────────────────────────────────── */
+const clean = h => { h=String(h).trim(); if(!h.startsWith("#")) h="#"+h;
+  if(/^#[0-9a-f]{3}$/i.test(h)) h="#"+h.slice(1).split("").map(c=>c+c).join("");
+  return /^#[0-9a-f]{6}$/i.test(h) ? h.toUpperCase() : null; };
+const rgb = h => [1,3,5].map(i=>parseInt(h.slice(i,i+2),16));
+
+function wcag(a,b){
+  const L = c => { const v = rgb(c).map(x=>{ x/=255; return x<=0.03928 ? x/12.92 : ((x+0.055)/1.055)**2.4; });
+    return .2126*v[0]+.7152*v[1]+.0722*v[2]; };
+  const [x,y]=[L(a),L(b)].sort((p,q)=>q-p);
+  return (x+.05)/(y+.05);
+}
+function apcaY(h){
+  const [r,g,b] = rgb(h).map(v=>(v/255)**2.4);
+  let y = .2126729*r + .7151522*g + .0721750*b;
+  return y < .022 ? y + (.022-y)**1.414 : y;
+}
+function apca(txt,bg){
+  const Yt=apcaY(txt), Yb=apcaY(bg);
+  if(Math.abs(Yb-Yt) < .0005) return 0;
+  let S_, C;
+  if(Yb > Yt){ S_=(Yb**.56 - Yt**.57)*1.14; C = S_ < .1 ? 0 : S_-.027; }
+  else       { S_=(Yb**.65 - Yt**.62)*1.14; C = S_ > -.1 ? 0 : S_+.027; }
+  return C*100;
+}
+const mix = (a,b,t) => "#"+rgb(a).map((v,i)=>Math.round(v+(rgb(b)[i]-v)*t).toString(16).padStart(2,"0")).join("").toUpperCase();
+
+/* ── font loading ────────────────────────────────────────── */
+function parseFamilies(txt){
+  return txt.split("\n").map(l=>l.trim()).filter(Boolean).map(line=>{
+    const [name,group,note] = line.split("::").map(s=>(s||"").trim());
+    return { name, group: (group||"sf"), note: note||"" };
+  }).filter(f=>f.name);
+}
+const gfUrl = (name, axes) =>
+  "https://fonts.googleapis.com/css2?family=" + encodeURIComponent(name).replace(/%20/g,"+")
+  + (axes ? ":"+axes : "") + "&display=swap";
+
+const cssCache = new Map();
+async function fetchFace(name){
+  if(cssCache.has(name)) return cssCache.get(name);
+  /* The CSS API rejects a wght range the family does not support, and the 400 it
+     returns has no CORS headers — so the range has to be found by probing. */
+  const tries = ["wght@100..900","wght@200..900","wght@300..900","wght@400..900",
+                 "wght@100..800","wght@100..700","wght@400..700","wght@400;700",""];
+  const p = (async () => {
+    for(const axes of tries){
+      try{
+        const r = await fetch(gfUrl(name, axes));
+        if(r.ok){ const css = await r.text(); if(css.includes("@font-face")) return {css, axes}; }
+      }catch{}
+    }
+    return null;
+  })();
+  cssCache.set(name,p);
+  return p;
+}
+
+const styleTag = el("style"); document.head.appendChild(styleTag);
+const loadedCss = new Map();
+
+async function ensureFonts(list){
+  const results = new Map();
+  await Promise.all(list.map(async f => {
+    const got = await fetchFace(f.name);
+    if(got && !loadedCss.has(f.name)) loadedCss.set(f.name, got.css);
+    results.set(f.name, got);
+  }));
+  styleTag.textContent = [...loadedCss.values()].join("\n");
+  const probe = CFG.probe + GLYPH_SETS.map(g=>g[1]).join("");
+  const meta = new Map();
+  for(const f of list){
+    const got = results.get(f.name);
+    meta.set(f.name, {
+      /* No scriptRange configured means the specimen makes no script demand,
+         so every family that loaded at all passes. */
+      ok:false, script: !CFG.scriptRange || (!!got && new RegExp(CFG.scriptRange,"i").test(got.css)),
+      axes: got ? variableAxes(got.css) : [],
+      weights: got ? weightsOf(got.css) : [],
+    });
+  }
+  await Promise.all(list.map(async f => {
+    for(const w of (meta.get(f.name).weights.length ? meta.get(f.name).weights : [400]))
+      try{ await document.fonts.load(`${w} 24px "${f.name}"`, probe); }catch{}
+  }));
+  for(const f of list)
+    meta.get(f.name).ok = !!results.get(f.name) && document.fonts.check(`24px "${f.name}"`, CFG.probe);
+  return meta;
+}
+
+/* Weights the family actually ships, from the served @font-face rules.
+   A variable range is sampled at the usual 100-step stops. */
+function weightsOf(css){
+  const set = new Set();
+  for(const m of css.matchAll(/font-weight:\s*([\d.]+)(?:\s+([\d.]+))?/g)){
+    const lo = +m[1], hi = m[2] ? +m[2] : null;
+    if(hi === null){ set.add(lo); continue; }
+    for(let w = Math.ceil(lo/100)*100; w <= hi; w += 100) set.add(w);
+    set.add(lo); set.add(hi);
+  }
+  return [...set].sort((a,b)=>a-b);
+}
+const WEIGHT_NAMES = {100:"Thin",200:"ExtraLight",300:"Light",400:"Regular",500:"Medium",
+  600:"SemiBold",700:"Bold",800:"ExtraBold",900:"Black"};
+
+function variableAxes(css){
+  const out = new Map();
+  for(const m of css.matchAll(/font-weight:\s*([\d.]+)\s+([\d.]+)/g)) out.set("wght", `${m[1]}–${m[2]}`);
+  for(const m of css.matchAll(/font-stretch:\s*([\d.]+%)\s+([\d.]+%)/g)) out.set("wdth", `${m[1]}–${m[2]}`);
+  for(const m of css.matchAll(/font-variation-settings:\s*([^;}]+)/g)){
+    for(const a of m[1].matchAll(/"(\w{4})"\s+([-\d.]+)/g)) if(!out.has(a[1])) out.set(a[1], a[2]);
+  }
+  if(/font-style:\s*oblique|font-style:\s*italic/.test(css) && /@font-face[^}]*font-style:\s*italic/.test(css)) out.set("ital","0–1");
+  return [...out].map(([k,v])=>`${k} ${v}`);
+}
+
+/* ── glyph coverage ──────────────────────────────────────── */
+const cv = document.createElement("canvas").getContext("2d");
+const covCache = new Map();
+function hasGlyph(family, ch){
+  const key = family+"|"+ch;
+  if(covCache.has(key)) return covCache.get(key);
+  const w = fb => { cv.font = `24px "${family}", ${fb}`; return cv.measureText(ch).width; };
+  const a = w("monospace"), b = w("serif"), c = w("cursive");
+  const res = a > 0 && Math.abs(a-b) < .01 && Math.abs(a-c) < .01;
+  covCache.set(key,res);
+  return res;
+}
+
+/* ── inline editing ──────────────────────────────────────────
+   S.texts is the single source of truth; a card only shows a slice of it.
+   Every editable node carries the coordinates of its slice — data-tk (key in
+   S.texts), data-tl (line within that value), data-tc (::-cell within that
+   line) — so a commit writes back through those coordinates and every card
+   showing the same slice changes with it. That is the point: you fix a word
+   once, not once per family. */
+const CELL_SEP = " :: ";
+
+/* Non-blank lines paired with their index in the untouched value, so a
+   writeback lands on the right line even though blank ones are not rendered. */
+function lines(v){
+  return String(v ?? "").split("\n").map((l,i) => [i,l]).filter(([,l]) => l.trim() !== "");
+}
+
+/* Attributes that make a node an editable slot. Emitted inside a tag that may
+   already carry class/style, so this contributes attributes only — the hover
+   and editing styles hang off the [data-tk] selector instead of a class. */
+function ed(k, line, cell){
+  return ` tabindex="0" aria-label="${esc(TEXT_LABELS[k] || k)}" data-tk="${esc(k)}"`
+    + (line == null ? "" : ` data-tl="${line}"`)
+    + (cell == null ? "" : ` data-tc="${cell}"`);
+}
+
+function slotOf(node){
+  return { k: node.dataset.tk,
+           line: node.dataset.tl === undefined ? null : +node.dataset.tl,
+           cell: node.dataset.tc === undefined ? null : +node.dataset.tc };
+}
+
+function writeSlot({k, line, cell}, next){
+  if(line == null){ S.texts[k] = next; return; }
+  const ls = String(S.texts[k] ?? "").split("\n");
+  while(ls.length <= line) ls.push("");
+  if(cell == null) ls[line] = next;
+  else{
+    const cs = ls[line].split("::").map(s => s.trim());
+    while(cs.length <= cell) cs.push("");
+    cs[cell] = next;
+    ls[line] = cs.join(CELL_SEP);
+  }
+  S.texts[k] = ls.join("\n");
+}
+
+/* Push a committed value into every other node showing the same slot. Done in
+   place rather than by re-rendering: a slot edit never changes the structure of
+   a card, and a re-render here would tear the DOM out from under the click that
+   is moving focus to the next slot. */
+function propagate({k, line, cell}, next){
+  for(const n of grid.querySelectorAll("[data-tk]")){
+    const s = slotOf(n);
+    if(s.k === k && s.line === line && s.cell === cell) n.textContent = next;
+  }
+}
+
+let editing = null;
+
+function beginEdit(node){
+  /* An edit interrupted by a re-render (Apply on the family list, say) leaves
+     `editing` pointing at a node that is no longer in the page. Without this
+     the stale reference would refuse every later edit, and the page would look
+     simply broken. */
+  if(editing && !editing.node.isConnected) editing = null;
+  if(editing) return;
+  editing = { node, before: node.textContent };
+  node.contentEditable = "plaintext-only";
+  /* Safari and older Firefox reject plaintext-only and leave it "false". */
+  if(node.contentEditable !== "plaintext-only") node.contentEditable = "true";
+  node.spellcheck = false;
+  node.dataset.editing = "1";
+  node.focus();
+  const r = document.createRange(); r.selectNodeContents(node);
+  const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r);
+  $("#shareNote").textContent = L.editing;
+}
+
+function endEdit(commit){
+  if(!editing) return;
+  const { node, before } = editing;
+  /* A slot holds one line: paste and Enter can smuggle newlines in, and a
+     newline here would silently split into a row the model never had. */
+  const next = node.textContent.replace(/\s+/g, " ").trim();
+  editing = null;
+  node.removeAttribute("contenteditable");
+  delete node.dataset.editing;
+  $("#shareNote").textContent = L.stateNote;
+  if(!commit || next === before.trim()){ node.textContent = before; return; }
+  const slot = slotOf(node);
+  writeSlot(slot, next);
+  propagate(slot, next);
+  syncTextFields();
+  save();
+}
+
+/* ── rendering ───────────────────────────────────────────── */
+const grid = $("#grid");
+let CURRENT = [];
+let META = new Map();
+
+function specimen(f, m){
+  const t = S.texts;
+  const full = S.open.includes(f.name);
+  const on = full
+    ? S.sections
+    : Object.fromEntries(SECTIONS.map(([k]) => [k, PREVIEW_SECTIONS.includes(k) && S.sections[k]]));
+  const card = el("div","card" + (m.ok ? "" : " dead") + (full ? " full" : ""));
+  card.style.setProperty("--ff", `"${f.name}"`);
+  card.dataset.group = f.group;
+  card.dataset.name = f.name.toLowerCase();
+
+  const badges = [
+    m.ok ? "" : `<span class="badge err">${L.badgeDead}</span>`,
+    m.ok && !m.script ? `<span class="badge err">${L.badgeNoScript}</span>` : "",
+    m.axes.length ? `<span class="badge var">${L.badgeVariable}</span>` : "",
+  ].join("");
+
+  const parts = [];
+  if(on.display) parts.push(`<section>
+      <div class="display"${ed("display")}>${esc(t.display)}</div>
+      <div class="num"${ed("timer")}>${esc(t.timer)}</div>
+      <div class="headline" style="margin-top:10px"${ed("headline")}>${esc(t.headline)}</div>
+    </section>`);
+  if(on.weights){
+    const ws = m.weights.filter(w => w % 100 === 0);
+    const ladder = ws.length < 2
+      ? `<div class="wline"><span class="wnum">${m.weights[0]||400}</span><span>${L.singleWeight}</span></div>`
+      : ws.map(w => `<div class="wline" style="font-weight:${w}">
+            <span class="wnum">${w}</span>
+            <span class="wsample"${ed("weights")}>${esc(t.weights)}</span>
+            <span class="wname">${WEIGHT_NAMES[w]||""}</span>
+          </div>`).join("");
+    parts.push(`<section><div class="slab">${L.slabWeights}${m.axes.some(a=>a.startsWith("wght"))?" · "+L.variableAxis:""}</div>${ladder}</section>`);
+  }
+  if(on.prose) parts.push(`<section><div class="slab">${L.slabProse}</div>
+      <div class="cols">` +
+      lines(t.prose).map(([i,l]) => `<p${ed("prose",i)}>${esc(l)}</p>`).join("") +
+      `</div></section>`);
+  if(on.caps) parts.push(`<section><div class="slab">${L.slabCaps}</div>
+      <div class="caps"${ed("caps")}>${esc(t.caps)}</div>
+      <div class="smallcaps"><span${ed("caps")}>${esc(t.caps)}</span> — ${L.smallCaps}</div></section>`);
+  if(on.table){
+    const cols = (t.tableHead||"").split("::").map(x=>x.trim());
+    const head = cols.map((c,i)=>
+      `<th${i===cols.length-1?' class="r"':''}${ed("tableHead",0,i)}>${esc(c)}</th>`).join("");
+    const rows = lines(t.table).map(([i,l]) => {
+      const cells = l.split("::").map(s=>(s||"").trim());
+      return "<tr>" + [0,1,2].map(j =>
+        `<td${j===2?' class="r"':''}${ed("table",i,j)}>${esc(cells[j]||"")}</td>`).join("") + "</tr>";
+    }).join("");
+    parts.push(`<section><div class="slab">${L.slabTable}</div><table>
+      <thead><tr>${head}</tr></thead>
+      <tbody>${rows}</tbody></table></section>`);
+  }
+  if(on.rows){
+    const rows = lines(t.rows).map(([i,l],pos) => {
+      const [n,v] = l.split("::").map(s=>(s||"").trim());
+      /* The dot sits outside the editable span, or editing swallows it. */
+      return `<div class="row"><span class="n">${pos===0?'<span class="dot"></span>':""}` +
+        `<span${ed("rows",i,0)}>${esc(n)}</span></span>` +
+        `<span class="d"${ed("rows",i,1)}>${esc(v||"")}</span></div>`;
+    }).join("");
+    parts.push(`<section><div class="slab">${L.slabRows}</div>${rows}</section>`);
+  }
+  if(on.alphabet) parts.push(`<section><div class="slab">${L.slabAlphabet}</div>` +
+    lines(t.alphabet).map(([i,l]) => `<div class="abc"${ed("alphabet",i)}>${esc(l)}</div>`).join("") +
+    `</section>`);
+  if(on.glyphs){
+    const blocks = GLYPH_SETS.map(([label,set])=>{
+      const cells = set.split(" ").filter(Boolean).map(ch=>{
+        const ok = m.ok ? hasGlyph(f.name, ch) : false;
+        return `<span class="gl${ok?"":" miss"}" title="${ok?L.glyphYes:L.glyphNo}">${esc(ch)}</span>`;
+      }).join("");
+      return `<div class="slab" style="margin-top:10px">${label}</div><div class="glyphs">${cells}</div>`;
+    }).join("");
+    parts.push(`<section><div class="slab">${L.slabGlyphs}</div>${blocks}</section>`);
+  }
+  if(on.axes) parts.push(`<section><div class="slab">${L.slabAxes}</div><div class="axes">` +
+    (m.axes.length ? m.axes.map(a=>`<code>${esc(a)}</code>`).join(" · ") : L.staticFont) + `</div></section>`);
+
+  card.innerHTML = `<div class="chead">
+      <span class="fname">${esc(f.name)}${badges}</span>
+      <span class="tag">${esc(f.note)}</span>
+      <button class="expand" aria-expanded="${full}">${full ? L.collapse : L.expand}</button>
+    </div>
+    <div class="spec">${parts.join("")}</div>`;
+  card.querySelector(".expand").onclick = () => {
+    S.open = full ? S.open.filter(n => n !== f.name) : [...S.open, f.name];
+    render(); save();
+  };
+  return card;
+}
+
+function render(){
+  const q = S.q.trim().toLowerCase();
+  grid.textContent = "";
+  let n = 0;
+  for(const f of CURRENT){
+    if(S.group !== "all" && f.group !== S.group) continue;
+    if(q && !f.name.toLowerCase().includes(q)) continue;
+    grid.appendChild(specimen(f, META.get(f.name) || {ok:false,script:false,axes:[],weights:[]}));
+    n++;
+  }
+  $("#empty").hidden = n > 0;
+  $("#count").textContent = n + " / " + CURRENT.length;
+}
+
+async function reloadFamilies(){
+  CURRENT = parseFamilies(S.families);
+  $("#count").textContent = L.loading;
+  META = await ensureFonts(CURRENT);
+  covCache.clear();
+  render();
+}
+
+/* ── theming ─────────────────────────────────────────────── */
+function applyTheme(){
+  const r = document.documentElement.style;
+  const dark = apcaY(S.bg) < apcaY(S.fg);
+  r.setProperty("--spec-bg", S.bg);
+  r.setProperty("--spec-fg", S.fg);
+  r.setProperty("--spec-title", dark ? "#FFFFFF" : "#0B0908");
+  r.setProperty("--spec-surface", mix(S.bg, S.fg, .09));
+  r.setProperty("--spec-muted", mix(S.fg, S.bg, .38));
+  r.setProperty("--spec-line", mix(S.bg, S.fg, .18));
+  r.setProperty("--spec-size", S.size+"px");
+  r.setProperty("--spec-weight", S.weight);
+  r.setProperty("--spec-lh", S.lh);
+  r.setProperty("--spec-ls", S.ls+"em");
+
+  const p = $("#cpreview");
+  p.style.background = S.bg; p.style.color = S.fg;
+
+  /* `lc`, not `L` — `L` is the locale table and shadowing it here breaks every
+     label below. */
+  const c = wcag(S.bg, S.fg), lc = Math.abs(apca(S.fg, S.bg));
+  const w = $("#wcag"), a = $("#apca");
+  w.textContent = c.toFixed(2)+":1";
+  w.className = "v " + (c>=4.5 ? "ok" : c>=3 ? "warn" : "bad");
+  $("#wcagN").textContent = c>=7 ? L.wcagAAA : c>=4.5 ? L.wcagAA : c>=3 ? L.wcagLarge : L.wcagFail;
+  a.textContent = Math.round(lc);
+  a.className = "v " + (lc>=75 ? "ok" : lc>=60 ? "warn" : "bad");
+  $("#apcaN").textContent = lc>=90 ? L.apcaAny : lc>=75 ? L.apcaBody : lc>=60 ? L.apcaMin : lc>=45 ? L.apcaLarge : L.apcaNo;
+}
+
+/* ── panel wiring ────────────────────────────────────────── */
+let selectedSw = null;
+
+function paintSwatches(){
+  const box = $("#swatches"); box.textContent = "";
+  S.palette.forEach(hex => {
+    const b = el("button","sw");
+    b.style.background = hex;
+    b.title = hex;
+    b.setAttribute("aria-label", L.swatch+" "+hex);
+    b.setAttribute("aria-pressed", String(selectedSw === hex));
+    b.onclick = e => {
+      selectedSw = hex;
+      if(e.altKey) setColor("fg", hex); else setColor("bg", hex);
+      paintSwatches();
+    };
+    box.appendChild(b);
+  });
+}
+function setColor(which, hex){
+  const h = clean(hex); if(!h) return;
+  S[which] = h;
+  $("#"+which+"Pick").value = h;
+  $("#"+which+"Hex").value = h;
+  applyTheme(); save();
+}
+
+function buildTextFields(){
+  const box = $("#textFields"); box.textContent = "";
+  for(const [k,label] of Object.entries(TEXT_LABELS)){
+    const wrap = el("div","field");
+    const id = "tx-"+k;
+    const multi = /\n/.test(DEFAULT_TEXTS[k]) || k==="prose";
+    wrap.innerHTML = `<label for="${id}">${label}</label>` +
+      (multi ? `<textarea id="${id}" rows="${k==="prose"?4:3}" spellcheck="false"></textarea>`
+             : `<input type="text" id="${id}" spellcheck="false">`);
+    box.appendChild(wrap);
+    const f = wrap.querySelector("#"+CSS.escape(id));
+    f.value = S.texts[k];
+    f.addEventListener("input", () => { S.texts[k] = f.value; render(); save(); });
+  }
+}
+
+/* Panel fields mirror S.texts, so an inline edit has to push its value back
+   here or the panel would overwrite it on the next keystroke. */
+function syncTextFields(){
+  for(const k of Object.keys(TEXT_LABELS)){
+    const f = document.getElementById("tx-"+k);
+    if(f && f.value !== S.texts[k]) f.value = S.texts[k];
+  }
+}
+
+function buildSectionToggles(){
+  const box = $("#sectionToggles"); box.textContent = "";
+  for(const [k,label] of SECTIONS){
+    const b = el("button", "ghost");
+    b.textContent = label;
+    b.setAttribute("aria-pressed", String(!!S.sections[k]));
+    b.style.margin = "0 6px 6px 0";
+    if(S.sections[k]) b.classList.remove("ghost");
+    b.onclick = () => {
+      S.sections[k] = !S.sections[k];
+      b.setAttribute("aria-pressed", String(S.sections[k]));
+      b.classList.toggle("ghost", !S.sections[k]);
+      render(); save();
+    };
+    box.appendChild(b);
+  }
+}
+
+function syncSliders(){
+  $("#sSize").value=S.size; $("#vSize").textContent=S.size+"px";
+  $("#sWeight").value=S.weight; $("#vWeight").textContent=S.weight;
+  $("#sLh").value=S.lh; $("#vLh").textContent=Number(S.lh).toFixed(2);
+  $("#sLs").value=S.ls; $("#vLs").textContent=Number(S.ls).toFixed(3)+"em";
+}
+function bindSlider(id, key, fmt){
+  $(id).addEventListener("input", e => {
+    S[key] = key==="size"||key==="weight" ? +e.target.value : parseFloat(e.target.value);
+    syncSliders(); applyTheme(); save();
+  });
+}
+
+function buildGroups(){
+  const bar = $("#groupbar"); bar.textContent = "";
+  const groups = [{id:"all", label:L.all}, ...CFG.groups];
+  for(const g of groups){
+    const b = el("button","filt");
+    b.dataset.g = g.id; b.textContent = g.label;
+    b.setAttribute("aria-pressed", String(S.group === g.id));
+    b.onclick = () => {
+      S.group = g.id;
+      bar.querySelectorAll(".filt").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+      render(); save();
+    };
+    bar.appendChild(b);
+  }
+}
+
+function buildFootnotes(){
+  $("#footnotes").innerHTML = (CFG.notes || [])
+    .map(n => `<p>${n}</p>`).join("");
+}
+
+function syncPanel(){
+  $("#families").value = S.families;
+  $("#q").value = S.q;
+  $("#bgPick").value = S.bg; $("#bgHex").value = S.bg;
+  $("#fgPick").value = S.fg; $("#fgHex").value = S.fg;
+  syncSliders(); paintSwatches(); buildTextFields(); buildSectionToggles(); buildGroups();
+}
+
+function init(){
+  load();
+  buildFootnotes();
+  $("#cpA").textContent = CFG.contrastPreview[0];
+  $("#cpB").textContent = CFG.contrastPreview[1];
+  syncPanel();
+  applyTheme();
+  reloadFamilies();
+
+  $("#applyFamilies").onclick = () => { S.families = $("#families").value; save(); reloadFamilies(); };
+  $("#resetFamilies").onclick = () => {
+    S.families = DEFAULTS().families; $("#families").value = S.families; save(); reloadFamilies();
+  };
+  $("#q").addEventListener("input", e => { S.q = e.target.value; render(); save(); });
+
+  /* Delegated, because cards are rebuilt whenever the family list changes.
+     Focus is the trigger rather than click, so a pointer and a Tab key take the
+     same path in and out of a slot. */
+  grid.addEventListener("focusin", e => {
+    const slot = e.target.closest?.("[data-tk]");
+    if(slot) beginEdit(slot);
+  });
+  grid.addEventListener("focusout", e => {
+    if(editing && e.target === editing.node) endEdit(true);
+  });
+  grid.addEventListener("keydown", e => {
+    if(!editing) return;
+    if(e.key === "Escape"){ e.preventDefault(); endEdit(false); e.target.blur(); }
+    else if(e.key === "Enter"){ e.preventDefault(); e.target.blur(); }
+  });
+
+  $("#mDark").onclick = () => { setColor("bg",CFG.dark[0]); setColor("fg",CFG.dark[1]); };
+  $("#mLight").onclick = () => { setColor("bg",CFG.light[0]); setColor("fg",CFG.light[1]); };
+  for(const w of ["bg","fg"]){
+    $("#"+w+"Pick").addEventListener("input", e => setColor(w, e.target.value));
+    $("#"+w+"Hex").addEventListener("change", e => setColor(w, e.target.value));
+  }
+  $("#addSw").onclick = () => {
+    const h = clean($("#newHex").value);
+    if(!h){ $("#newHex").focus(); return; }
+    if(!S.palette.includes(h)) S.palette.push(h);
+    $("#newHex").value = ""; selectedSw = h; paintSwatches(); save();
+  };
+  $("#delSw").onclick = () => {
+    if(!selectedSw) return;
+    S.palette = S.palette.filter(h => h !== selectedSw);
+    selectedSw = null; paintSwatches(); save();
+  };
+
+  bindSlider("#sSize","size"); bindSlider("#sWeight","weight");
+  bindSlider("#sLh","lh"); bindSlider("#sLs","ls");
+
+  $("#openAll").onclick = () => { S.open = CURRENT.map(f=>f.name); render(); save(); };
+  $("#closeAll").onclick = () => { S.open = []; render(); save(); };
+
+  $("#share").onclick = async () => {
+    history.replaceState(null,"","#s="+encode(S));
+    try{ await navigator.clipboard.writeText(location.href);
+         $("#shareNote").textContent = L.linkCopied; }
+    catch{ $("#shareNote").textContent = L.copyManually; }
+    setTimeout(()=>{ $("#shareNote").textContent = L.stateNote; }, 2500);
+  };
+  $("#reset").onclick = () => {
+    S = DEFAULTS();
+    try{ localStorage.removeItem(LS); }catch{}
+    history.replaceState(null,"",location.pathname);
+    syncPanel(); applyTheme(); reloadFamilies();
+  };
+}
+init();
+</script>
+</body>
+</html>

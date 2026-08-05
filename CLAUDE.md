@@ -14,7 +14,10 @@ visual identity.
 
 Skills live in `humane/skills/<name>/SKILL.md`; the bundled agent is
 `humane/agents/synthetic-respondent.md`. Bump `version` in
-`humane/.claude-plugin/plugin.json` when plugin users should receive an update.
+`humane/.claude-plugin/plugin.json` when plugin users should receive an update,
+and add the entry to `CHANGELOG.md` in the same commit — its "How to write an
+entry" section owns the format (capability heading, numbered steps, `### Fixed`
+lists, and what never gets documented).
 
 ## Rule ownership
 
@@ -28,6 +31,7 @@ backticks and name only the handoff — never restate or override it.
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
 | `respondent-panel` | Gut reactions from strangers to a **user-facing artifact**, in isolated contexts. Never rewrites. |
 | `design-tokens` | The token set: DTCG structure, resolution, CSS/DESIGN.md export, the brand block, and **all color measurement and remediation** (`tokens contrast`) |
+| `type-specimen` | Typeface **selection**: the specimen page, its ten-slot copy contract, script and glyph coverage checks, and what a specimen may and may not conclude. Owns no token. |
 | `layout-rules` | Structural and interaction defect classes for tool/dashboard UIs, and the de-slop avoid-list |
 | `ux-writing` | The source wording of every user-facing string, and what each string must accomplish — including documentation prose (README, docs, release notes) |
 | `nielsen-heuristics` | Formal usability inspection against the 10 heuristics, with severity and evidence locators |
@@ -56,6 +60,13 @@ Cross-boundary cases, resolved:
   Respondents never suggest alternatives — that is the point of them.
 - `brandkit` runs before a token set exists and hands off into it;
   `brand-illustrate` runs after one exists and reads from it.
+- `type-specimen` chooses a typeface and stops; `design-tokens` owns the family
+  from the moment it becomes a token. The specimen page reports WCAG and APCA
+  for the pair being previewed, but remediation is `tokens contrast` — a
+  specimen that "fixes" a colour by eye has stepped over the line.
+- `ux-writing` owns every string a specimen sets. `type-specimen` picks *which*
+  strings prove something about a font and how long they must be; it never
+  invents wording that the corpus or the product already has.
 - `persona-review` and `respondent-panel` differ by artifact and by attention:
   a document studied by an expert vs. an artifact glanced at by a stranger.
 - `nielsen-heuristics` inspects an interface against principles; `walkthrough`

@@ -101,34 +101,19 @@ file, so there is exactly one driving procedure in the cycle.
    prove something and how long they have to be.
 3. List the shortlisted families, then `scripts/specimen build spec.json`. It
    writes one standalone HTML page and serves it on `127.0.0.1`.
-4. Every family is set in the same copy: display line, weight ladder, prose in
-   columns, a data table, list rows, small caps, glyph coverage and variable
-   axes. Families missing the script you declared are badged, not silently
-   shown in fallback.
-5. Click any specimen text in any card and edit it in place. The edit lands in
-   every family at once, so you are always comparing families rather than
-   accidentally comparing copy. Escape reverts; **Copy link** encodes the whole
-   shortlist into the URL.
+4. Every family is set in the same copy: display line, figures, a weight ladder
+   built from the weights the family actually ships, prose in columns, a data
+   table, list rows, uppercase and small caps, glyph coverage and variable
+   axes. Declare `scriptRange` to have a family missing your Cyrillic or symbol
+   coverage badged, not silently shown in a fallback.
+5. Click any specimen text in any card and edit it in place. The edit writes to
+   one source of truth and lands in every family at once, so you are always
+   comparing families rather than accidentally comparing copy. Escape reverts;
+   **Copy link** encodes the whole shortlist into the URL.
 
 `scripts/specimen check` refuses to build a config whose slots still say
 `TODO` — the placeholders exist so unwritten copy cannot be mistaken for a
 finished specimen.
-
-## 0.10.0 — 2026-08-05
-
-### Choose a typeface against your own copy, not "Hamburgefonstiv"
-
-1. Run `humane:type-specimen` with your shortlist of Google Fonts families.
-2. It builds one standalone HTML page setting every family in the same ten
-   slots — display line, figures, weight ladder built from the weights the
-   family actually ships, prose in columns, a data table, list rows, uppercase
-   and small caps, glyph coverage, variable axes.
-3. Click any specimen text and retype it. The edit writes to one source of
-   truth and lands in every family at once, so you compare typefaces rather
-   than copy.
-4. Declare `scriptRange` to have missing Cyrillic or symbol coverage badged
-   instead of silently rendering in a fallback.
-5. **Copy link** encodes the whole shortlist into the URL.
 
 It produces evidence, not a verdict: no score, no ranking, and coverage claims
 cover only the glyph sets you asked it to test. The chosen family then enters

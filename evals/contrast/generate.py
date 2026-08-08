@@ -190,10 +190,12 @@ def build_html(entries):
         "<head>",
         '  <meta charset="utf-8">',
         f"  <title>{_TITLE}</title>",
-        "  <!-- Every colour on this page is declared inline on the element that",
-        "       uses it, and every one is recorded in manifest.json. The document",
-        "       sets no stylesheet colour of its own, so there is nothing painted",
-        "       here that the manifest does not know about. -->",
+        # No comment here, deliberately. An earlier version explained that every
+        # colour was recorded in manifest.json — inside the file handed to the
+        # reviewer being evaluated. That tells a subject an answer key exists and
+        # names it, and one arm duly reported the comment as a finding. The
+        # invariant it described is real and belongs in this generator's
+        # docstring, where the reviewer cannot read it.
         "</head>",
         "<body>",
     ]

@@ -1,6 +1,6 @@
 ---
 name: brand-illustrate
-description: Turn design tokens into a coherent, on-brand illustration set through a short step-by-step questionnaire, then generate with whichever image backend is installed (gpt-image-2 / nano-banana). Assembles the prompt scaffold from the token palette + brand block, merges layout-rules de-slop negatives, requests platform preset sizes, saves a reusable recipe, and hands the batch to review. Use for "brand illustrations", "on-brand images", "an illustration set", "generate images matching my brand / tokens", "illustrate this section on-brand". Triggers on brand illustrations, on-brand images, illustration set, generate images matching my brand, illustrate this section on-brand, contact sheet.
+description: Turn design tokens into a coherent, on-brand illustration set through a short step-by-step questionnaire, then generate with whichever image backend is installed (gpt-image-2 / nano-banana). Assembles the prompt scaffold from the token palette + brand block, merges layout-rules de-slop negatives, requests platform preset sizes, saves a reusable recipe, and hands the batch to review. Use when a project already has a token set and needs images that match it, or when an earlier batch should be re-run from its saved recipe. Triggers on brand illustrations, on-brand images, illustration set, generate images matching my brand, illustrate this section on-brand, contact sheet.
 ---
 
 # brand-illustrate

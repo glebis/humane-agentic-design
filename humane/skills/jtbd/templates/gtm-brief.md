@@ -55,4 +55,4 @@ Based on the interview, these are attractive but secondary — leading with them
 ---
 
 **Source:** `jtbd.json` for {{project_name}}
-**Next step:** Pick 2 experiments, set up tracking, run for 2 weeks. Report back with `/jtbd` to update the brief.
+**Next step:** Pick 2 experiments, set up tracking, run for 2 weeks. Report back with `humane:jtbd` to update the brief.

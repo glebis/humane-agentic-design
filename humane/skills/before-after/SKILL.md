@@ -1,6 +1,6 @@
 ---
 name: before-after
-description: Generate emotional Before/After transformation grids for products, lectures, and offers. Chainable from /jtbd output. Uses empathy mapping, first-person voice, somatic markers, and valence scoring to produce grids ready for landing pages, slides, and messaging. This skill should be used when the user wants to articulate the transformation their product/service creates, build a before/after grid, or chain from a JTBD interview into emotional copywriting. Triggers on before/after grid, transformation grid, "what's the transformation", landing page transformation section, emotional copywriting, chain from JTBD.
+description: Generate emotional Before/After transformation grids for products, lectures, and offers. Chainable from humane:jtbd output. Uses empathy mapping, first-person voice, somatic markers, and valence scoring to produce grids ready for landing pages, slides, and messaging. This skill should be used when the user wants to articulate the transformation their product/service creates, build a before/after grid, or chain from a JTBD interview into emotional copywriting. Triggers on before/after grid, transformation grid, "what's the transformation", landing page transformation section, emotional copywriting, chain from JTBD.
 ---
 
 # Before/After Transformation Grid
@@ -13,7 +13,7 @@ Generate emotionally precise Before/After grids that capture the felt transforma
 - "What's the transformation?"
 - "Chain this JTBD into a before/after"
 - "I need a landing page transformation section"
-- After completing a `/jtbd` interview, as a natural next step
+- After completing a `humane:jtbd` interview, as a natural next step
 
 ## Mode selection
 

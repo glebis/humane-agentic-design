@@ -1,6 +1,6 @@
 ---
 name: jtbd
-description: Terminal-first JTBD engine for founders and product people. Interview fast, kill jargon, capture real switching forces (Push/Pull/Habit/Anxiety), score opportunities, and export structured artifacts (JSON + one-pager + messaging angles + GTM brief). Use when the user says "help me figure out what to build", "analyze these customer reviews", "what are people actually hiring this for", "I need messaging for my product", "turn this interview into insights", "what should I prioritize", or any variation of articulating what a project does, why it matters, who it's for, or converting interview/review/transcript signal into a decision-grade brief. Also triggers on "describe my project", "JTBD", "jobs to be done", "switching forces", or "mine these reviews".
+description: Terminal-first JTBD engine for founders and product people. Interview fast, kill jargon, capture real switching forces (Push/Pull/Habit/Anxiety), score opportunities, and export structured artifacts (JSON + one-pager + messaging angles + GTM brief). Use when the user says "help me figure out what to build", "analyze these customer reviews", "what are people actually hiring this for", "I need messaging for my product", "turn this interview into insights", "what should I prioritize", or any variation of articulating what a project does, why it matters, who it's for, or converting interview/review/transcript signal into a decision-grade brief. Triggers on "describe my project", "JTBD", "jobs to be done", "switching forces", or "mine these reviews".
 ---
 
 # JTBD Project Describer
@@ -35,7 +35,7 @@ Pick one at the start. Ask the user only if ambiguous.
 
 ## Scope discipline
 
-One project per session. If the user starts describing a second project, stop them: "That sounds like a separate project — let's finish this one first, then run `/jtbd` again for the next."
+One project per session. If the user starts describing a second project, stop them: "That sounds like a separate project — let's finish this one first, then run `humane:jtbd` again for the next."
 
 If the user drifts into implementation details, features, or tech stack: "Interesting, but let's stay at the job level — what is the person trying to accomplish?"
 
@@ -359,11 +359,11 @@ only the report's headings — statements and quotes stay as captured.
 
 ## Downstream pipeline (superpowers integration)
 
-The `jtbd.json` is a contract between `/jtbd` and downstream agents. See `references/superpowers_handoff.md` for the full field mapping.
+The `jtbd.json` is a contract between `humane:jtbd` and downstream agents. See `references/superpowers_handoff.md` for the full field mapping.
 
 **Short version:** when brainstorming starts and a `jtbd.json` exists, it should skip the questions the JSON already answers (who, what, why, constraints) and focus on the questions it doesn't (how, architecture, scope, technical choices). Switch forces inform approach selection. Open questions become brainstorming priorities.
 
-**Chain:** `/jtbd` → `jtbd.json` → brainstorm → writing-plans → implementation
+**Chain:** `humane:jtbd` → `jtbd.json` → brainstorm → writing-plans → implementation
 
 After the interview, suggest: "Want to brainstorm approaches? I can feed this into superpowers with your job, forces, and needs as context."
 

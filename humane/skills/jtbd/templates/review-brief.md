@@ -47,4 +47,4 @@ Emphasize these instead:
 
 ---
 
-**Next step:** run `/jtbd` in Interview mode, using this brief as pre-seed.
+**Next step:** run `humane:jtbd` in Interview mode, using this brief as pre-seed.

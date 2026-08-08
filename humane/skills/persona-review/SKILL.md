@@ -1,6 +1,6 @@
 ---
 name: persona-review
-description: Review a document from multiple stakeholder perspectives (personas), collect structured feedback, and optionally update the document. Use when you want a document stress-tested from different viewpoints before sharing — e.g., "review this PRD from an engineer's perspective", "what would a skeptical investor say about this pitch?" Triggers on persona review, review from a stakeholder perspective, what would an engineer say, stress-test this PRD, review this pitch, skeptical investor.
+description: Review a document from multiple stakeholder perspectives (personas), collect structured feedback, and optionally update the document. Use when a document should be stress-tested from different viewpoints before sharing — e.g., "review this PRD from an engineer's perspective", "what would a skeptical investor say about this pitch?" Triggers on persona review, review from a stakeholder perspective, what would an engineer say, stress-test this PRD, review this pitch, skeptical investor.
 ---
 
 # Persona Review

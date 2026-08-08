@@ -138,7 +138,15 @@ an audit.
 
 ## Tests
 
+The repo-level suite checks the frontmatter contract across every skill — YAML
+that parses, `name` matching its directory, a `Triggers on` list, a description
+under the ceiling, and no `/skill` invocations for skills that ship as
+`humane:skill`. Run it after touching any `SKILL.md`, including the description.
+
 ```bash
+python3 -m pytest tests/ -v
+
+cd humane/skills/type-specimen && PYTHONPATH=scripts python3 -m pytest tests/ -v
 cd humane/skills/design-tokens && PYTHONPATH=scripts python3 -m pytest tests/ -v
 cd humane/skills/brand-illustrate && python3 -m unittest discover -s tests -v
 cd humane/skills/jtbd && python3 -m pytest tests/ -v

@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Does the skill help? — humane contrast eval</title>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<style>
+  @font-face { font-family:'Monaspace Argon';
+    src:url('https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.101/fonts/webfonts/MonaspaceArgon-Regular.woff2') format('woff2');
+    font-weight:400; font-display:swap; }
+  @font-face { font-family:'Monaspace Argon';
+    src:url('https://cdn.jsdelivr.net/gh/githubnext/monaspace@v1.101/fonts/webfonts/MonaspaceArgon-Bold.woff2') format('woff2');
+    font-weight:700; font-display:swap; }
+
+  :root{
+    --ink:#1a1a1a; --ink-light:#555; --ink-muted:#888;
+    --bg:#fffff8; --bg-aside:#f9f6ee; --accent:#a00; --rule:#ccc;
+    --spark-primary:#c45a28; --spark-secondary:#2a7a5a; --spark-tertiary:#5a5aaa;
+    --status-red:#a02a2a; --status-amber:#c89000; --status-green:#2a7a3a;
+    --mono:'Monaspace Argon',ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{ background:var(--bg); color:var(--ink);
+    font-family:'EB Garamond',Georgia,serif; font-size:18px; line-height:1.6;
+    max-width:1200px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+  h1{font-size:2.2rem;font-weight:400;font-variant:small-caps;margin:0 0 .3rem;letter-spacing:.01em}
+  h2{font-size:1.5rem;font-weight:400;font-variant:small-caps;margin:0;letter-spacing:.01em}
+  h3{font-size:1.15rem;font-weight:400;font-variant:small-caps;color:var(--ink-light);margin:2rem 0 .5rem}
+  .subtitle{font-size:1.15rem;color:var(--ink-light);font-style:italic;margin:0 0 1rem}
+  .tags{font-family:var(--mono);font-size:.65rem;color:var(--rule);letter-spacing:.06em;margin-bottom:2rem}
+  .tags span{margin-right:1.2rem}
+  hr.rule{border:0;border-top:1px solid var(--rule);margin:2rem 0}
+
+  .lede{font-size:1.25rem;line-height:1.6}
+  .lede::first-letter{float:left;font-size:3.4rem;line-height:.82;padding:.1rem .5rem .1rem 0;color:var(--spark-primary)}
+
+  .toc-layout{display:grid;grid-template-columns:1fr 180px;gap:2rem;align-items:start}
+  .toc{font-size:.8rem;line-height:1.9;border-left:1px solid var(--rule);padding-left:1rem;position:sticky;top:1.5rem}
+  .toc a{color:var(--ink-light);text-decoration:none;display:block}
+  .toc a:hover{color:var(--spark-primary)}
+  .toc .toc-title{font-variant:small-caps;color:var(--ink-muted);letter-spacing:.06em;margin-bottom:.4rem}
+
+  .status-strip{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);margin:2rem 0}
+  .status-cell{padding:1rem 1.2rem;border-right:1px solid var(--rule)}
+  .status-cell:last-child{border-right:0}
+  .status-label{font-variant:small-caps;font-size:.82rem;color:var(--ink-muted);letter-spacing:.05em}
+  .status-value{font-family:var(--mono);font-size:1.5rem;font-variant-numeric:tabular-nums;margin:.2rem 0}
+  .status-note{font-size:.8rem;color:var(--ink-light);font-style:italic;line-height:1.35}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin:2rem 0}
+  .card{border:1px solid var(--rule);padding:1.1rem 1.2rem;background:var(--bg);transition:border-color .3s ease,box-shadow .3s ease}
+  .card:hover{border-color:var(--ink-muted);box-shadow:0 1px 6px rgba(0,0,0,.05)}
+  .card .label{font-variant:small-caps;font-size:.85rem;color:var(--ink-muted);letter-spacing:.05em}
+  .card .big{font-family:var(--mono);font-size:2.6rem;letter-spacing:-.02em;line-height:1.1;margin:.3rem 0}
+  .card .delta{font-family:var(--mono);font-size:.8rem;color:var(--ink-light)}
+  .card .note{font-size:.85rem;color:var(--ink-light);font-style:italic;margin-top:.5rem;line-height:1.4}
+
+  .aside-container{display:grid;grid-template-columns:1fr 280px;gap:2rem;align-items:start;margin:1.5rem 0}
+  .aside{font-size:.85rem;line-height:1.5;font-style:italic;color:var(--ink-light);border-left:1px solid var(--rule);padding-left:1rem}
+  .aside p{margin:0 0 .8rem}
+  .aside b{font-style:normal;color:var(--ink)}
+
+  .state-line{font-size:1.5rem;line-height:1.45;font-style:italic;color:var(--ink-light);margin:1.5rem 0 2rem}
+  .flyout{background:var(--bg-aside);border:1px solid var(--rule);padding:1rem 1.2rem;margin:1.5rem 0;font-size:.92rem;line-height:1.55}
+  .flyout::before{content:"\2726";color:var(--accent);margin-right:.5rem}
+  .flyout b{font-variant:small-caps;letter-spacing:.03em}
+
+  .chart-wrap{margin:2rem 0;padding:0 5%}
+  .caption{font-size:.82rem;font-style:italic;color:var(--ink-muted);text-align:center;margin-top:.6rem}
+
+  .table-wrapper{overflow-x:auto;margin:1.5rem 0}
+  table{border-collapse:collapse;width:100%}
+  th{font-variant:small-caps;font-size:.92rem;color:var(--ink-muted);font-weight:400;letter-spacing:.04em;text-align:left;border-bottom:1px solid var(--ink);padding:.4rem .6rem}
+  td{font-family:var(--mono);font-size:.85rem;font-variant-numeric:tabular-nums;padding:.4rem .6rem;border-bottom:1px solid #eee}
+  td.text{font-family:'EB Garamond',Georgia,serif;font-size:.95rem}
+  tbody tr:hover td{background:#f1ecdc}
+  .win{color:var(--status-green)}
+  .lose{color:var(--status-red)}
+  .flat{color:var(--ink-muted)}
+
+  .ornament{font-family:var(--mono);font-size:.9rem;color:var(--rule);text-align:center;margin:2rem 0;letter-spacing:.3em}
+  .back{float:right;font-size:.8rem;color:var(--ink-muted);text-decoration:none;transition:color .3s ease,transform .3s ease}
+  .back:hover{color:var(--spark-primary)}
+  section{margin-top:2.5rem}
+  footer{margin-top:4rem;padding-top:1rem;border-top:1px solid var(--rule);font-size:.8rem;color:var(--ink-muted);font-family:var(--mono)}
+
+  .reveal{opacity:0;transform:translateY(16px);transition:opacity .6s cubic-bezier(.25,.1,.25,1),transform .6s cubic-bezier(.25,.1,.25,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media (prefers-reduced-motion:reduce){ .reveal{opacity:1;transform:none;transition:none} *{transition:none!important} }
+  @media (max-width:800px){
+    .toc-layout,.aside-container,.cards,.status-strip{grid-template-columns:1fr}
+    .toc{position:static;border-left:0;border-top:1px solid var(--rule);padding:1rem 0 0}
+    .status-cell{border-right:0;border-bottom:1px solid var(--rule)}
+    .chart-wrap{padding:0}
+    .hide-mobile{display:none}
+  }
+</style>
+</head>
+<body>
+
+<h1>Does the skill help?</h1>
+<p class="subtitle">Measuring <span style="font-family:var(--mono);font-size:.9em">humane:review</span> against the same review without it</p>
+<div class="tags">
+  <span>4 SEEDS · 8 BLIND REVIEWS</span>
+  <span>ORACLE: dtokens/contrast.py</span>
+  <span>n=4 PER ARM</span>
+  <span>2026-08-09</span>
+</div>
+
+<div class="status-strip">
+  <div class="status-cell">
+    <div class="status-label">Defects found</div>
+    <div class="status-value win">100%</div>
+    <div class="status-note">every planted defect, every seed — against 79% unaided</div>
+  </div>
+  <div class="status-cell">
+    <div class="status-label">Measurement-only</div>
+    <div class="status-value win">100%</div>
+    <div class="status-note">vs 38%: the defects you cannot eyeball</div>
+  </div>
+  <div class="status-cell">
+    <div class="status-label">Invented findings</div>
+    <div class="status-value win">0.75</div>
+    <div class="status-note">per run, against 3.25 unaided</div>
+  </div>
+  <div class="status-cell">
+    <div class="status-label">False “Clear”</div>
+    <div class="status-value flat">0 / 0</div>
+    <div class="status-note">the honesty metric never fired — see §5</div>
+  </div>
+</div>
+
+<div class="toc-layout">
+<div>
+<p class="lede">Four generated pages, twelve colour pairs each, six of them genuinely
+failing. Eight reviews, each run blind in its own directory with no access to the
+answer key. Half were told to use <span style="font-family:var(--mono);font-size:.9em">humane:review</span>;
+half got a competent but unstructured “review this thoroughly and find the real
+problems”. Same model, same budget, both arms.</p>
+
+<p>The result favours the skill on every metric that moved. It also required two
+corrections to the measuring instrument along the way — one of which reversed the
+apparent conclusion, and one of which I found only because a number disagreed
+with what I expected. Both are documented below, because a report on whether a
+method is honest cannot itself be selective.</p>
+</div>
+<nav class="toc">
+  <div class="toc-title">Contents</div>
+  <a href="#setup">1 · The setup</a>
+  <a href="#result">2 · The result</a>
+  <a href="#seeds">3 · Seed by seed</a>
+  <a href="#instrument">4 · Fixing the instrument</a>
+  <a href="#limits">5 · What this does not show</a>
+</nav>
+</div>
+
+<div class="ornament">:::</div>
+
+<section id="setup">
+<h2>1 · The setup <a class="back" href="#">↑</a></h2>
+<p class="state-line">Ground truth is arithmetic, not opinion — a pair either clears the bar or it does not.</p>
+
+<div class="aside-container">
+<div>
+<p>The obvious way to run this eval is to produce both reviews and ask a model
+which is better. That is circular: the judge reads the skill’s own vocabulary —
+its severity scale, its <i>Not reviewed</i> result, its evidence locators — and
+rewards the arm that matches the rubric it was handed. It measures conformance,
+not improvement.</p>
+
+<p>So no judgement enters the ground truth. Each fixture is generated with twelve
+foreground/background pairs, and every pair is measured by
+<span style="font-family:var(--mono);font-size:.9em">dtokens/contrast.py</span> —
+the same code the <span style="font-family:var(--mono);font-size:.9em">design-tokens</span>
+skill runs in production. A pair is a planted defect if and only if that program
+says it fails. Nothing is asserted by hand.</p>
+</div>
+<div class="aside">
+<p><b>Blinding.</b> Each arm received a directory containing <i>fixture.html</i>
+and nothing else. The manifest was never copied there.</p>
+<p><b>Control quality.</b> The unaided prompt asks for a rigorous review and warns
+that missing a real defect is worse than being verbose. Not a strawman.</p>
+<p><b>The author reviewed neither arm.</b> Knowing the answer key disqualifies you
+from being a subject.</p>
+</div>
+</div>
+
+<div class="flyout">
+<b>The disagreement pairs.</b> WCAG and APCA do not rank colour the same way.
+<span style="font-family:var(--mono);font-size:.9em">#2174a7</span> on
+<span style="font-family:var(--mono);font-size:.9em">#f5f3ef</span> is a blue link
+on off-white: 4.60∶1, which clears the familiar 4.5∶1 bar, and APCA 67.7 against a
+floor of 75 — a real failure. Two of every six planted defects are of this kind.
+They are the defects a reviewer working from memory waves through, and the reason
+the fixture is not built from obvious grey-on-grey alone.
+</div>
+</section>
+
+<div class="ornament">:::</div>
+
+<section id="result">
+<h2>2 · The result <a class="back" href="#">↑</a></h2>
+<p class="state-line">Perfect recall with a quarter of the noise — and routing that the control never attempts.</p>
+
+<div class="cards">
+  <div class="card">
+    <div class="label">Recall</div>
+    <div class="big win">1.00</div>
+    <div class="delta">without · 0.79</div>
+    <div class="note">Every planted defect on every seed.</div>
+  </div>
+  <div class="card">
+    <div class="label">Precision</div>
+    <div class="big win">0.80</div>
+    <div class="delta">without · 0.64</div>
+    <div class="note">Higher recall <i>and</i> higher precision — not a trade.</div>
+  </div>
+  <div class="card">
+    <div class="label">Padding</div>
+    <div class="big win">0.75</div>
+    <div class="delta">without · 3.25</div>
+    <div class="note">Invented findings per run. Lower is better.</div>
+  </div>
+</div>
+
+<div class="chart-wrap"><canvas id="chartMain" height="150"></canvas></div>
+<p class="caption">Mean across four seeds, all four measures on one 0–1 rate axis.</p>
+
+<div class="aside-container">
+<div>
+<p>The interesting number is not recall — it is recall <i>together with</i>
+precision. Recall is trivially maximised by reporting everything, and precision by
+reporting nothing. A reviewer that improves one at the other’s expense has changed
+how wide a net it throws, not how well it knows where the fish are.</p>
+
+<p>Both arms were free to carpet-bomb. The control largely did: 3.25 invented
+findings per run against 0.75, while still missing a fifth of the real ones. The
+skill arm found more with less noise, which is the only shape of result that
+distinguishes calibration from volume.</p>
+</div>
+<div class="aside">
+<p><b>Routing.</b> 0.70 against 0.00. The control never attributes a finding to an
+owning skill because it has no ownership model — this metric measures something
+the skill has and the control structurally lacks, so read it as a description,
+not a defeat.</p>
+<p><b>Consolidation.</b> The skill arm reports one root cause per row, listing
+every affected location. That nearly broke the scorer — see §4.</p>
+</div>
+</div>
+
+<div class="chart-wrap"><canvas id="chartPadding" height="90"></canvas></div>
+<p class="caption">Invented findings per run — a count, so it is drawn separately rather than
+sharing an axis with the rates above. The control invented more on every seed.</p>
+</section>
+
+<div class="ornament">:::</div>
+
+<section id="seeds">
+<h2>3 · Seed by seed <a class="back" href="#">↑</a></h2>
+<p class="state-line">The mean hides nothing: the skill arm scored 1.00 recall on all four, the control on one.</p>
+
+<div class="chart-wrap"><canvas id="chartSeeds" height="130"></canvas></div>
+<p class="caption">Recall on the measurement-only pairs, per seed. The control scored zero on two of four.</p>
+
+<div class="aside-container">
+<div class="table-wrapper">
+<table>
+<thead><tr><th>Seed</th><th>Arm</th><th>Recall</th><th>Disagree</th><th>Precision</th><th class="hide-mobile">Padding</th><th class="hide-mobile">Routing</th></tr></thead>
+<tbody>
+<tr><td>1337</td><td class="text">with</td><td class="win">1.00</td><td class="win">1.00</td><td>0.67</td><td class="hide-mobile">1</td><td class="hide-mobile">0.67</td></tr>
+<tr><td>1337</td><td class="text">without</td><td class="lose">0.67</td><td class="lose">0.00</td><td>0.57</td><td class="hide-mobile">3</td><td class="hide-mobile">0.00</td></tr>
+<tr><td>2026</td><td class="text">with</td><td class="win">1.00</td><td class="win">1.00</td><td>0.75</td><td class="hide-mobile">1</td><td class="hide-mobile">0.75</td></tr>
+<tr><td>2026</td><td class="text">without</td><td class="lose">0.83</td><td class="lose">0.50</td><td>0.67</td><td class="hide-mobile">3</td><td class="hide-mobile">0.00</td></tr>
+<tr><td>4242</td><td class="text">with</td><td class="win">1.00</td><td class="win">1.00</td><td>0.80</td><td class="hide-mobile">1</td><td class="hide-mobile">0.60</td></tr>
+<tr><td>4242</td><td class="text">without</td><td class="flat">1.00</td><td class="flat">1.00</td><td>0.60</td><td class="hide-mobile">4</td><td class="hide-mobile">0.00</td></tr>
+<tr><td>7777</td><td class="text">with</td><td class="win">1.00</td><td class="win">1.00</td><td>1.00</td><td class="hide-mobile">0</td><td class="hide-mobile">0.80</td></tr>
+<tr><td>7777</td><td class="text">without</td><td class="lose">0.67</td><td class="lose">0.00</td><td>0.71</td><td class="hide-mobile">3</td><td class="hide-mobile">0.00</td></tr>
+</tbody>
+</table>
+</div>
+<div class="aside">
+<p><b>Seed 4242</b> is the honest counter-example: the control matched the skill
+arm exactly on recall, at 0.60 precision against 0.80.</p>
+<p><b>Seeds 1337 and 7777</b> are where the gap lives — the control found neither
+measurement-only defect on either.</p>
+<p><b>Variance is high.</b> Control recall ranges 0.67 to 1.00 across four runs.
+That spread is why n=4 is a smoke test.</p>
+</div>
+</div>
+</section>
+
+<div class="ornament">:::</div>
+
+<section id="instrument">
+<h2>4 · Fixing the instrument <a class="back" href="#">↑</a></h2>
+<p class="state-line">Two scorer bugs. The first inverted the result; the second was found while chasing a number I disliked.</p>
+
+<div class="aside-container">
+<div>
+<p><b>Bug one: consolidation counted as failure.</b> The scorer attributed each
+finding to a single best-matching pair. But the skill requires one root cause to
+be one row listing every affected location — so the skill arm consolidated six
+failing pairs into two rows, and the scorer read that as having missed four
+defects it had just named. The first run therefore read: <i>with</i> 0.33,
+<i>without</i> 0.67. The skill makes reviews worse. Corrected, the same two
+reports read 1.00 and 0.83.</p>
+
+<p><b>Bug two: locator match ≠ subject matter.</b> Every element in the fixture is
+a <span style="font-family:var(--mono);font-size:.9em">pair-NN</span>, so any
+finding citing any element matched a pair and was classified as a contrast
+finding. A dead-link report on <span style="font-family:var(--mono);font-size:.9em">pair-06</span>
+scored as having detected that pair’s contrast defect. This inflated control recall
+from a true 0.79 to an apparent 0.92, and counted the skill arm’s layout and copy
+findings as contrast padding — penalising breadth, rewarding narrowness.</p>
+</div>
+<div class="aside">
+<p><b>What caught bug one.</b> An <i>ambiguous</i> counter that had no purpose
+except to surface findings matching more than one pair. It was not built to catch
+this.</p>
+<p><b>What caught bug two.</b> A control arm scoring 1.00 where the hypothesis
+predicted failure — investigated because it was surprising.</p>
+</div>
+</div>
+
+<div class="flyout">
+<b>Disclosure.</b> The second fix changed a metric definition <i>after</i> results
+were visible, and moved them toward the hypothesis under test. The bug is real and
+independently describable, and is tested in both directions. But it was found
+while investigating a number that disagreed with a prediction, and a fair reading
+is that agreement would have drawn less scrutiny. Anyone weighing these numbers
+should know that. It is recorded in the commit message as well as here.
+</div>
+</section>
+
+<div class="ornament">:::</div>
+
+<section id="limits">
+<h2>5 · What this does not show <a class="back" href="#">↑</a></h2>
+<p class="state-line">One domain, four trials, and the metric that mattered most never fired.</p>
+
+<div class="table-wrapper">
+<table>
+<thead><tr><th>Claim</th><th>Status</th><th class="hide-mobile">Why</th></tr></thead>
+<tbody>
+<tr><td class="text">The skill finds more contrast defects</td><td class="text win">Supported, n=4</td><td class="text hide-mobile">1.00 vs 0.79 recall, 4/4 seeds</td></tr>
+<tr><td class="text">It finds them with less noise</td><td class="text win">Supported, n=4</td><td class="text hide-mobile">0.75 vs 3.25 padding</td></tr>
+<tr><td class="text">It is more honest about coverage</td><td class="text flat">Not measured</td><td class="text hide-mobile">false_clear was 0 for both arms on every seed</td></tr>
+<tr><td class="text">It improves reviews generally</td><td class="text lose">Not shown</td><td class="text hide-mobile">Only contrast was measured — one machine-checkable domain</td></tr>
+<tr><td class="text">The difference is statistically real</td><td class="text lose">Not shown</td><td class="text hide-mobile">n=4 per arm; no significance test is honest at this size</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="aside-container">
+<div>
+<p><b>The honesty metric never fired.</b> <span style="font-family:var(--mono);font-size:.9em">false_clear</span>
+— asserting a domain is <i>Clear</i> while it holds real defects — was the metric
+this harness was built around, and it scored 0 for both arms on all four seeds.
+That is a limitation of the fixture, not a virtue of either arm: a contrast-only
+page invites every reviewer to look at contrast, so nobody had the opportunity to
+falsely declare a domain clean.</p>
+
+<p><b>Scope.</b> Colour contrast is one domain, and the one with a machine-checkable
+answer. Structure, copy, task completion, and de-slop are most of the method and
+none of them are measured here. Reporting this as a grade for the method would fail
+the same honesty guard the skills impose on themselves.</p>
+</div>
+<div class="aside">
+<p><b>Next.</b> A second oracle (axe-core, six vetted rules) is built and tested but
+not yet wired into fixture generation.</p>
+<p><b>Then.</b> A fixture with a domain that cannot be checked from the artifact at
+all — the only way <span style="font-family:var(--mono);font-size:.9em">false_clear</span>
+gets a chance to fire.</p>
+<p><b>And.</b> More trials per seed. Control recall varied 0.67–1.00 across four
+runs; that is noise, not a measurement.</p>
+</div>
+</div>
+</section>
+
+<footer>
+generated 2026-08-09 · humane-agentic-design · evals/contrast · oracle dtokens/contrast.py ·
+8 blind reviews across 4 seeds · scored by evals/contrast/score.py
+</footer>
+
+<script>
+Chart.defaults.font.family = "'EB Garamond', Georgia, serif";
+Chart.defaults.font.size = 13;
+Chart.defaults.color = '#555';
+Chart.defaults.scale.grid.color = '#eee';
+Chart.defaults.scale.grid.drawTicks = false;
+Chart.defaults.plugins.legend.labels.usePointStyle = false;
+Chart.defaults.plugins.legend.labels.boxWidth = 8;
+Chart.defaults.plugins.legend.labels.boxHeight = 8;
+Chart.defaults.plugins.legend.labels.borderRadius = 4;
+
+const WITH = '#c45a28', WITHOUT = 'rgba(42,80,140,0.7)';
+
+// Rates only, one axis. Padding is a count and gets its own chart below —
+// putting them together needed a second y-axis, which draws two incomparable
+// quantities at the same visual height and invites exactly the false
+// equivalence a dual axis always invites.
+new Chart(document.getElementById('chartMain'), {
+  type: 'bar',
+  data: {
+    labels: ['Recall', 'Recall — measurement-only', 'Precision', 'Routing accuracy'],
+    datasets: [
+      { label: 'with humane', data: [1.0, 1.0, 0.804, 0.704], backgroundColor: WITH },
+      { label: 'without',     data: [0.792, 0.375, 0.638, 0.0], backgroundColor: WITHOUT }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    scales: {
+      y: { beginAtZero: true, max: 1.0, title: { display: true, text: 'rate (0–1)' } },
+      x: { grid: { display: false } }
+    },
+    plugins: { legend: { position: 'top', align: 'end' } }
+  }
+});
+
+new Chart(document.getElementById('chartPadding'), {
+  type: 'bar',
+  data: {
+    labels: ['seed 1337', 'seed 2026', 'seed 4242', 'seed 7777'],
+    datasets: [
+      { label: 'with humane', data: [1, 1, 1, 0], backgroundColor: WITH },
+      { label: 'without',     data: [3, 3, 4, 3], backgroundColor: WITHOUT }
+    ]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: true,
+    scales: { x: { beginAtZero: true, title: { display: true, text: 'invented findings (count)' } },
+              y: { grid: { display: false } } },
+    plugins: { legend: { position: 'top', align: 'end' } }
+  }
+});
+
+new Chart(document.getElementById('chartSeeds'), {
+  type: 'bar',
+  data: {
+    labels: ['seed 1337', 'seed 2026', 'seed 4242', 'seed 7777'],
+    datasets: [
+      { label: 'with humane', data: [1.0, 1.0, 1.0, 1.0], backgroundColor: WITH },
+      { label: 'without',     data: [0.0, 0.5, 1.0, 0.0], backgroundColor: WITHOUT }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    scales: { y: { beginAtZero: true, max: 1.0, title: { display: true, text: 'recall on disagreement pairs' } },
+              x: { grid: { display: false } } },
+    plugins: { legend: { position: 'top', align: 'end' } }
+  }
+});
+
+const io = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+}, { threshold: 0.08 });
+document.querySelectorAll('section, .cards, .status-strip').forEach(el => {
+  el.classList.add('reveal'); io.observe(el);
+});
+</script>
+</body>
+</html>

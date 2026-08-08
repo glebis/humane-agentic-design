@@ -109,6 +109,49 @@ tokens, needs the user to confirm a panel first, and produces reactions rather
 than findings. Offer it as a follow-up when the review turns up copy problems;
 never fold its output into a findings table.
 
+### Inline, or fanned out
+
+Run the domains **inline** by default — one context, in the order above. Simple,
+portable, and correct for `quick` mode or a small scope.
+
+Run them **fanned out** when the scope is large enough that inline would fill the
+context before consolidation: a `full` review of a runnable interface, a driven
+walkthrough across two device tiers, or any scope where the five domains' rules
+plus the artifact plus the evidence will not comfortably coexist. Each domain
+runs in its own context and returns **only its findings table** — not its
+reasoning, not the artifact, not its screenshots.
+
+**Why this is an honesty rule, not an efficiency one.** A host that compacts a
+full context does not fail; it summarizes and continues. The walkthrough
+evidence from step 1 can be summarized away while the *impression* of having
+covered task completion survives to the consolidation step — and this skill then
+reports `Clear` on a domain whose evidence it no longer holds. `Clear` is an
+assertion about the artifact. Losing the evidence for one and still asserting it
+is the exact failure the four-result scale in Output exists to prevent. Fanning
+out keeps each domain's evidence inside a context small enough to survive it.
+
+Two constraints on how to fan out:
+
+1. **`walkthrough` runs first, and alone.** It is stateful — it drives a live
+   browser across ordered steps, and its device matrix and screenshot contract
+   belong to `references/driven.md`. It may be one subagent that owns the whole
+   walk; it may never be split per step, and it may not run concurrently with
+   another domain that drives the same interface. The other four have no shared
+   state and fan out together once it returns.
+2. **A silent domain is `Not reviewed`, never `Clear`.** If a domain's run dies,
+   returns nothing, or returns something that is not a findings table, record it
+   as `Not reviewed` and name what happened. Absence of findings from a domain
+   that never reported is not absence of findings.
+
+> **Claude Code extras:** launch the four independent domains as subagents in a
+> single message so they run concurrently, each told to apply its owning skill
+> and return the findings table alone.
+>
+> **On other agents:** fan out if the host has an equivalent; otherwise run
+> inline and narrow the scope per §2 rather than letting a full review outgrow
+> one context. Say which you did — a fanned-out review and an inline one over a
+> narrowed scope are not the same claim.
+
 ## 5. Mark what you did not cover
 
 If an owning skill is unavailable, mark that domain **Not reviewed**, name the
@@ -133,6 +176,22 @@ Every finding cites `path/to/file:line`, a screenshot, or the exact screen and
 element. Do not report a code-level finding from appearance alone, or a visual
 finding from source alone when runtime decides the result. Where the corpus
 supports the ranking, cite the evidence id (`[Q2]`) or the outcome.
+
+### Carry the locator, not the payload
+
+A locator is durable; a payload is not. `src/Nav.tsx:42` and
+`walks/2026-08-08-signup/step-03-mobile.png` survive summarizing, hand across a
+subagent boundary intact, and can be re-read on demand. The file's contents and
+the image itself cannot — they are the first thing a compacting host drops, and
+once dropped they cannot be recovered from the summary.
+
+So: read what you need to judge a finding, write down the locator, and let the
+payload go. Never hold a screenshot in context to support a claim you will make
+several domains later — cite its path instead and re-open it if consolidation
+turns out to need it. When a domain runs fanned out, its findings table crosses
+back as locators for exactly this reason, and a domain that returns prose
+instead of locators has produced something this skill cannot verify or
+consolidate.
 
 ## 7. Rank by user impact
 
@@ -178,7 +237,10 @@ re-run the relevant verification afterwards.
 
 ### Scope and coverage
 
-Mode, exact scope, stack and conventions, and any boundary. Then:
+Mode, exact scope, stack and conventions, any boundary, and whether the domains
+ran **inline** or **fanned out** — the reader is owed the difference, because a
+fanned-out review consolidated locators while an inline one held the evidence
+itself. Then:
 
 | Domain | Evidence inspected | Result |
 | --- | --- | --- |

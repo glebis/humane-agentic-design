@@ -28,6 +28,29 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.13.0 — 2026-08-08
+
+### Run a full review without the evidence quietly going missing
+
+1. `humane:review` now chooses how to run: **inline** by default, or **fanned
+   out** when a `full` review of a runnable interface would fill the context
+   before it reaches consolidation.
+2. Fanned out, each domain runs in its own context and returns only its findings
+   table — not its reasoning, not the artifact, not its screenshots.
+   `humane:walkthrough` goes first and alone, because it drives a live browser
+   across ordered steps and cannot be split per step.
+3. A domain that dies, returns nothing, or returns something that is not a
+   findings table is recorded **Not reviewed**, never `Clear`.
+4. Findings carry the locator, not the payload: `src/Nav.tsx:42` and a
+   screenshot path survive summarizing and cross a subagent boundary intact —
+   the file contents and the image itself do not.
+5. Scope and coverage states which way the review ran, because a fanned-out
+   review consolidated locators while an inline one held the evidence itself.
+
+This is an honesty rule, not an efficiency one. A host that compacts a full
+context does not fail — it summarizes and continues, and `Clear` can outlive the
+evidence that justified it.
+
 ## 0.12.0 — 2026-08-08
 
 ### Find out what runs next without guessing the cycle

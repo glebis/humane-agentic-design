@@ -16,3 +16,4 @@ assets/style-*.json
 assets/cycle-preview.png
 design.illustrate-recipe.json
 evals/contrast/runs/
+evals/node_modules/

@@ -5,8 +5,31 @@ it? This directory answers that for the parts of the method a machine can check,
 and says plainly which parts it cannot.
 
 **Dev-only.** Nothing here is a runtime dependency of any shipped skill, and
-nothing under `humane/` may import from `evals/`. Python standard library only,
-no network.
+nothing under `humane/` may import from `evals/`.
+
+## Dependencies
+
+| What | Needed for | Install |
+| --- | --- | --- |
+| Python 3, standard library only | the contrast pathway, fixtures, scoring | already present |
+| Node 18+ | the accessibility pathway | already present, or `brew install node` |
+| `axe-core` (pinned exactly) | oracle #2 | `npm install` in `evals/` |
+| `jsdom` | the DOM axe runs against | `npm install` in `evals/` |
+
+The Python side has **no dependencies at all** and never gains any — the repo's
+stdlib-only rule governs shipped skill scripts, and while `evals/` is not one,
+the fixture generator and scorer stay runnable on a bare machine on purpose.
+
+The Node dependencies are for the accessibility oracle alone. Without them the
+harness still runs: `run_axe.js` reports `available: false`, the manifest records
+the pathway as unavailable, and that domain is scored **Not reviewed** rather
+than quietly vanishing — the same distinction the skills themselves draw between
+`Clear` and an admitted gap. A run on a machine without Node must not look like
+a smaller but complete result.
+
+`axe-core` is pinned to an exact version, not a range. The enabled rule set *is*
+the oracle, so a minor upgrade that adds or changes a rule would silently move
+ground truth underneath the fixtures.
 
 ## The trap this design exists to avoid
 
@@ -16,10 +39,35 @@ severity scale, `Not reviewed`, evidence locators) and scores the skill-run
 higher because it matches the rubric it was handed. That measures conformance to
 the skill, not improvement over its absence.
 
-So the ground truth here is never a judgement. It is a number computed by
-`humane/skills/design-tokens/scripts/dtokens/contrast.py` — the same oracle the
-`design-tokens` skill uses in production. A defect is planted only if that code
-says the pair fails. Nothing in this harness asserts a defect by hand.
+So the ground truth here is never a judgement. It is computed by a program, and
+a defect is planted only if that program says so. Nothing here asserts a defect
+by hand.
+
+**Oracle #1 — colour.** `humane/skills/design-tokens/scripts/dtokens/contrast.py`,
+the same code the `design-tokens` skill runs in production, reached through the
+single import point in `contrast/oracle.py`.
+
+**Oracle #2 — accessibility.** `axe-core` under jsdom, via `axe/run_axe.js`. It
+runs a vetted **allow-list** of rules (`axe/owners.json`), never everything axe
+ships: jsdom computes no layout, so rules needing geometry or a resolved cascade
+cannot be judged soundly, and a deny-list would rot the first time an upgrade
+added one.
+
+Two rules of that allow-list are worth knowing:
+
+- **`color-contrast` is excluded.** Two oracles ruling on one domain would
+  produce contradictory truth — axe is WCAG-only and would pass exactly the
+  WCAG-passes/APCA-fails pairs this harness plants on purpose. Under jsdom axe
+  cannot decide it anyway; it returns `incomplete`, not a verdict.
+- **The accessible-name rules are excluded** (`image-alt`, `label`,
+  `button-name`, `link-name`). `CLAUDE.md` puts accessibility engineering depth
+  *out of humane's scope*, deferring to `interfaces`. Planting a defect the
+  method disclaims would test nothing about the method — and would penalise a
+  review for correctly routing it elsewhere.
+
+Each rule carries a set of **accepted owners**, not one name, because some
+defects are defensibly routed to more than one skill. `routing_accuracy` must
+not mark a defensible choice wrong.
 
 ## What is measured
 

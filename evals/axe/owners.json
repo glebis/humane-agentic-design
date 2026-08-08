@@ -1,0 +1,54 @@
+{
+  "_comment": [
+    "The axe rules this harness is allowed to plant, and which humane skill may",
+    "own each finding. An ALLOW-LIST, never a deny-list: the enabled rule set is",
+    "the oracle, so an axe-core upgrade that adds a layout-dependent rule must",
+    "not silently join it. axe-core is pinned exactly in package.json for the",
+    "same reason.",
+    "",
+    "A rule is here only if CLAUDE.md's ownership table gives it an owner.",
+    "'Accessibility engineering depth' is explicitly OUT of humane's scope and",
+    "deferred to interfaces/better-accessibility, so the accessible-name rules",
+    "(image-alt, label, button-name, link-name) are excluded: planting a defect",
+    "the method disclaims would test nothing about the method, and would punish a",
+    "review for correctly routing it elsewhere.",
+    "",
+    "accepted_owners is a SET, not one name. Some defects are defensibly routed",
+    "to more than one skill, and routing_accuracy must not mark a defensible",
+    "choice wrong."
+  ],
+  "rules": {
+    "heading-order": {
+      "accepted_owners": ["layout-rules"],
+      "why": "Heading hierarchy is structure. layout-rules owns structural and interaction defect classes."
+    },
+    "region": {
+      "accepted_owners": ["layout-rules"],
+      "why": "Content outside any landmark is a structural omission.",
+      "one_root_cause": true
+    },
+    "landmark-one-main": {
+      "accepted_owners": ["layout-rules"],
+      "why": "A missing main landmark is a structural omission."
+    },
+    "page-has-heading-one": {
+      "accepted_owners": ["layout-rules"],
+      "why": "Document hierarchy has no top. Structure, not wording."
+    },
+    "empty-heading": {
+      "accepted_owners": ["ux-writing", "layout-rules"],
+      "why": "A heading with no text is both a missing string (ux-writing owns what a string says) and a hierarchy break. Either routing is defensible."
+    },
+    "html-has-lang": {
+      "accepted_owners": ["layout-rules"],
+      "why": "layout-rules owns the i18n/theming rule group."
+    }
+  },
+  "excluded": {
+    "color-contrast": "Owned by oracle #1 (dtokens/contrast.py), which measures APCA and WCAG under standard=both. axe is WCAG-only and would contradict the deliberately planted WCAG-pass/APCA-fail pairs. Under jsdom axe cannot decide it at all — it returns `incomplete`, not a verdict.",
+    "image-alt": "Accessibility engineering depth — out of humane's scope per CLAUDE.md.",
+    "label": "Accessibility engineering depth — out of humane's scope per CLAUDE.md.",
+    "button-name": "Accessibility engineering depth — out of humane's scope per CLAUDE.md.",
+    "link-name": "Accessibility engineering depth — out of humane's scope per CLAUDE.md."
+  }
+}

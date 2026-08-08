@@ -1,0 +1,20 @@
+{
+  "name": "evals",
+  "version": "1.0.0",
+  "description": "Dev-only eval harness dependencies: oracle #2 (axe-core under jsdom). Nothing under humane/ imports these.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axe-core": "4.13.0",
+    "jsdom": "30.0.1"
+  },
+  "private": true
+}

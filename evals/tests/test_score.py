@@ -288,12 +288,20 @@ class TestPaddingAndRouting(unittest.TestCase):
     def test_routing_accuracy_is_not_one_by_construction(self):
         # If the contrast population were defined by the Domain cell, this
         # report would score 1.0 and the metric would be meaningless.
+        # The finding must be unmistakably about colour — the population test is
+        # evidence of subject matter, not a locator match, so a row saying only
+        # "too light" against placeholder values is correctly not counted.
         report = coverage_table("1 finding") + findings_table([
-            ["1", "HIGH", "`layout-rules`", "`pair-01`", "x", "y", "too light"],
+            ["1", "HIGH", "`layout-rules`", "`pair-01`",
+             "#767676 on #ffffff", "#595959 on #ffffff", "contrast below the bar"],
         ])
         result = run(MANIFEST, report)
         self.assertEqual(result["report"]["contrast_findings"], 1)
-        self.assertEqual(result["metrics"]["routing_accuracy"], 0.0)
+        self.assertEqual(
+            result["metrics"]["routing_accuracy"], 0.0,
+            "contrast is owned by `design-tokens`; routing it to `layout-rules` "
+            "is the double-review bug the ownership table exists to prevent",
+        )
 
 
 class TestTolerantIngestion(unittest.TestCase):
@@ -387,3 +395,36 @@ class TestCLI(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestContrastPopulation(unittest.TestCase):
+    """Every fixture element is a `pair-NN`, so a locator match cannot classify.
+
+    An earlier version treated any locator match as proof a finding was about
+    contrast. That counted a multi-domain review's layout, copy and usability
+    findings as contrast padding — penalising breadth and rewarding a reviewer
+    that only ever discussed colour.
+    """
+
+    def test_a_non_colour_finding_on_a_pair_element_is_not_contrast(self):
+        report = coverage_table("1 finding") + findings_table([
+            ["1", "MEDIUM", "`nielsen-heuristics`", "`pair-01`",
+             "anchor href is `#`", "point it at a destination",
+             "the link goes nowhere"],
+        ])
+        result = run(MANIFEST, report)
+        self.assertEqual(
+            result["report"]["contrast_findings"], 0,
+            "a dead-link finding that merely cites a pair element is not a "
+            "contrast finding; counting it inflates padding and punishes breadth",
+        )
+        self.assertEqual(result["metrics"]["padding"], 0)
+
+    def test_a_colour_finding_on_a_pair_element_still_counts(self):
+        report = coverage_table("1 finding") + findings_table([
+            ["1", "HIGH", "`design-tokens`", "`pair-03`",
+             "#faf4ff on #eef1f4", "darken the foreground",
+             "contrast is far below the bar"],
+        ])
+        result = run(MANIFEST, report)
+        self.assertEqual(result["report"]["contrast_findings"], 1)

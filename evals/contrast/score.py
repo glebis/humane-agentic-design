@@ -282,20 +282,30 @@ CONTRAST_KEYWORDS = re.compile(
 def is_contrast_finding(finding, matched):
     """Whether a finding is about contrast at all.
 
-    A matched pair settles it. Otherwise the domain and prose cells are scanned
-    for contrast vocabulary — deliberately NOT the Domain cell alone, because
-    `routing_accuracy` measures whether the Domain cell names the right owner.
-    Defining the population by that same cell would make the metric read 1.0 by
-    construction and hide the exact double-review bug the ownership table in
-    CLAUDE.md exists to prevent.
+    A locator match is NOT sufficient, though an earlier version treated it as
+    conclusive. Every element in the fixture is a `pair-NN`, so a finding about
+    heading order or a dead link matches a pair and was being counted as a
+    contrast finding. That penalised precisely the reviews that cover more than
+    one domain: an arm reporting layout, copy and usability findings against
+    those same elements had every one of them scored as contrast padding, while
+    an arm that only ever discussed colour was barely touched. The harness was
+    rewarding narrowness.
+
+    So the test is evidence that the finding is *about* colour: contrast
+    vocabulary anywhere in its cells, or the pair's colours quoted in it.
+
+    The Domain cell alone is deliberately not the test — `routing_accuracy`
+    measures whether that cell names the right owner, and defining the
+    population by it would make the metric read 1.0 by construction and hide the
+    double-review bug the ownership table in CLAUDE.md exists to prevent.
     """
-    if matched is not None:
-        return True
     blob = " ".join(
         finding.get(k, "") or ""
         for k in ("domain", "why", "location", "before", "after")
     )
-    return bool(CONTRAST_KEYWORDS.search(blob))
+    if CONTRAST_KEYWORDS.search(blob):
+        return True
+    return matched is not None and bool(_hexes(blob))
 
 
 OWNER = re.compile(r"design[-_ ]?tokens", re.IGNORECASE)

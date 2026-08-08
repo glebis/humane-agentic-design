@@ -1,6 +1,18 @@
 ---
 name: jtbd
 description: Terminal-first JTBD engine for founders and product people. Interview fast, kill jargon, capture real switching forces (Push/Pull/Habit/Anxiety), score opportunities, and export structured artifacts (JSON + one-pager + messaging angles + GTM brief). Use when the user says "help me figure out what to build", "analyze these customer reviews", "what are people actually hiring this for", "I need messaging for my product", "turn this interview into insights", "what should I prioritize", or any variation of articulating what a project does, why it matters, who it's for, or converting interview/review/transcript signal into a decision-grade brief. Triggers on "describe my project", "JTBD", "jobs to be done", "switching forces", or "mine these reviews".
+handoffs:
+  - to: ux-writing
+    when: the corpus is captured and product strings need grounding in it
+  - to: before-after
+    when: the job and its forces are captured and the felt transformation needs stating
+  - to: walkthrough
+    when: a job from the corpus needs attempting on something operable
+  - to: type-specimen
+    when: the specimen must be set in the words of the people who read this interface
+accepts:
+  - from: before-after
+  - from: setup
 ---
 
 # JTBD Project Describer

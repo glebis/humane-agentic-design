@@ -26,6 +26,7 @@ backticks and name only the handoff — never restate or override it.
 
 | Skill | Owns |
 | --- | --- |
+| `using-humane` | Routing only: which skill owns a task, and what the declared graph says comes next. Owns the graph *keys* (`handoffs`/`accepts`/`orchestrates`) and their reader, `scripts/graph.py`. Owns no method rules, and no edge — each skill declares its own. |
 | `setup` | Environment and configuration: the six settings, their resolution order, dependency checks, and the install commands for each gap. Owns no method rules. |
 | `jtbd` | The corpus: jobs, switch forces, ODI outcomes, evidence ledger, granularity and jargon gates. Every downstream claim cites it. |
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
@@ -81,6 +82,11 @@ Cross-boundary cases, resolved:
   `design-tokens`.
 - `review` never restates a rule. When it needs one, it names the owner. A rule
   written into `review` is a bug.
+- `using-humane` names the next skill; it never performs its work. It also never
+  holds the edge list — routes live in the frontmatter of the skills they
+  connect, so a handoff is edited where the prose that describes it lives. A
+  route written into `using-humane` instead of into a skill's frontmatter is a
+  bug, and `tests/test_skill_graph.py` will not catch it.
 
 ## What we deliberately do not cover
 

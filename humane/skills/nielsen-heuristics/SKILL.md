@@ -1,6 +1,9 @@
 ---
 name: nielsen-heuristics
 description: Run a formal heuristic evaluation of a design artifact against Jakob Nielsen's 10 usability heuristics, producing an evidence-backed, severity-scored report with honesty guards. Accepts a screenshot, live URL, codebase/HTML, interface description, or JTBD/spec doc, and adapts its rigor to what is actually observable. Renders as markdown or a Tufte-style HTML report, and can export findings as Linear or Beads tasks after confirmation. Triggers on heuristic evaluation, usability review, Nielsen heuristics check, UX heuristic audit, usability inspection.
+handoffs:
+  - to: walkthrough
+    when: the interface passes inspection but task completion is still unproven
 ---
 
 # Nielsen Heuristics Validator

@@ -1,6 +1,13 @@
 ---
 name: ux-writing
 description: Write and review the words inside a product — button labels, error messages, empty states, confirmations, settings labels, placeholders, notifications — and the documentation prose around it, including READMEs, docs pages and release notes. Grounds the wording in the JTBD corpus (the anxiety force tells you what a confirmation must defuse) and hands the result to respondent-panel to find out whether strangers read it the way you meant. Use when writing or reviewing any user-facing string. Triggers on UX writing, microcopy, interface copy, button labels, error messages, empty states, placeholder text, settings labels, confirmation dialog, notification copy, README wording, rewrite these docs, release notes copy, "what should this button say", "rewrite this error", "перепиши текст кнопки".
+handoffs:
+  - to: respondent-panel
+    when: rewritten copy needs reading by strangers, not by its author
+accepts:
+  - from: jtbd
+  - from: layout-rules
+  - from: respondent-panel
 ---
 
 # UX Writing

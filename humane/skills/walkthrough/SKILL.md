@@ -1,6 +1,14 @@
 ---
 name: walkthrough
 description: Task-based evaluation of a real interface — take one job from the JTBD corpus, attempt it step by step as the person who has it, and record where the attempt breaks. Answers "can someone actually complete this?", which inspection and reaction methods do not. Runs a cognitive walkthrough (four questions per step) against a live URL, a prototype, screenshots, or the code, and reports task success against the outcome it was derived from. Use when you have a task and something operable to attempt it on. Triggers on walkthrough, cognitive walkthrough, task analysis, "can a user actually do this", "test this task", "where do people get stuck", "walk through the signup flow", "test this on mobile", "drive it in the browser", "пройди сценарий".
+handoffs:
+  - to: layout-rules
+    when: a mobile-tier finding is a tap target or horizontal scroll
+  - to: design-tokens
+    when: a walkthrough finding is a contrast failure
+accepts:
+  - from: jtbd
+  - from: nielsen-heuristics
 ---
 
 # Walkthrough

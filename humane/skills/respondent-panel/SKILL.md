@@ -1,6 +1,12 @@
 ---
 name: respondent-panel
 description: Run a panel of independent synthetic respondents against copy, a slogan, brand values, a landing page, or any user-facing text — each in an isolated context, each a different specific person — then read the panel for convergence and divergence. Use when the user asks "how does this land", "what would people think of this", "test this tagline", "get reactions to this copy", "run a panel", or wants gut-level audience reaction rather than expert critique. Complements persona-review, which is expert stakeholder critique of a document. Triggers on respondent panel, how does this land, what would people think, test this tagline, reactions to this copy, gut reaction, audience reaction.
+handoffs:
+  - to: ux-writing
+    when: the panel shows copy landing wrong and the rewrite is owed
+accepts:
+  - from: type-specimen
+  - from: ux-writing
 ---
 
 # Respondent Panel

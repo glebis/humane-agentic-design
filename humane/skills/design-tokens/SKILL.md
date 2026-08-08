@@ -1,6 +1,14 @@
 ---
 name: design-tokens
 description: This skill should be used to set up, validate, resolve, and export design tokens following the DTCG (Design Tokens Community Group) Format Module 2025.10 standard, and to measure and remediate colour contrast — every text/background pair on both APCA Lc and the WCAG ratio, with a fix that moves OKLCH lightness only. Use when the user wants to define a design token set globally or per project, compile tokens to CSS variables, layer a project's tokens over a global brand base, check whether a palette is readable, or produce an on-brand context file for other generation skills. Triggers on "set up design tokens", "create a token set", "compile tokens to CSS", "design system variables", "brand tokens", "check contrast", "WCAG", "APCA", "is this text readable", "contrast audit", "проверь контраст".
+handoffs:
+  - to: brand-illustrate
+    when: a token set exists and assets must be produced under it
+accepts:
+  - from: brandkit
+  - from: layout-rules
+  - from: type-specimen
+  - from: walkthrough
 ---
 
 # Design Tokens

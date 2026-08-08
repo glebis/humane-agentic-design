@@ -28,6 +28,30 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.12.0 — 2026-08-08
+
+### Find out what runs next without guessing the cycle
+
+1. Run `humane:using-humane` when it is not obvious which skill owns a design
+   task. It matches the intent to an entry point, and says plainly when a task
+   has no humane owner instead of stretching a design skill over it.
+2. Finished a skill and unsure what follows? Ask the graph rather than
+   recalling it: `python3 scripts/graph.py --from layout-rules` prints what
+   that skill hands to and the condition that opens each route. `--to <skill>`
+   answers the reverse, and `--mermaid` draws the whole cycle.
+3. The routes are declared in each skill's own frontmatter — `handoffs:` with a
+   `when:`, `accepts:` on the receiving side, and `orchestrates:` for
+   `humane:review`, which calls its domain skills rather than handing to them.
+4. A handoff is a condition, not an instruction: a `humane:layout-rules` pass
+   that found no contrast issue does not hand to `humane:design-tokens`. The
+   route names what could come next; you decide whether it runs.
+
+### Fixed
+
+- A skill could reference a handoff the receiving skill had never heard of, and
+  nothing noticed; every route now has to be acknowledged on both sides or the
+  test suite fails, naming the edge and the fix.
+
 ## 0.11.0 — 2026-08-08
 
 ### Walk a task on a real device, not a resized window

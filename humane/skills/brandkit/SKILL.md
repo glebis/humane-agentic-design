@@ -1,6 +1,9 @@
 ---
 name: brandkit
 description: This skill should be used when EXPLORING a brand identity that does not exist yet. Generates premium brand-guidelines boards for competing directions, and hands the WINNING direction off into the design-tokens brand block (confirm-then-write). Upstream of tokens; for producing assets under an EXISTING token contract use brand-illustrate instead. Carries reference direction for minimalist, cinematic, editorial, dark-tech, luxury, cultural, security, gaming, developer-tool, and consumer-app brand systems. Triggers on brand kit, brand board, brand directions, identity candidates, identity direction, logo system, brand guidelines deck, visual identity exploration, визуальные направления бренда.
+handoffs:
+  - to: design-tokens
+    when: a direction wins and its brand block must become a token set
 ---
 
 # Brandkit

@@ -1,6 +1,9 @@
 ---
 name: setup
 description: Get humane working on this machine — check what the cycle needs, configure the corpus root, token base, image backend, task-export target, language and browser tool, and install the companions and generators that are missing. Diagnoses read-only first, then installs only what the user confirms. Use on a fresh machine, when a skill complains something is missing, or to see how humane is currently configured. Triggers on humane setup, set up humane, configure humane, humane doctor, "what do I need to install", "why can't it find my tokens", "check my humane install", "настрой humane".
+handoffs:
+  - to: jtbd
+    when: the corpus root is configured but no corpus exists yet
 ---
 
 # Setup

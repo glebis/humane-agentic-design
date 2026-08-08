@@ -1,6 +1,13 @@
 ---
 name: type-specimen
 description: Build a browsable type specimen that sets candidate typefaces in the product's own words, so a font is chosen against real copy rather than "Hamburgefonstiv". Loads families from Google Fonts, shows a weight ladder, prose, a data table, list rows, small caps, glyph coverage and variable axes per family, measures WCAG and APCA for the chosen background/text pair, and lets any specimen text be edited in place — one edit, every family. Use when picking a typeface, comparing shortlisted fonts, checking a font's Cyrillic or symbol coverage, or proving a font works for a specific interface before it enters the token set. Triggers on choose a font, pick a typeface, compare fonts, type specimen, font shortlist, does this font have Cyrillic, font pairing, which font for this dashboard, шрифтовой стенд, выбрать шрифт.
+handoffs:
+  - to: design-tokens
+    when: a family is chosen and must enter the token set as a token
+  - to: respondent-panel
+    when: the built specimen should be reacted to rather than argued about
+accepts:
+  - from: jtbd
 ---
 
 # type-specimen

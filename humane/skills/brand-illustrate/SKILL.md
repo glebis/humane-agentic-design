@@ -5,6 +5,8 @@ description: Turn design tokens into a coherent, on-brand illustration set throu
 
 # brand-illustrate
 
+**Announce at start:** "I'm using the humane:brand-illustrate skill to generate an on-brand illustration set from existing tokens."
+
 Ring-2 humane skill. It reads the on-brand contract a `design-tokens` set already
 carries (palette with roles, fonts, shape, and the `$extensions` brand block) and
 walks the user through a short questionnaire — JTBD-style, one step at a time — to

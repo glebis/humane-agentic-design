@@ -5,6 +5,8 @@ description: Build a browsable type specimen that sets candidate typefaces in th
 
 # type-specimen
 
+**Announce at start:** "I'm using the humane:type-specimen skill to pick a typeface against the product's own copy."
+
 Choosing a typeface from a foundry's own specimen tells you the font can be
 made to look good. It does not tell you whether *your* numbers align in *your*
 table at *your* size. This skill builds a single self-contained HTML page that

@@ -5,6 +5,8 @@ description: User-invoked review that coordinates the humane review skills — l
 
 # Review the whole thing, once
 
+**Announce at start:** "I'm using the humane:review skill to run the review cycle and consolidate one verdict."
+
 Five separate audits stapled together is not a review — it is five reports the
 reader has to reconcile. This skill runs the domains, lets each owning skill
 apply its own rules, and consolidates the evidence into one ranked verdict.
@@ -55,6 +57,13 @@ and the workspace. State the resolved scope in the output. Default to `full`.
 | --- | --- | --- |
 | `quick` | The primary path and highest-traffic states; report `HIGH` and `MEDIUM` only | 5 |
 | `full` | The whole requested scope across every available domain, including empty, loading, error, and narrow-width states where they exist | 15 |
+
+In `full` mode on a runnable interface, the **mobile device tier is part of the
+scope**: the primary flow is driven at the mobile tier per `walkthrough`'s
+`references/driven.md` (which owns the tool ladder, device matrix, and
+screenshot contract). If no browser tool rung is available, the mobile tier is
+reported **Not reviewed** in Scope and Coverage — never silently narrowed to
+desktop.
 
 If the scope is too large to inspect credibly, narrow it to the highest-traffic
 complete flow and **state the boundary**. Never imply that uninspected surfaces
@@ -143,9 +152,10 @@ Never pad to reach the cap. A short review, or none, is a valid result.
 ## 9. Verify, and say what you could not
 
 Run the safe checks the project offers. Inspect the rendered interface when
-runtime or visual judgment decides the answer. Run `tokens contrast` per theme
-rather than eyeballing color. Report the exact command or interaction and the
-observed result.
+runtime or visual judgment decides the answer — driving and screenshots follow
+`walkthrough`'s `references/driven.md`, and the screenshot filenames are the
+evidence locators. Run `tokens contrast` per theme rather than eyeballing
+color. Report the exact command or interaction and the observed result.
 
 If a check could not be run, label it **Not verified** and state what remains.
 **Never convert a verification gap into a finding.**

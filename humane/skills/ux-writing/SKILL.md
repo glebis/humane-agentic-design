@@ -5,6 +5,8 @@ description: Write and review the words inside a product — button labels, erro
 
 # UX Writing
 
+**Announce at start:** "I'm using the humane:ux-writing skill to write and review the words inside this product."
+
 The words are part of the interface, not a layer applied to it. A control that
 names its exact action needs no tooltip; an error that says what to do next
 needs no support ticket. Clear beats clever, consistent beats varied, and the

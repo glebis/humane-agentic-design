@@ -5,6 +5,8 @@ description: Generate emotional Before/After transformation grids for products, 
 
 # Before/After Transformation Grid
 
+**Announce at start:** "I'm using the humane:before-after skill to capture the felt transformation as a before/after grid."
+
 Generate emotionally precise Before/After grids that capture the felt transformation a product, lecture, or service creates. Not feature lists — lived experience shifts.
 
 ## When to invoke

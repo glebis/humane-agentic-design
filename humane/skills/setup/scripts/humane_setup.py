@@ -48,6 +48,8 @@ SETTINGS = {
                       "where nielsen-heuristics files findings (linear | beads | none)"),
     "language":      ("HUMANE_LANGUAGE",     "en",
                       "language for skill output; captured evidence is never translated"),
+    "browser_tool":  ("HUMANE_BROWSER_TOOL", "auto",
+                      "what drives a live interface in walkthrough driven mode (auto | agent-browser | playwright-mcp | host | user)"),
 }
 
 
@@ -273,6 +275,22 @@ def check_task_export(cfg):
                     f"install the {target} CLI, or set task_export to none")
 
 
+def check_browser_tool(cfg):
+    """Read-only: detects the `agent-browser` binary on PATH. Never executes it
+    and never makes a network call — a driven walkthrough is not this doctor's
+    job, only reporting whether the top rung of the ladder is reachable.
+    """
+    wanted = str(cfg["browser_tool"]["value"] or "auto").strip()
+    if wanted and wanted != "auto" and wanted != "agent-browser":
+        return _ok("browser tool", f"configured: {wanted} (not verifiable from here)")
+    path = shutil.which("agent-browser")
+    if path:
+        return _ok("browser tool", path)
+    return _missing("browser tool", "agent-browser not found on PATH — "
+                    "driven walkthroughs and the mobile tier degrade",
+                    "npm i -g agent-browser")
+
+
 def check_companions():
     """Plugins humane defers to. Absent is fine and reported honestly — the
     review skills mark those domains Not reviewed rather than improvising."""
@@ -456,7 +474,8 @@ def doctor(project_dir=None):
     checks = [check_python(), check_corpus(cfg), check_tokens(cfg),
               check_project_tokens(project_dir),
               check_image_backend(cfg, project_dir),
-              check_task_export(cfg)]
+              check_task_export(cfg),
+              check_browser_tool(cfg)]
     checks.extend(check_companions())
     checks.extend(check_humane_copies(project_dir))
     return {"config": cfg, "checks": checks,

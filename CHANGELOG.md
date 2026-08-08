@@ -28,6 +28,42 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.11.0 — 2026-08-08
+
+### Walk a task on a real device, not a resized window
+
+1. Run `humane:walkthrough` against a live URL. Driven mode now follows a
+   single written procedure — `walkthrough/references/driven.md` — instead of
+   improvising with whatever browser tool is around.
+2. The tool ladder resolves automatically: the `agent-browser` CLI first
+   (portable, headless, real device emulation), then Playwright MCP, then the
+   host's browser tools, then you drive and describe. `humane:setup`'s doctor
+   detects the first rung and prints `npm i -g agent-browser` when it is
+   missing; pin a rung with the new `browser_tool` setting.
+3. The walk runs a device matrix: `set device "iPhone 14"` for the mobile
+   tier (real UA, DPR, and touch — so tap-target and hover-only breaks are
+   observed, not guessed), 1440×900 for desktop, iPad only when the product
+   targets tablets. Every finding names the tier it was seen on.
+4. One screenshot per step per tier lands in
+   `<corpus_root>/<slug>/walks/<date>-<task>/step-NN-<tier>.png`; the filename
+   is the evidence locator, and `agent-browser errors` is checked after each
+   step.
+5. The mode gate keeps the claim honest: a "Driven" walk without a complete
+   screenshot trail is downgraded to what the evidence supports, with the
+   undocumented steps listed as **Not verified**.
+
+`humane:review` full mode now includes the mobile tier for any runnable
+interface — or reports it **Not reviewed**, never silently narrowed to
+desktop. `humane:nielsen-heuristics` live-URL evaluations drive by the same
+file, so there is exactly one driving procedure in the cycle.
+
+### Every skill announces itself
+
+1. Each humane skill now opens with an announce line — "I'm using the
+   humane:<skill> skill to …" — matching the convention Superpowers
+   established, so a session mixing both plugins narrates which method owns
+   the current step.
+
 ## 0.10.0 — 2026-08-05
 
 ### Choose a typeface against your own copy, not "Hamburgefonstiv"

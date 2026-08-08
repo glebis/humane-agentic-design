@@ -26,7 +26,7 @@ backticks and name only the handoff — never restate or override it.
 
 | Skill | Owns |
 | --- | --- |
-| `setup` | Environment and configuration: the five settings, their resolution order, dependency checks, and the install commands for each gap. Owns no method rules. |
+| `setup` | Environment and configuration: the six settings, their resolution order, dependency checks, and the install commands for each gap. Owns no method rules. |
 | `jtbd` | The corpus: jobs, switch forces, ODI outcomes, evidence ledger, granularity and jargon gates. Every downstream claim cites it. |
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
 | `respondent-panel` | Gut reactions from strangers to a **user-facing artifact**, in isolated contexts. Never rewrites. |
@@ -35,7 +35,7 @@ backticks and name only the handoff — never restate or override it.
 | `layout-rules` | Structural and interaction defect classes for tool/dashboard UIs, and the de-slop avoid-list |
 | `ux-writing` | The source wording of every user-facing string, and what each string must accomplish — including documentation prose (README, docs, release notes) |
 | `nielsen-heuristics` | Formal usability inspection against the 10 heuristics, with severity and evidence locators |
-| `walkthrough` | Task completion — whether a specific person with a specific job can get through a specific interface |
+| `walkthrough` | Task completion — whether a specific person with a specific job can get through a specific interface. Also owns the **driven-mode procedure** (`references/driven.md`): browser tool ladder, device matrix, screenshot evidence contract, mode gate |
 | `review` | Orchestration only: scope, mode, domain order, consolidation, coverage honesty, and the single final verdict. Owns no domain rules. |
 | `before-after` | The felt transformation claim, and the proof that a change worked |
 | `brandkit` | Identity **exploration** — competing directions for a brand that does not exist yet |
@@ -73,6 +73,12 @@ Cross-boundary cases, resolved:
   attempts a task on it. An interface can pass every heuristic and still be
   impossible to get through, and vice versa — run both, report each finding once
   under the skill that owns it.
+- `walkthrough` owns *how* a live interface is driven — tool ladder, device
+  tiers, screenshots (`references/driven.md`). `review` and
+  `nielsen-heuristics` cite that file; a second driving procedure written
+  anywhere else is a bug. What the mobile tier *finds* still routes to its
+  owner: tap targets and horizontal scroll to `layout-rules`, contrast to
+  `design-tokens`.
 - `review` never restates a rule. When it needs one, it names the owner. A rule
   written into `review` is a bug.
 
@@ -88,6 +94,10 @@ memory or claims holistic coverage it did not have.
 
 ## Authoring conventions
 
+- **Every skill announces itself.** One line after the H1 —
+  `**Announce at start:** "I'm using the humane:<skill> skill to <purpose>."` —
+  so the cycle narrates itself, matching the convention Superpowers established
+  in the ecosystem.
 - **Frontmatter `description` is the discovery surface.** One sentence on what
   the skill does, then "Use when…", then a `Triggers on …` keyword list. Update
   the triggers whenever scope changes.

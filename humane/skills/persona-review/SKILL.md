@@ -5,6 +5,8 @@ description: Review a document from multiple stakeholder perspectives (personas)
 
 # Persona Review
 
+**Announce at start:** "I'm using the humane:persona-review skill to stress-test this document from stakeholder perspectives."
+
 ## Overview
 
 Takes a document and reviews it from N configurable personas. Each persona reads the document independently, provides structured feedback, then optionally the document is updated to address the feedback.

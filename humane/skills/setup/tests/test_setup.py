@@ -71,6 +71,12 @@ class ConfigResolutionTests(unittest.TestCase):
             cfg = hs.resolve_config(self.d)
         self.assertEqual(cfg["corpus_root"]["source"], "default")
 
+    def test_browser_tool_env_beats_default(self):
+        with unittest.mock.patch.dict(hs.os.environ, {"HUMANE_BROWSER_TOOL": "host"}):
+            cfg = hs.resolve_config(self.d)
+        self.assertEqual(cfg["browser_tool"]["value"], "host")
+        self.assertEqual(cfg["browser_tool"]["source"], "$HUMANE_BROWSER_TOOL")
+
     def test_non_object_config_is_ignored(self):
         self.global_cfg.write_text("[1, 2, 3]")
         with self._clear_env():
@@ -98,6 +104,10 @@ class ConfigWriteTests(unittest.TestCase):
         cfg = hs.resolve_config(self.d)
         self.assertEqual(cfg["language"]["value"], "ru")
         self.assertEqual(cfg["task_export"]["value"], "beads")
+
+    def test_write_browser_tool_and_read_back(self):
+        hs.write_config({"browser_tool": "agent-browser"}, scope="global", project_dir=self.d)
+        self.assertEqual(hs.resolve_config(self.d)["browser_tool"]["value"], "agent-browser")
 
     def test_write_project_scope(self):
         path = hs.write_config({"corpus_root": "./r"}, "project", self.d)
@@ -312,6 +322,38 @@ class CheckTests(unittest.TestCase):
         self.assertEqual(hs.check_python()["state"], "ok")
 
 
+class BrowserToolCheckTests(unittest.TestCase):
+    def _cfg(self, value="auto"):
+        cfg = {k: {"value": v[1], "source": "default"} for k, v in hs.SETTINGS.items()}
+        cfg["browser_tool"] = {"value": value, "source": "test"}
+        return cfg
+
+    def test_auto_present_reports_the_binary_path(self):
+        with unittest.mock.patch.object(hs.shutil, "which", return_value="/usr/local/bin/agent-browser"):
+            c = hs.check_browser_tool(self._cfg("auto"))
+        self.assertEqual(c["state"], "ok")
+        self.assertIn("/usr/local/bin/agent-browser", c["detail"])
+
+    def test_auto_missing_is_optional_with_npm_fix(self):
+        with unittest.mock.patch.object(hs.shutil, "which", return_value=None):
+            c = hs.check_browser_tool(self._cfg("auto"))
+        self.assertEqual(c["state"], "optional")
+        self.assertEqual(c["fix"], "npm i -g agent-browser")
+
+    def test_configured_agent_browser_checks_the_binary(self):
+        with unittest.mock.patch.object(hs.shutil, "which", return_value=None):
+            c = hs.check_browser_tool(self._cfg("agent-browser"))
+        self.assertEqual(c["state"], "optional")
+        self.assertEqual(c["fix"], "npm i -g agent-browser")
+
+    def test_other_configured_value_is_not_verifiable(self):
+        with unittest.mock.patch.object(hs.shutil, "which", return_value="/should/not/matter"):
+            c = hs.check_browser_tool(self._cfg("playwright-mcp"))
+        self.assertEqual(c["state"], "ok")
+        self.assertIn("playwright-mcp", c["detail"])
+        self.assertIn("not verifiable from here", c["detail"])
+
+
 class DoctorTests(unittest.TestCase):
     def test_doctor_is_read_only(self):
         """The doctor must not create the paths it reports as missing."""
@@ -342,7 +384,8 @@ class DoctorTests(unittest.TestCase):
         report = hs.doctor(".")
         for c in report["checks"]:
             if c["name"].startswith("companion") or c["name"] in (
-                    "corpus", "token base", "project tokens", "image backend", "task export"):
+                    "corpus", "token base", "project tokens", "image backend",
+                    "task export", "browser tool"):
                 self.assertNotEqual(c["state"], "missing", c["name"])
 
 

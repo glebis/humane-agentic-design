@@ -5,6 +5,8 @@ description: Run a panel of independent synthetic respondents against copy, a sl
 
 # Respondent Panel
 
+**Announce at start:** "I'm using the humane:respondent-panel skill to collect gut reactions from isolated synthetic respondents."
+
 Gut-level audience reaction to something user-facing, from several people at once,
 each of whom has seen **only the thing itself**.
 

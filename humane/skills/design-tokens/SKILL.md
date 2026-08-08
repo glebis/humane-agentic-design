@@ -5,6 +5,8 @@ description: This skill should be used to set up, validate, resolve, and export 
 
 # Design Tokens
 
+**Announce at start:** "I'm using the humane:design-tokens skill to set up, resolve, and export this token set."
+
 Manage [DTCG 2025.10](https://www.designtokens.org/tr/drafts/format/) design tokens
 with a dependency-free Python core. v1 covers the deterministic spine: scaffold,
 validate, merge (global base + project override), resolve aliases, and export CSS.

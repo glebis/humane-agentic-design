@@ -1,9 +1,11 @@
 ---
 name: walkthrough
-description: Task-based evaluation of a real interface — take one job from the JTBD corpus, attempt it step by step as the person who has it, and record where the attempt breaks. Answers "can someone actually complete this?", which inspection and reaction methods do not. Runs a cognitive walkthrough (four questions per step) against a live URL, a prototype, screenshots, or the code, and reports task success against the outcome it was derived from. Use when you have a task and something operable to attempt it on. Triggers on walkthrough, cognitive walkthrough, task analysis, "can a user actually do this", "test this task", "where do people get stuck", "walk through the signup flow", "пройди сценарий".
+description: Task-based evaluation of a real interface — take one job from the JTBD corpus, attempt it step by step as the person who has it, and record where the attempt breaks. Answers "can someone actually complete this?", which inspection and reaction methods do not. Runs a cognitive walkthrough (four questions per step) against a live URL, a prototype, screenshots, or the code, and reports task success against the outcome it was derived from. Use when you have a task and something operable to attempt it on. Triggers on walkthrough, cognitive walkthrough, task analysis, "can a user actually do this", "test this task", "where do people get stuck", "walk through the signup flow", "test this on mobile", "drive it in the browser", "пройди сценарий".
 ---
 
 # Walkthrough
+
+**Announce at start:** "I'm using the humane:walkthrough skill to attempt this task as the person who has it."
 
 Inspection asks whether an interface obeys principles. Reaction asks how words
 land. Neither asks the question that decides whether the product works: **can
@@ -70,10 +72,13 @@ the reader should know.
 Announce the mode and its ceiling in the output. Never let a code reading
 masquerade as an observation.
 
-> **Claude Code extras:** in driven mode use the browser tools to navigate,
-> click, fill, and screenshot each step; capture a screenshot per step as the
-> evidence locator. On other agents, drive whatever browser automation is
-> available, or ask the user to perform the steps and describe what happened.
+**Driven mode has a procedure — `references/driven.md`.** It owns the browser
+tool ladder (`agent-browser` CLI first, it emulates real devices), the device
+matrix (mobile tier mandatory when the walk feeds a `review` full pass), the
+screenshot-per-step evidence contract, and the mode gate: a claimed mode is
+downgraded to what the captured evidence supports, never argued back up.
+`review` and `nielsen-heuristics` drive by that same file — do not restate it
+for them.
 
 ## Step 3 — Walk it, one step at a time
 
@@ -131,7 +136,9 @@ no happy-path walk reveals.
 
 The task in the person's words, the actor and entry state, the success
 condition, the corpus outcome it came from (with its importance/satisfaction if
-scored), the mode, and the mode's ceiling.
+scored), the mode, and the mode's ceiling. In driven mode, also the tool rung
+and the device tiers walked (`references/driven.md`); every finding names the
+tier(s) it was observed on, and a tier not walked is a tier not claimed.
 
 ### Walk
 

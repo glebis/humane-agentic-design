@@ -5,6 +5,8 @@ description: This skill should be used when designing, building, or reviewing an
 
 # Layout Rules
 
+**Announce at start:** "I'm using the humane:layout-rules skill to check this layout against the defect avoid-list."
+
 A defect-class avoid-list for tool/dashboard UIs. Every rule is a bug or design smell actually caught in a real build-and-audit cycle — treat them as hard constraints, not suggestions.
 
 ## Usage

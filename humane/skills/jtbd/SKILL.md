@@ -5,6 +5,8 @@ description: Terminal-first JTBD engine for founders and product people. Intervi
 
 # JTBD Project Describer
 
+**Announce at start:** "I'm using the humane:jtbd skill to capture the job and its switching forces."
+
 ## Purpose
 
 Conduct a focused Jobs-to-Be-Done interview for one project and emit a decision-grade artifact bundle. The bundle contains a machine-readable `jtbd.json`, a shareable `one-pager.md`, and a `messaging-angles.md` derived from Switch forces. Ingest voice transcripts or review exports when available.

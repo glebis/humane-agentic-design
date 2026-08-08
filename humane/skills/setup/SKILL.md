@@ -1,9 +1,11 @@
 ---
 name: setup
-description: Get humane working on this machine — check what the cycle needs, configure the corpus root, token base, image backend, task-export target and language, and install the companions and generators that are missing. Diagnoses read-only first, then installs only what the user confirms. Use on a fresh machine, when a skill complains something is missing, or to see how humane is currently configured. Triggers on humane setup, set up humane, configure humane, humane doctor, "what do I need to install", "why can't it find my tokens", "check my humane install", "настрой humane".
+description: Get humane working on this machine — check what the cycle needs, configure the corpus root, token base, image backend, task-export target, language and browser tool, and install the companions and generators that are missing. Diagnoses read-only first, then installs only what the user confirms. Use on a fresh machine, when a skill complains something is missing, or to see how humane is currently configured. Triggers on humane setup, set up humane, configure humane, humane doctor, "what do I need to install", "why can't it find my tokens", "check my humane install", "настрой humane".
 ---
 
 # Setup
+
+**Announce at start:** "I'm using the humane:setup skill to diagnose this machine before changing anything."
 
 Two jobs, in this order: **find out what is actually wrong**, then **fix only
 what the user agrees to fix**. Never the other way round — a setup flow that
@@ -22,7 +24,7 @@ of the cycle works without them.
 
 ## Configuration
 
-Five settings, resolved highest-precedence first: **project `humane.json` >
+Six settings, resolved highest-precedence first: **project `humane.json` >
 `~/.humane/config.json` > `HUMANE_*` environment > built-in default**. `doctor`
 and `config` print the source beside every value, so "why is it using that
 path?" is always answerable.
@@ -34,6 +36,7 @@ path?" is always answerable.
 | `image_backend` | `auto` | which generator `brand-illustrate` shells out to |
 | `task_export` | `none` | where `nielsen-heuristics` files findings (`linear`, `beads`, `none`) |
 | `language` | `en` | the language skills speak; captured evidence is never translated |
+| `browser_tool` | `auto` | what drives a live interface in `walkthrough` driven mode (and the skills that cite its procedure). `auto` resolves the ladder in `walkthrough/references/driven.md`: `agent-browser` CLI → Playwright MCP → host browser tools → the user drives. Set explicitly to pin a rung |
 
 Project beats environment deliberately: a repo that pins its corpus root should
 win over a variable that happens to be exported in the shell. Set a value in the
@@ -66,6 +69,10 @@ alarms: most are optional, and the cycle degrades honestly without them.
 - **companions** — `interfaces` and `impeccable` are separate plugins humane
   defers to. Absent is fine; the review skills mark those domains **Not
   reviewed** rather than improvising rules they do not own.
+- **browser tool** — optional. Without any rung of the ladder, driven
+  walkthroughs fall back to asking the user to perform the steps, and `review`
+  full mode reports the mobile tier **Not reviewed**. The fix the doctor
+  prints is `npm i -g agent-browser`.
 - **humane copies** — other installed copies of humane's own skills, and
   whether they have drifted from this checkout. See below; this is the check
   most likely to surprise someone.
@@ -132,6 +139,7 @@ either companion — do not improvise one. On another agent, report the companio
 as unavailable and let the review mark those domains **Not reviewed**; a made-up
 install command is worse than a named gap.
 | image generator | install `gpt-image-2` or `nano-banana` into any skills dir | needs `OPENAI_API_KEY` or `GEMINI_API_KEY` |
+| browser tool | `npm i -g agent-browser` | enables driven walkthroughs and the mobile device tier; headless, no credentials |
 | token base | `tokens setup-edit ~/design-tokens/base.tokens.json` | runs the `design-tokens` questionnaire |
 | task export | install the `linear` or `bd` CLI | or set `task_export=none` |
 

@@ -5,6 +5,8 @@ description: This skill should be used when EXPLORING a brand identity that does
 
 # Brandkit
 
+**Announce at start:** "I'm using the humane:brandkit skill to explore competing brand identity directions."
+
 You are an elite brand identity art director, logo designer, visual-system
 strategist, and presentation designer. The job is to generate brand-kit images
 that look like they came from a serious identity studio: intentional, premium,

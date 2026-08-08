@@ -7,6 +7,8 @@ description: Run a formal heuristic evaluation of a design artifact against Jako
 
 > Mascot: `assets/jakob-nielsen.png` — a line-art portrait of Jakob Nielsen. Surface it (embed or attach) when producing a rendered/HTML report or a shareable summary, as the evaluation's signature. It is an output asset, not context to read while evaluating.
 
+**Announce at start:** "I'm using the humane:nielsen-heuristics skill to evaluate this against Nielsen's 10 usability heuristics."
+
 Run a rigorous, evidence-disciplined heuristic evaluation against Jakob Nielsen's 10 usability heuristics (Nielsen & Molich 1990, refined 1994). The value over an ad-hoc "critique this UI" prompt is a **consistent rubric plus honesty guards**: sharp per-heuristic probes, a per-finding severity scale, a mandatory evidence-locator requirement, and correct handling of artifacts that have no observable interface.
 
 ## Scope guard (read first)
@@ -19,7 +21,11 @@ Heuristic evaluation is an inspection of an *interface*. Some inputs have one to
 
 **Evaluation mode** (observable interface → findings are severity-scored):
 - **Screenshot / image** — read it visually.
-- **Live URL** — drive it with browser tools to observe states and flows.
+- **Live URL** — drive it to observe states and flows, following
+  `walkthrough`'s `references/driven.md` for the tool ladder, device matrix,
+  and screenshot evidence contract (that file is the single owner of the
+  driving procedure). A heuristic only observable on a tier that was not
+  driven is **N/A at that tier**, not silently assessed from desktop.
 - **Codebase / HTML page** — grep and read the UI source.
 
 **Design-risk review mode** (interface described but not built → findings are UNSCORED risk flags):

@@ -212,16 +212,24 @@ def _hexes(text):
 
 
 def match_finding(finding, pairs, fixture):
-    """Match one finding to one pair.
+    """Match one finding to EVERY pair it locates.
 
-    Returns (pair_or_None, strategy_or_None, ambiguous_bool).
+    Returns (pairs_list, strategy_or_None, multi_bool). The list is empty when
+    nothing matched.
 
-    Priority is fixed: element id, then `fixture.html:LINE`, then both hex
-    colours. Priority resolves *across* tiers silently — an id beats a line
-    number by design. Ambiguity *within* a tier cannot be resolved, so the best
-    match by document order is taken and the finding is flagged. Flagged, not
-    dropped: a locator that points at two defects is a real weakness in the
-    report and the reader of the score is owed the count.
+    One finding legitimately covers many pairs. `humane:review` §8 requires it:
+    "One root cause is one finding, listing every confirmed location — not a row
+    per occurrence." An earlier version of this scorer attributed a finding to a
+    single best match and counted the rest as ambiguous, which scored a review
+    that obeyed the consolidation rule as though it had missed the defects it
+    had actually found and listed. On the first real comparison that inverted
+    the result — the arm that found 6 of 6 scored 0.33 against an arm that found
+    4 of 6. A scorer that punishes the skill for following its own rules
+    measures the scorer, not the skill.
+
+    Priority is fixed and resolves across tiers: element id, then
+    `fixture.html:LINE`, then both hex colours. The first tier that hits wins,
+    and every pair it names is returned.
     """
     location = finding.get("location", "") or ""
     why = finding.get("why", "") or ""
@@ -229,7 +237,7 @@ def match_finding(finding, pairs, fixture):
     hits = [by_id[m.lower()] for m in PAIR_ID.findall(location) if m.lower() in by_id]
     if hits:
         unique = _dedupe(hits)
-        return unique[0], "id", len(unique) > 1
+        return unique, "id", len(unique) > 1
 
     stem = re.escape(Path(fixture).name) if fixture else r"[\w.\-/]+"
     lines = {int(m) for m in re.findall(rf"{stem}\s*:\s*(\d+)", location)}
@@ -237,7 +245,7 @@ def match_finding(finding, pairs, fixture):
         hits = [p for p in pairs if p.get("line") in lines]
         if hits:
             unique = _dedupe(hits)
-            return unique[0], "line", len(unique) > 1
+            return unique, "line", len(unique) > 1
 
     found = _hexes(location) | _hexes(why)
     if found:
@@ -249,9 +257,9 @@ def match_finding(finding, pairs, fixture):
         ]
         if hits:
             unique = _dedupe(hits)
-            return unique[0], "hex", len(unique) > 1
+            return unique, "hex", len(unique) > 1
 
-    return None, None, False
+    return [], None, False
 
 
 def _dedupe(pairs):
@@ -311,14 +319,16 @@ def score(manifest, findings, coverage_result, arm=None):
     strategies = {"id": 0, "line": 0, "hex": 0}
 
     for finding in findings:
-        pair, strategy, is_ambiguous = match_finding(finding, pairs, fixture)
-        if not is_contrast_finding(finding, pair):
+        matches, strategy, is_multi = match_finding(finding, pairs, fixture)
+        primary = matches[0] if matches else None
+        if not is_contrast_finding(finding, primary):
             continue
-        contrast_findings.append((finding, pair))
-        if pair is not None:
+        contrast_findings.append((finding, primary, matches))
+        for pair in matches:
             matched_ids.add(pair["id"])
+        if strategy:
             strategies[strategy] += 1
-        if is_ambiguous:
+        if is_multi:
             ambiguous += 1
 
     nulls = {}
@@ -341,14 +351,15 @@ def score(manifest, findings, coverage_result, arm=None):
         "recall_disagreement",
         "no planted defect where WCAG and APCA disagree",
     )
-    hits = sum(1 for _, pair in contrast_findings if pair is not None and pair.get("planted"))
+    # A consolidated finding is correct if any pair it names is a real defect.
+    hits = sum(1 for _, _, ms in contrast_findings if any(m.get("planted") for m in ms))
     precision = ratio(
         hits,
         len(contrast_findings),
         "precision",
         "the report contains no contrast findings — nothing to be precise about",
     )
-    routed = sum(1 for f, _ in contrast_findings if OWNER.search(f.get("domain") or ""))
+    routed = sum(1 for f, _, _ms in contrast_findings if OWNER.search(f.get("domain") or ""))
     routing_accuracy = ratio(
         routed,
         len(contrast_findings),
@@ -358,7 +369,7 @@ def score(manifest, findings, coverage_result, arm=None):
 
     padding = sum(
         1
-        for _, pair in contrast_findings
+        for _, pair, _ms in contrast_findings
         if pair is None or pair.get("passed") is True
     )
 

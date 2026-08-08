@@ -233,18 +233,23 @@ class TestLocatorStrategies(unittest.TestCase):
 
 
 class TestAmbiguity(unittest.TestCase):
-    def test_a_locator_naming_two_pairs_is_counted_and_surfaced(self):
+    def test_a_consolidated_finding_gets_credit_for_every_pair_it_names(self):
+        # `humane:review` §8 requires one root cause to be one row listing every
+        # confirmed location. Crediting only the "best" match scored a review
+        # that obeyed that rule as though it had missed the defects it listed —
+        # on the first real comparison it turned 6-of-6 into 0.33 and inverted
+        # the result against an arm that had found 4 of 6.
         report = coverage_table("1 finding") + findings_table([
             ["1", "HIGH", "`design-tokens`", "`pair-01` and `pair-03`",
              "x", "y", "both are too light"],
         ])
         result = run(MANIFEST, report)
+        self.assertEqual(result["report"]["matched_pairs"], ["pair-01", "pair-03"],
+                         "every pair the finding locates must be credited")
         self.assertEqual(result["metrics"]["ambiguous"], 1,
-                         "a finding matching two pairs must increment `ambiguous`")
-        self.assertEqual(result["report"]["matched_pairs"], ["pair-01"],
-                         "attributed to the single best match, never dropped")
+                         "the multi-pair count is still surfaced to the reader")
         self.assertIn("ambiguous", scorer.format_summary(result),
-                      "the ambiguity count must reach the reader of the summary")
+                      "the count must reach the reader of the summary")
 
 
 class TestPaddingAndRouting(unittest.TestCase):

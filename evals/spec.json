@@ -1,34 +1,34 @@
 {
-  "title": "Six parameters, and the two that tested my own decisions",
+  "title": "Seven parameters: two hold, four don't, one I voided",
   "subtitle": "Measuring <span style=\"font-family:var(--mono);font-size:.9em\">humane:review</span> against the same review without it",
   "tags": [
-    "23 SEEDS/ARMS \u00b7 39 BLIND REVIEWS",
-    "ORACLE: dtokens/contrast.py",
-    "PREREGISTERED \u00d74",
+    "29 SEEDS/ARMS \u00b7 45 BLIND REVIEWS",
+    "2 ORACLES",
+    "PREREGISTERED \u00d75",
     "2026-08-09"
   ],
   "lede": [
-    "Six parameters now. The skill finds contrast defects an unaided review misses, and keeps the interface pipeline off a document. It shows no measurable advantage on coverage honesty, and none on inventing findings when there is nothing to find. And the mechanism behind a mode I shipped this morning does not appear at all.",
-    "Four preregistrations, five falsified predictions, one pathway voided by its own author, and three instrument bugs \u2014 two of which favoured the control and one the skill. What survived is narrower than what was claimed, which is the point of doing it this way."
+    "Seven parameters, two oracles, forty-five blind reviews. Two claims hold up. Three found no difference at all. One was a claim of mine that failed. One I threw out myself. The strongest result \u2014 that the skill finds contrast defects an unaided review misses \u2014 is weaker on a harder fixture than it looked on an easier one.",
+    "Five preregistrations, eight falsified predictions, four instrument bugs. What survives is a narrow claim about measurement and scope, not a case that the method makes reviews better."
   ],
   "status": [
     {
       "label": "Detection",
       "value": "1.00 / 0.79",
       "tone": "win",
-      "note": "recall, with vs without"
+      "note": "but 0.87 / 0.80 on a harder fixture"
     },
     {
       "label": "Artifact type",
       "value": "3 / 0",
       "tone": "win",
-      "note": "seeds marking inapplicable domains N/A"
+      "note": "the one clean, repeated win"
     },
     {
       "label": "No difference",
-      "value": "2 of 6",
+      "value": "3 of 7",
       "tone": "flat",
-      "note": "coverage honesty \u00b7 padding"
+      "note": "honesty \u00b7 padding \u00b7 structural breadth"
     },
     {
       "label": "My own claim",
@@ -632,9 +632,126 @@
       ]
     },
     {
+      "id": "combined",
+      "title": "8 \u00b7 Two domains at once \u2014 no breadth gained",
+      "nav": "8 \u00b7 Two domains",
+      "state_line": "Both arms found every structural defect. The domain pipeline bought nothing a competent reviewer did not already do.",
+      "blocks": [
+        {
+          "type": "prose",
+          "html": "<p>Every earlier pathway planted defects of one kind, so a review that covered one domain well and another badly looked identical to a thorough one. This fixture plants both: ten colour defects confirmed by <span style=\"font-family:var(--mono);font-size:.9em\">dtokens/contrast.py</span>, and four structural ones confirmed by axe \u2014 a heading-level skip, an empty heading, no declared language, and content outside any landmark.</p><p>The prediction was that <span style=\"font-family:var(--mono);font-size:.9em\">layout-rules</span> being a named stop in the pipeline would show up as broader coverage, and that the control \u2014 asked to find what is wrong with a visibly colourful page \u2014 would skew toward what it could see.</p>"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Metric",
+            "with humane",
+            "without",
+            "Predicted"
+          ],
+          "rows": [
+            [
+              "structural recall",
+              "1.00",
+              "1.00",
+              "skill higher"
+            ],
+            [
+              "contrast recall",
+              "0.87",
+              "0.80",
+              "skill higher (~1.00 vs 0.79)"
+            ],
+            [
+              "measurement-only recall",
+              "0.67",
+              "0.50",
+              "skill higher"
+            ],
+            [
+              "precision",
+              "0.55",
+              "0.85",
+              "\u2014"
+            ],
+            [
+              "padding",
+              "1.67",
+              "1.33",
+              "\u2014"
+            ],
+            [
+              "routing",
+              "0.92",
+              "0.00",
+              "unfair \u2014 see below"
+            ]
+          ],
+          "tones": [
+            [
+              "",
+              "flat",
+              "flat",
+              "lose"
+            ],
+            [
+              "",
+              "win",
+              "",
+              "flat"
+            ],
+            [
+              "",
+              "win",
+              "",
+              "flat"
+            ],
+            [
+              "",
+              "lose",
+              "win",
+              ""
+            ],
+            [
+              "",
+              "lose",
+              "win",
+              ""
+            ],
+            [
+              "",
+              "flat",
+              "flat",
+              "flat"
+            ]
+          ],
+          "caption": "Three seeds, one trial per arm. Both arms found 4 of 4 structural defects on every seed, including the two that are absences rather than things on the page."
+        },
+        {
+          "type": "aside",
+          "main": [
+            {
+              "type": "prose",
+              "html": "<p><b>The falsifier fired.</b> Structural recall equal in the control was named in advance as the condition that would kill this pathway's claim, and it came back exactly equal \u2014 4/4, three seeds, both arms. The control found the missing <code>lang</code> attribute and the absent landmark, which I specifically predicted it would miss.</p><p><b>And the detection claim looks weaker here.</b> On the original single-domain fixtures the gap was 1.00 against 0.79. On this harder, busier page it is 0.87 against 0.80 \u2014 and the skill arm gave up precision to get it, 0.55 against 0.85. A reader should weight the two together, not the flattering one alone.</p>"
+            }
+          ],
+          "notes": [
+            [
+              "Routing, declared unfair before the run.",
+              "0.92 against 0.00 measures whether an arm was taught the vocabulary. The control has never heard of these skills. It is reported as a description of the skill arm \u2014 which did keep colour and structure in the right lanes \u2014 never as a win."
+            ],
+            [
+              "Seed 8003.",
+              "Both arms scored 0.60 recall and 0.00 on the measurement-only pairs. Some fixtures are simply hard, and neither arm's discipline rescued it."
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "id": "limits",
-      "title": "8 \u00b7 What this does not show",
-      "nav": "8 \u00b7 Limits",
+      "title": "9 \u00b7 What this does not show",
+      "nav": "9 \u00b7 Limits",
       "state_line": "Two domains, one trial each, and a sample too small for a significance test to be honest.",
       "blocks": [
         {
@@ -646,19 +763,24 @@
           ],
           "rows": [
             [
+              "Keeps the UI pipeline off a document",
+              "Supported, n=3",
+              "3/3 vs 0/3 marking domains N/A \u2014 the clearest win"
+            ],
+            [
               "Finds more contrast defects",
-              "Supported, n=4",
-              "1.00 vs 0.79 recall, 4/4 seeds"
+              "Supported but weaker, n=7",
+              "1.00 vs 0.79 on easy fixtures; 0.87 vs 0.80 on hard ones, at a cost in precision"
             ],
             [
               "Finds them with less noise",
-              "Supported, n=4",
-              "0.75 vs 3.25 invented findings"
+              "Contested",
+              "0.75 vs 3.25 on detection; 1.67 vs 1.33 here"
             ],
             [
-              "Keeps the UI pipeline off a document",
-              "Supported, n=3",
-              "3/3 vs 0/3 marking domains N/A"
+              "Broader coverage across domains",
+              "Not supported, n=3",
+              "both arms 4/4 structural, every seed"
             ],
             [
               "Keeps a review honest about coverage",
@@ -676,14 +798,9 @@
               "inline found 24/24, position bias 0.500"
             ],
             [
-              "Improves reviews generally",
-              "Not shown",
-              "contrast and scope measured; copy quality is not"
-            ],
-            [
               "Any of it is statistically real",
               "Not shown",
-              "n=1 to 4; no significance test is honest here"
+              "n=1 to 7; no significance test is honest here"
             ]
           ],
           "tones": [
@@ -699,27 +816,27 @@
             ],
             [
               "",
-              "win",
-              ""
-            ],
-            [
-              "",
-              "lose",
-              ""
-            ],
-            [
-              "",
-              "lose",
-              ""
-            ],
-            [
-              "",
-              "lose",
-              ""
-            ],
-            [
-              "",
               "flat",
+              ""
+            ],
+            [
+              "",
+              "lose",
+              ""
+            ],
+            [
+              "",
+              "lose",
+              ""
+            ],
+            [
+              "",
+              "lose",
+              ""
+            ],
+            [
+              "",
+              "lose",
               ""
             ],
             [
@@ -728,7 +845,7 @@
               ""
             ]
           ],
-          "caption": "Three supported claims, two negatives, one falsified claim of my own, and one pathway voided. Nothing here is a grade for the method."
+          "caption": "One clear win, one qualified win, one contested, four negatives. Nothing here is a grade for the method."
         },
         {
           "type": "aside",
@@ -752,5 +869,5 @@
       ]
     }
   ],
-  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 39 blind reviews \u00b7 4 preregistrations, 5 falsified predictions"
+  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 45 blind reviews \u00b7 5 preregistrations, 8 falsified predictions"
 }

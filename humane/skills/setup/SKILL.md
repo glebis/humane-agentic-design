@@ -128,9 +128,24 @@ scripts/humane_setup.py config --set language=ru --scope project
 
 ## Step 3 — Install what they confirm
 
-The doctor prints the exact command for every gap. **Run them yourself only
-after the user says yes, one at a time, showing the command first.** Each of
-these reaches outside the repo, and two of them need money or credentials.
+The doctor prints the exact command for every gap, and `install` runs those
+same strings — never a second recipe that can drift from them:
+
+```bash
+scripts/humane_setup.py install                 # list the fixable gaps
+scripts/humane_setup.py install "browser tool"  # run one, confirming first
+scripts/humane_setup.py install --all --yes     # everything, no prompts
+```
+
+Each command is confirmed individually; non-interactive runs refuse without
+`--yes` rather than reading piped input as consent. Fixes that are agent slash
+commands (`/plugin …`) are listed for you to run in the agent — a shell cannot.
+After running, `install` re-runs the doctor: the verdict is the doctor's, not
+the installer's.
+
+**Run installs only after the user says yes, one at a time, showing the command
+first.** Each of these reaches outside the repo, and two of them need money or
+credentials.
 
 | Gap | Command | Note |
 | --- | --- | --- |

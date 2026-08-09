@@ -33,6 +33,21 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.19.0 — 2026-08-09
+
+### Install what the doctor found missing, without leaving the terminal
+
+1. `scripts/humane_setup.py install` lists every fixable gap the doctor knows,
+   marked shell-runnable or agent-only.
+2. `install "browser tool"` runs that gap's fix — the same string the doctor
+   prints, never a second recipe — after showing the command and asking.
+   `--all` takes every gap; `--yes` skips the prompts.
+3. Non-interactive runs refuse without `--yes` instead of reading piped input
+   as consent, and `/plugin …` fixes are listed for the agent rather than
+   shelled out.
+4. Afterwards `install` re-runs the doctor and exits by its verdict, so a zero
+   exit means the environment checks out, not merely that commands ran.
+
 ## 0.18.1 — 2026-08-09
 
 The eval harness gains its second oracle in working order (`evals/`). No change

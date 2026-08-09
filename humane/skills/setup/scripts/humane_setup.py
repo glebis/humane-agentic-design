@@ -613,6 +613,83 @@ def render(report):
 
 
 # ---------------------------------------------------------------------------
+# Install
+# ---------------------------------------------------------------------------
+
+def _gaps(report):
+    """Checks that are not ok and carry a fix, in doctor order."""
+    return [c for c in report["checks"] if c["state"] != "ok" and c["fix"]]
+
+
+def _match_gap(gaps, name):
+    """Resolve a user-typed name to one gap; raise ValueError otherwise."""
+    needle = name.lower()
+    hits = [g for g in gaps if needle in g["name"].lower()]
+    if not hits:
+        raise ValueError(f"no gap matches {name!r} — `install` with no names lists them")
+    if len(hits) > 1:
+        raise ValueError(f"{name!r} is ambiguous: " + ", ".join(g["name"] for g in hits))
+    return hits[0]
+
+
+def install(names, run_all=False, yes=False, project_dir=None):
+    """Run the doctor's own fix commands, one confirmed command at a time.
+
+    The fix strings are the single source of truth — this runs exactly what
+    `doctor` prints, never a second install recipe that can drift from it.
+    Fixes that start with `/` are agent slash commands (plugin installs); a
+    shell cannot run them, so they are listed for the agent instead of failing
+    confusingly here.
+    """
+    report = doctor(project_dir)
+    gaps = _gaps(report)
+    if not gaps:
+        print("nothing to install — the doctor reports no fixable gaps.")
+        return 0
+    if not names and not run_all:
+        print("fixable gaps (install <name> or --all):")
+        for g in gaps:
+            kind = "agent command" if g["fix"].startswith("/") else "shell"
+            print(f"  {g['name']:<24} [{kind}]  -> {g['fix']}")
+        return 0
+    try:
+        chosen = gaps if run_all else [_match_gap(gaps, n) for n in names]
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    failures = 0
+    for g in chosen:
+        if g["fix"].startswith("/"):
+            print(f"skip  {g['name']}: `{g['fix']}` is an agent command — "
+                  "run it inside your agent, not a shell.")
+            continue
+        if not yes:
+            if not sys.stdin.isatty():
+                print(f"skip  {g['name']}: confirmation needed and stdin is not "
+                      "a terminal — re-run with --yes to accept.", file=sys.stderr)
+                failures += 1
+                continue
+            answer = input(f"run `{g['fix']}` for {g['name']}? [y/N] ").strip().lower()
+            if answer not in ("y", "yes"):
+                print(f"skip  {g['name']}: declined.")
+                continue
+        print(f"run   {g['fix']}")
+        proc = subprocess.run(g["fix"], shell=True)
+        if proc.returncode != 0:
+            failures += 1
+            print(f"FAIL  {g['name']}: exited {proc.returncode} — the gap "
+                  "remains; fix by hand or re-run.", file=sys.stderr)
+
+    # The verdict is the doctor's, not the installer's: re-check rather than
+    # trusting that a zero exit produced a working environment.
+    after = doctor(project_dir)
+    print()
+    print(render(after), end="")
+    return 1 if failures or any(c["state"] == "missing" for c in after["checks"]) else 0
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -633,7 +710,19 @@ def main(argv=None):
 
     sub.add_parser("settings", help="list known settings and their meaning")
 
+    i = sub.add_parser("install", help="run the doctor's fix commands, confirmed one at a time")
+    i.add_argument("names", nargs="*", metavar="GAP",
+                   help="gap name (substring of a doctor check name); none lists the gaps")
+    i.add_argument("--all", action="store_true", dest="run_all",
+                   help="install every fixable gap")
+    i.add_argument("--yes", action="store_true",
+                   help="skip per-command confirmation (required when non-interactive)")
+    i.add_argument("--project-dir", default=".")
+
     args = p.parse_args(argv)
+
+    if args.cmd == "install":
+        return install(args.names, args.run_all, args.yes, args.project_dir)
 
     if args.cmd == "settings":
         for key, (env, default, desc) in SETTINGS.items():

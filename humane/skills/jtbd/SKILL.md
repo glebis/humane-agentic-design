@@ -10,6 +10,8 @@ handoffs:
     when: a job from the corpus needs attempting on something operable
   - to: type-specimen
     when: the specimen must be set in the words of the people who read this interface
+  - to: prototype
+    when: the job is captured and a structure for it needs to be seen or clicked before a system exists
 accepts:
   - from: before-after
   - from: setup

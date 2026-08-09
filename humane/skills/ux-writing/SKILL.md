@@ -8,6 +8,7 @@ accepts:
   - from: jtbd
   - from: layout-rules
   - from: respondent-panel
+  - from: prototype
 ---
 
 # UX Writing

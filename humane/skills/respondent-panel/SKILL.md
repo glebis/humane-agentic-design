@@ -7,6 +7,7 @@ handoffs:
 accepts:
   - from: type-specimen
   - from: ux-writing
+  - from: prototype
 ---
 
 # Respondent Panel

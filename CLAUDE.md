@@ -31,6 +31,7 @@ backticks and name only the handoff — never restate or override it.
 | `jtbd` | The corpus: jobs, switch forces, ODI outcomes, evidence ledger, granularity and jargon gates. Every downstream claim cites it. |
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
 | `respondent-panel` | Gut reactions from strangers to a **user-facing artifact**, in isolated contexts. Never rewrites. |
+| `prototype` | Pre-system fidelity: the ASCII → SVG click-dummy → HTML ladder, the one-question rule, the self-containment contract, and the "what is fake" disclosure. Owns no token, no final wording, and never reviews its own output. |
 | `design-tokens` | The token set: DTCG structure, resolution, CSS/DESIGN.md export, the brand block, and **all color measurement and remediation** (`tokens contrast`) |
 | `type-specimen` | Typeface **selection**: the specimen page, its ten-slot copy contract, script and glyph coverage checks, and what a specimen may and may not conclude. Owns no token. |
 | `layout-rules` | Structural and interaction defect classes for tool/dashboard UIs, and the de-slop avoid-list |
@@ -43,6 +44,14 @@ backticks and name only the handoff — never restate or override it.
 | `brand-illustrate` | Asset **production** under an existing token contract |
 
 Cross-boundary cases, resolved:
+
+- `prototype` drafts copy freely — buttons need words before `ux-writing` has
+  run — but any string that outlives the prototype is handed to `ux-writing`,
+  which owns it. `prototype` never mints a design value: token-faithful tier
+  reads compiled `design-tokens` CSS or does not run, and a doubtful pairing is
+  named for `tokens contrast`, never eyeballed. A prototype is reviewed by
+  `respondent-panel`, `walkthrough`, and the rest as a first-class artifact —
+  never by `prototype` itself.
 
 - `layout-rules` rule 12 states that text must clear the contrast bar;
   `design-tokens` owns measuring the pair and changing the color. A review that

@@ -9,6 +9,7 @@ accepts:
   - from: layout-rules
   - from: type-specimen
   - from: walkthrough
+  - from: prototype
 ---
 
 # Design Tokens

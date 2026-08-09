@@ -28,6 +28,29 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.14.0 — 2026-08-09
+
+### See and click an idea before any design system exists
+
+1. Ask for a prototype — "mock this up", "show me the flow", "wireframe this
+   screen" — and `humane:prototype` names the one question the prototype must
+   answer, then picks the cheapest fidelity that answers it: an ASCII sketch
+   for structure, an SVG click-dummy with hotspots linking screens for
+   navigation, or a self-contained HTML file for how a screen reads.
+2. For HTML you choose the tier: grayscale wireframe (the default before a
+   token set exists), or token-faithful, rendering under the project's
+   compiled `humane:design-tokens` CSS.
+3. You get one double-clickable file in `prototypes/<slug>/` — no CDN, no
+   build step — with the question, the corpus citation, and a list of what is
+   fake, so reviewers don't report scaffolding as findings.
+4. The prototype is a first-class artifact for the rest of the cycle: hand it
+   to `humane:respondent-panel` for gut reactions, `humane:walkthrough` to
+   attempt the job on it, and on to `humane:design-tokens` once the structure
+   survives.
+
+Drafted prototype copy is scaffolding: any string that outlives the prototype
+is handed to `humane:ux-writing`, which owns it.
+
 ## 0.13.0 — 2026-08-08
 
 ### Run a full review without the evidence quietly going missing

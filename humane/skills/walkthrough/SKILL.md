@@ -9,6 +9,7 @@ handoffs:
 accepts:
   - from: jtbd
   - from: nielsen-heuristics
+  - from: prototype
 ---
 
 # Walkthrough

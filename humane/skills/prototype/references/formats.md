@@ -42,6 +42,20 @@ stays inert — nothing to break, nothing to audit.
 - A screen map at the top of the file — plain `<nav>` of links to every
   screen — so a reviewer can jump anywhere without solving the maze first.
 
+Two SVG text traps, both caught in a real build — check for them before
+handing the file over:
+
+- **A stylesheet rule beats a `fill` attribute.** `svg text { fill: #262626 }`
+  silently overrides every `<text fill="#fff">`, so labels on dark boxes render
+  dark-on-dark. Style SVG text through classes (`text.inv { fill: #fff }`),
+  never by relying on presentation attributes once a stylesheet exists.
+- **SVG text neither wraps nor clips.** A string longer than its box runs
+  straight over the neighbouring element. Estimate width (~0.5 × font-size per
+  character) against the container before committing a string; break long lines
+  into stacked `<text>` elements yourself, and re-check every string a copy
+  rewrite lengthens — a rewrite that fixes the wording and overflows the box
+  has traded one defect for another.
+
 ## Rung 3 — HTML
 
 One self-contained `.html` file per prototype: inline `<style>`, inline

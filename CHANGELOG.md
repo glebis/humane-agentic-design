@@ -28,6 +28,17 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.15.1 — 2026-08-09
+
+### Fixed
+
+- `humane:prototype` click-dummies could render unreadable or overflowing SVG
+  text: a stylesheet rule silently beats a `fill` attribute (dark-on-dark
+  labels), and SVG text neither wraps nor clips (strings run over neighbouring
+  elements). The rung-2 contract in `references/formats.md` now names both
+  traps and requires a width check on every string, including after a copy
+  rewrite lengthens one.
+
 ## 0.15.0 — 2026-08-09
 
 ### Put every generated artifact where you want it

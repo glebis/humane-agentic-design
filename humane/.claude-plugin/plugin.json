@@ -1,7 +1,7 @@
 {
   "name": "humane",
   "description": "A human-centric design method cycle for people and agents: setup, jtbd, prototype, persona-review, respondent-panel, design-tokens, type-specimen, layout-rules, ux-writing, nielsen-heuristics, walkthrough, before-after, and a review orchestrator. Portable across agentic stacks.",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "author": {
     "name": "Gleb Kalinin",
     "url": "https://github.com/glebis"

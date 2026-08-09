@@ -25,10 +25,24 @@ hotspots are links that switch screens.
 
 **Screen switching is CSS `:target`, no JavaScript.** Each screen is a
 `<section id="screen-name">`; hotspots are `<a href="#screen-name">` wrapping
-an SVG `<rect>`; CSS shows only the targeted section (with a `:not(:has(…))`
-or sibling fallback showing the first screen when no hash is set). Why: the URL
-then names the current screen, back/forward walk the history, and the file
-stays inert — nothing to break, nothing to audit.
+an SVG `<rect>`. Why: the URL then names the current screen, back/forward walk
+the history, and the file stays inert — nothing to break, nothing to audit.
+
+The canonical scaffold — use exactly this, not an improvised variant (a naïve
+sibling fallback leaves the first screen visible beside the targeted one):
+
+```css
+section { display: none; }
+section:target { display: block; }
+/* no-hash state: show the first screen only when nothing is targeted */
+body:not(:has(section:target)) #first-screen-id { display: block; }
+```
+
+`:has()` is the baseline (all evergreen browsers since 2023 — fine for a
+prototype opened on the reviewer's machine). Escape hatch, only if a target
+browser genuinely lacks `:has()`: give the first section `display: block` and
+accept that it stays visible under other screens, saying so in the "what is
+fake" note.
 
 - Frame each screen at a stated device size (`viewBox="0 0 390 844"` for a
   phone, `0 0 1280 800` for desktop) and say which was chosen.

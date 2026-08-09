@@ -28,6 +28,30 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.16.1 — 2026-08-09
+
+### Fixed
+
+- `humane:prototype` claimed a prototype after tokens exist "is not a
+  prototype" while also offering a token-faithful tier that requires them; the
+  skill now distinguishes greenfield prototyping from prototyping inside an
+  existing system, where the tokens are context.
+- The one-question gate could be settled by the maker's own impression; a
+  question now counts as settled only by the user or a named reviewer's output,
+  and a broad request is narrowed to one question with the user before drawing.
+- The question, corpus citation, and "what is fake" disclosure could live only
+  in chat and detach from the file; every prototype now embeds them as a
+  visible notes block.
+- No conformance check existed on the artifact itself; a smoke test (no-hash
+  load, every hotspot, zero external requests, string widths) now runs before
+  handoff, with anything unrunnable reported "Not verified".
+- The `:target` screen-switching rule allowed an improvised sibling fallback
+  that leaves the first screen visible; `references/formats.md` now ships one
+  canonical scaffold and names its browser baseline.
+- The skill restated `setup`-owned path rules and named `before-after` as a
+  consumer without a graph edge; the path contract now points at
+  `setup/references/paths.md` and the description names only declared routes.
+
 ## 0.15.1 — 2026-08-09
 
 ### Fixed

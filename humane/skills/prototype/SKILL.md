@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: Turn a captured job into something a person can look at and click before any design system exists — an ASCII sketch, an SVG click-dummy with hotspots linking screens, or a self-contained HTML file. Picks the cheapest fidelity that answers the open question and escalates only when asked or when the question demands it. Runs after jtbd and before design-tokens; its output is a first-class artifact for respondent-panel, walkthrough, and before-after. Use when the user wants to see or try an idea before committing to structure, tokens, or copy. Triggers on prototype, wireframe, mockup, click-dummy, sketch the screens, "what would this look like", "mock this up", "show me the flow", "прототип", "макет".
+description: Make an idea lookable and clickable at the cheapest fidelity that answers its one open question — an ASCII sketch, an SVG click-dummy with hotspots linking screens, or a self-contained HTML file. Use when the user wants to see or try an idea before committing to structure, tokens, or copy. Triggers on prototype, wireframe, mockup, click-dummy, sketch the screens, "what would this look like", "mock this up", "show me the flow", "прототип", "макет".
 handoffs:
   - to: design-tokens
     when: the structure has survived a look or a click-through and needs a system to render under
@@ -23,13 +23,43 @@ structure, does the navigation make sense, does the screen read at a glance —
 before anything expensive is committed. This skill produces the cheapest
 artifact that answers that question and stops.
 
+## Quick Reference
+
+| Need | Where |
+| --- | --- |
+| Format contracts per rung: file layout, hotspot markup, self-containment, the SVG text traps | `references/formats.md` |
+| Where the output file goes | `setup/references/paths.md` — `setup` owns the path table |
+
+## The one question
+
+Every prototype names, before anything is drawn, the single question it will
+answer. A broad request ("mock up the app") contains several candidate
+questions — extract them, and ask the user to pick one; a prototype chasing two
+questions answers neither. Record the chosen question in the artifact's notes
+block (see Output).
+
+The question is **settled** only by the user saying so, or by a named
+reviewer's output — a `respondent-panel` read, a `walkthrough` result. The
+maker's own impression that a structure "looks right" settles nothing; this
+skill never reviews its own output, and it does not certify its own handoffs
+either. Until the question is settled, it stays open, and escalation waits.
+
 ## Where it sits
 
-After `jtbd`, before `design-tokens`. The corpus says what job the interface
-serves; the prototype proposes a structure for it; only a structure that
-survives being looked at or clicked through deserves a token set. A prototype
-built after the token set exists is a render, not a prototype — that work
-belongs to the build itself, reviewed by `layout-rules`.
+The home case is greenfield: after `jtbd`, before `design-tokens`. The corpus
+says what job the interface serves; the prototype proposes a structure for it;
+only a structure that survives being looked at or clicked through deserves a
+token set.
+
+`jtbd` is preferred, not required. Entered directly, with no corpus: offer to
+run `jtbd` first, and if the user declines, proceed — with "no corpus;
+structure is a guess" stated in the artifact's notes block.
+
+Prototyping inside an existing system is also legitimate — a new screen for a
+product that already has tokens. The existing tokens are then context, and the
+token-faithful tier renders under them. What this skill still never does there
+is re-litigate the system: a finding about the tokens themselves belongs to
+`design-tokens`, and defects in the eventual real build to `layout-rules`.
 
 ## The fidelity ladder
 
@@ -42,8 +72,9 @@ lowest rung that can answer it. The user's explicit format request always wins.
 | 2 | **SVG click-dummy** — screens as SVG frames, hotspots linking them, in one self-contained HTML file | Does the navigation make sense? Can you get from A to B? | Visual polish, real rendering behavior |
 | 3 | **HTML** — real markup and CSS, self-contained file | Does the screen read? Do the interactions feel right? | That it is the product |
 
-Escalate only when the current rung's question is settled or when the open
-question lives on a higher rung. Do not skip rung 1 for a new structure — an
+Escalate only when the current rung's question is settled (see "The one
+question" — settled by the user or a named reviewer, never by the maker) or
+when the open question lives on a higher rung. Do not skip rung 1 for a new structure — an
 ASCII sketch that is wrong costs one message to redraw; an HTML page that is
 wrong costs an argument.
 
@@ -134,31 +165,40 @@ Every prototype is a file the user can open, not a paste into chat (rung 1 may
 also be shown inline). It is **self-contained**: no CDN, no external fonts, no
 build step. Double-click opens it.
 
-It goes in `<artifact_root>/<slug>/prototypes/<name>/` — the `setup` setting,
-which defaults to `corpus_root`. `setup` owns the whole path table
-(`setup/references/paths.md`); resolve it rather than building it:
-
-```python
-from humane_setup import artifact_dir
-artifact_dir(slug, "prototype")
-```
-
-**Never write to the current working directory**, and never to a bare relative
-`prototypes/`. That puts the user's prototype wherever the agent happens to be
-standing — an earlier version of this rule did exactly that and wrote a
-prototype into the humane plugin's own source tree, untracked and one
-`git add -A` from shipping to every user. If the user names a place, use it.
+The destination is `setup`'s rule, not this skill's: resolve
+`artifact_dir(slug, "prototype")` — it returns the `prototypes/` parent; create
+`<name>/` inside it — and never write to the working directory. The full path
+table, defaults, and prohibitions live in `setup/references/paths.md`. If the
+user names a place, use it.
 
 > **Claude Code extras:** offer to publish the file as an Artifact when the
 > user wants a shareable link; the file on disk remains the source of truth.
 
-State with the artifact:
+Every prototype carries a **notes block inside the file itself** — a visible
+footer (rung 1: a paragraph under the sketch) — so the context travels with
+the artifact when it is opened alone. Chat may repeat it; it must never be the
+only copy. Three fields:
 
 1. **The question** this prototype answers, in one sentence.
 2. **The job** it serves, cited from the corpus (`jtbd.json` outcome or force)
    — or "no corpus; structure is a guess" when `jtbd` has not run.
 3. **What is fake** — drafted copy, invented data, dead controls — so a
    reviewer does not report scaffolding as findings.
+
+## Smoke test before handoff
+
+Producing the file includes proving it meets its own format contract. This is
+production QA, not review — reviewing the design stays with `respondent-panel`,
+`walkthrough`, and the rest. Before handing the artifact over:
+
+- open the file with no hash and confirm the first screen shows;
+- follow every hotspot and every back link once;
+- confirm zero external requests (no CDN, fonts, or linked assets);
+- check every string against its container (the SVG text traps in
+  `references/formats.md`).
+
+Anything on this list that cannot be run is reported as **Not verified**, never
+silently assumed.
 
 ## What this skill does not own
 

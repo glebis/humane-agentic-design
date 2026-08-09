@@ -23,7 +23,12 @@ What you can do with `humane` that you could not do before, newest first.
 6. **Never document what the user cannot reach.** Refactors, test-suite
    changes, and internal renames are invisible releases — skip them entirely
    rather than padding a section.
-7. **Name skills as `humane:<skill>` and settings in backticks**, matching the
+7. **Before prepending, search the file for your version number.** Parallel
+   sessions each writing "their" entry is how a heading appears twice; if the
+   heading already exists, merge into it. `tests/test_changelog.py` enforces
+   uniqueness, descending order, and version agreement with `plugin.json` and
+   `marketplace.json` — run it after any edit here.
+8. **Name skills as `humane:<skill>` and settings in backticks**, matching the
    ownership table in `CLAUDE.md`, so a reader can jump straight to the owner.
 
 ---
@@ -80,22 +85,6 @@ What you can do with `humane` that you could not do before, newest first.
 - The skill restated `setup`-owned path rules and named `before-after` as a
   consumer without a graph edge; the path contract now points at
   `setup/references/paths.md` and the description names only declared routes.
-
-## 0.15.1 — 2026-08-09
-
-### Fixed
-
-- `humane:prototype` click-dummies could render unreadable or overflowing SVG
-  text: a stylesheet rule silently beats a `fill` attribute (dark-on-dark
-  labels), and SVG text neither wraps nor clips (strings run over neighbouring
-  elements). The rung-2 contract in `references/formats.md` now names both
-  traps and requires a width check on every string, including after a copy
-  rewrite lengthens one.
-
-## 0.16.1 — 2026-08-09
-
-### Fixed
-
 - `humane:prototype` claimed it would write a design file to
   `<artifact_root>/<slug>/prototypes/<name>.pen`. It cannot. A design-file
   backend writes into whichever document its application has open and ignores
@@ -133,6 +122,17 @@ on its own, and its HTML export references image assets by relative path rather
 than embedding them — so it is a handoff to implementation, not the
 self-contained artifact rungs 2 and 3 promise. The skill says which of the two
 it produced.
+
+## 0.15.1 — 2026-08-09
+
+### Fixed
+
+- `humane:prototype` click-dummies could render unreadable or overflowing SVG
+  text: a stylesheet rule silently beats a `fill` attribute (dark-on-dark
+  labels), and SVG text neither wraps nor clips (strings run over neighbouring
+  elements). The rung-2 contract in `references/formats.md` now names both
+  traps and requires a width check on every string, including after a copy
+  rewrite lengthens one.
 
 ## 0.15.0 — 2026-08-09
 

@@ -28,6 +28,37 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.15.0 — 2026-08-09
+
+### Put every generated artifact where you want it
+
+1. `scripts/humane_setup.py config --set artifact_root=./design` moves every
+   generated artifact — prototypes, specimens, boards, illustrations, walk
+   screenshots, saved reviews — without touching where `humane:jtbd` keeps the
+   corpus. Left unset it follows `corpus_root`, so everything stays in one
+   bundle.
+2. `humane:setup` gains `references/paths.md`: one table naming every file each
+   skill writes, where it goes, and which setting moves it. If a skill writes
+   something that is not in that table, that is a bug in the skill.
+3. The layout is fixed per project slug — `prototypes/`, `specimens/`,
+   `boards/`, `illustrations/`, `walks/<date>-<task>/`, `reviews/<date>/` — so
+   an artifact can be found without knowing which skill made it.
+4. `humane:design-tokens` and `humane:persona-review` still write beside their
+   input, deliberately: a compiled `tokens.css` belongs next to the token file
+   it came from. That is stated in the table rather than left to look like an
+   oversight.
+
+### Fixed
+
+- `humane:prototype` wrote to a bare relative `prototypes/<slug>/`, so a
+  prototype landed in whatever directory the agent was standing in — including,
+  once, this plugin's own source tree. It now resolves through `artifact_root`,
+  and the four artifact directories are gitignored so a stray one cannot be
+  committed into the plugin.
+- `humane:type-specimen`, `humane:brandkit` and `humane:brand-illustrate` had no
+  default output location, leaving each run to invent one. All three now name
+  `artifact_root` and say where their output lands.
+
 ## 0.14.0 — 2026-08-09
 
 ### See and click an idea before any design system exists

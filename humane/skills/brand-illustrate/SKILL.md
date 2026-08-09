@@ -45,6 +45,10 @@ a config file legitimately outranks a variable exported in the calling shell.
 `scripts/illustrate.py backends -v` prints what was found and every location
 searched — use it before concluding anything is missing.
 
+## Where output goes
+
+A batch — images, `prompts.md`, `metadata.json`, the contact sheet, and the saved recipe — goes in `<artifact_root>/<slug>/illustrations/<batch>/`, the `setup` setting defaulting to `corpus_root`, unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
+
 ## What you need first
 
 A token file (`design.tokens.json` or `<name>.tokens.json`) produced by

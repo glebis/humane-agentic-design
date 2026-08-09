@@ -70,9 +70,23 @@ and prototype copy that skips the handoff ships unreviewed.
 ## Output
 
 Every prototype is a file the user can open, not a paste into chat (rung 1 may
-also be shown inline). Write it into the project — `prototypes/<slug>/` unless
-the user names a place — as a **self-contained** artifact: no CDN, no external
-fonts, no build step. Double-click opens it.
+also be shown inline). It is **self-contained**: no CDN, no external fonts, no
+build step. Double-click opens it.
+
+It goes in `<artifact_root>/<slug>/prototypes/<name>/` — the `setup` setting,
+which defaults to `corpus_root`. `setup` owns the whole path table
+(`setup/references/paths.md`); resolve it rather than building it:
+
+```python
+from humane_setup import artifact_dir
+artifact_dir(slug, "prototype")
+```
+
+**Never write to the current working directory**, and never to a bare relative
+`prototypes/`. That puts the user's prototype wherever the agent happens to be
+standing — an earlier version of this rule did exactly that and wrote a
+prototype into the humane plugin's own source tree, untracked and one
+`git add -A` from shipping to every user. If the user names a place, use it.
 
 > **Claude Code extras:** offer to publish the file as an Artifact when the
 > user wants a shareable link; the file on disk remains the source of truth.

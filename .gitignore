@@ -19,3 +19,10 @@ evals/contrast/runs/
 evals/node_modules/
 evals/honesty/runs/
 evals/artifact_type/runs/
+
+# User artifacts must never land in the plugin source. See
+# humane/skills/setup/references/paths.md — they belong under artifact_root.
+prototypes/
+specimens/
+boards/
+illustrations/

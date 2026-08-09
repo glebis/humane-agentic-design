@@ -50,6 +50,25 @@ SETTINGS = {
                       "language for skill output; captured evidence is never translated"),
     "browser_tool":  ("HUMANE_BROWSER_TOOL", "auto",
                       "what drives a live interface in walkthrough driven mode (auto | agent-browser | playwright-mcp | host | user)"),
+    # Empty means "wherever the corpus lives" — see artifact_root() below. A
+    # literal duplicate of corpus_root's default would drift the first time one
+    # of them changed.
+    "artifact_root": ("HUMANE_ARTIFACT_ROOT", "",
+                      "where generated artifacts land (prototypes, specimens, boards, "
+                      "illustrations); empty = same as corpus_root"),
+}
+
+
+# Every artifact a skill generates belongs under one of these, inside the
+# project's slug directory. Skills name the kind; this table owns the layout, so
+# a reader can find any artifact without knowing which skill made it.
+ARTIFACT_KINDS = {
+    "prototype":        "prototypes",
+    "type-specimen":    "specimens",
+    "brandkit":         "boards",
+    "brand-illustrate": "illustrations",
+    "walkthrough":      "walks",
+    "review":           "reviews",
 }
 
 
@@ -131,6 +150,43 @@ def resolve_config(project_dir=None):
         if problems:
             out[key]["suspect"] = True
     return out
+
+
+def artifact_root(config=None, project_dir=None):
+    """Resolve where generated artifacts belong, as an expanded path.
+
+    Empty `artifact_root` resolves to `corpus_root`, so by default a project's
+    prototypes, specimens and boards sit in the same bundle as its corpus and a
+    reader has one place to look. Set it explicitly to put artifacts somewhere
+    else — inside the product repo, say, where they can be committed.
+
+    It exists as a separate setting because the two genuinely differ in kind: a
+    JTBD corpus is usually personal and global, while a prototype is often
+    something you want beside the code it describes.
+    """
+    config = config or resolve_config(project_dir)
+    value = (config.get("artifact_root", {}).get("value") or "").strip()
+    if not value:
+        value = config.get("corpus_root", {}).get("value") or SETTINGS["corpus_root"][1]
+    return pathlib.Path(value).expanduser()
+
+
+def artifact_dir(slug, kind, config=None, project_dir=None):
+    """The directory a skill must write `kind` artifacts for `slug` into.
+
+    Never the current working directory. A CWD-relative default writes a user's
+    artifact into whatever tree the agent happens to be standing in — which is
+    how a prototype landed inside this plugin's own source, untracked and one
+    `git add -A` away from shipping to every user of the plugin.
+    """
+    if kind not in ARTIFACT_KINDS:
+        raise ValueError(
+            f"unknown artifact kind {kind!r}. Known: {', '.join(sorted(ARTIFACT_KINDS))}. "
+            "Add it to ARTIFACT_KINDS rather than inventing a path at the call site."
+        )
+    if not slug or "/" in slug or slug.startswith("."):
+        raise ValueError(f"slug {slug!r} must be a plain directory name")
+    return artifact_root(config, project_dir) / slug / ARTIFACT_KINDS[kind]
 
 
 def write_config(updates, scope="global", project_dir=None):

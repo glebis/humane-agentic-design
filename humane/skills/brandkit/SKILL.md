@@ -18,6 +18,10 @@ minimal, coherent, strategic, visually expensive, presentation-ready.
 Create a complete brand world in one image. Do not generate generic logos,
 random mockups, or messy AI moodboards.
 
+## Where output goes
+
+Boards, `direction.json`, and the `brand-block.draft.json` handoff go in `<artifact_root>/<slug>/boards/` — the `setup` setting, defaulting to `corpus_root` — unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
+
 ## Where this sits in the cycle
 
 `brandkit` explores identity **before** a token set exists. Its downstream twin

@@ -239,6 +239,14 @@ def generate(seed, pairs, defects=0, clean=False):
             want = _disagreement
         elif index in set(defect_slots):
             want = _both_fail
+        elif clean:
+            # A clean fixture must be clean under any defensible level
+            # assignment, so a passing pair is not enough — it must also clear
+            # the body-text bar, the strictest of the three. Otherwise a
+            # reviewer who reads a link as running text flags it, correctly,
+            # and `padding` scores that judgement as an invented finding.
+            want = lambda m: m["passed"] and measure(  # noqa: E731
+                m["fg"], m["bg"], "body")["passed"]
         else:
             want = lambda m: m["passed"]  # noqa: E731
         m = _search(rng, level, want, _BACKGROUNDS, used)
@@ -272,6 +280,24 @@ def generate(seed, pairs, defects=0, clean=False):
         )
     if clean and got_planted:
         raise AssertionError("--clean produced a failing pair")
+    if clean:
+        # A clean fixture must be clean under ANY defensible level assignment,
+        # not only the one this generator picked. The first clean run had 1-3
+        # pairs per fixture that passed at their declared level (`non-body`,
+        # `graphic`) and failed at `body`: #65635d on #eef1f4 is Lc 71.5 — fine
+        # for a link, short of the 75 body floor. Reviewers reasonably read some
+        # of those as body text and flagged them, and `padding` then scored a
+        # defensible disagreement about level as an invented finding. The
+        # pathway could not answer the question it was built for.
+        soft = [e for e in entries
+                if not measure(e["fg"], e["bg"], "body")["passed"]]
+        if soft:
+            raise AssertionError(
+                "--clean produced %d pair(s) that fail when judged as body text "
+                "(%s). Clean must hold at the strictest threshold, or `padding` "
+                "measures a level disagreement rather than invention."
+                % (len(soft), ", ".join(e["id"] for e in soft))
+            )
 
     manifest = {
         "seed": seed,

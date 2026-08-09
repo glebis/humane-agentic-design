@@ -273,8 +273,16 @@ def _dedupe(pairs):
     return out
 
 
+# Explicit contrast vocabulary, or a quoted measurement. Deliberately NOT bare
+# "colour" and NOT the owning skill's name: a `layout-rules` finding that the
+# same status badge is painted in two unrelated palettes is about consistency,
+# not contrast, and a `ux-writing` finding about duplicate labels is about
+# neither. Both quote hex values, and both were being counted as contrast
+# findings — which inflated `padding` for exactly the reviews that cover more
+# than one domain. The harness was penalising breadth again, in a second place.
 CONTRAST_KEYWORDS = re.compile(
-    r"contrast|colour|color|wcag|apca|design-tokens|design tokens|luminance|legib",
+    r"contrast|wcag|apca|luminance|legib|readab"
+    r"|\d+(\.\d+)?\s*:\s*1|\bLc\s*-?\d",
     re.IGNORECASE,
 )
 
@@ -303,9 +311,7 @@ def is_contrast_finding(finding, matched):
         finding.get(k, "") or ""
         for k in ("domain", "why", "location", "before", "after")
     )
-    if CONTRAST_KEYWORDS.search(blob):
-        return True
-    return matched is not None and bool(_hexes(blob))
+    return bool(CONTRAST_KEYWORDS.search(blob))
 
 
 OWNER = re.compile(r"design[-_ ]?tokens", re.IGNORECASE)
@@ -457,8 +463,8 @@ def format_summary(result):
     lines.append("\n  matched pairs: " + (", ".join(matched) if matched else "none"))
     if metrics["ambiguous"]:
         lines.append(
-            f"  {metrics['ambiguous']} finding(s) had a locator matching more than one "
-            "pair; each was attributed to its best match by locator priority."
+            f"  {metrics['ambiguous']} finding(s) name more than one pair — every pair "
+            "named is credited, per the skill's one-root-cause-one-row rule."
         )
     return "\n".join(lines)
 

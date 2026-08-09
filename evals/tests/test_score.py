@@ -220,7 +220,9 @@ class TestLocatorStrategies(unittest.TestCase):
 
     def test_one_hex_alone_does_not_match(self):
         # Half a pair is not evidence the reviewer found that pair.
-        result = self._one("somewhere", why="#8a8a8a looks light")
+        # The `why` must read as a contrast claim, or the finding is not in the
+        # contrast population at all and there is nothing to say about matching.
+        result = self._one("somewhere", why="#8a8a8a has poor contrast here")
         self.assertEqual(result["report"]["matched_pairs"], [])
         self.assertEqual(result["metrics"]["padding"], 1)
 
@@ -241,7 +243,7 @@ class TestAmbiguity(unittest.TestCase):
         # the result against an arm that had found 4 of 6.
         report = coverage_table("1 finding") + findings_table([
             ["1", "HIGH", "`design-tokens`", "`pair-01` and `pair-03`",
-             "x", "y", "both are too light"],
+             "x", "y", "both fail the contrast bar"],
         ])
         result = run(MANIFEST, report)
         self.assertEqual(result["report"]["matched_pairs"], ["pair-01", "pair-03"],

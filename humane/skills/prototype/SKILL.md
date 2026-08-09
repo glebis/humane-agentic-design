@@ -196,10 +196,10 @@ also be shown inline). It is **self-contained**: no CDN, no external fonts, no
 build step. Double-click opens it.
 
 The destination is `setup`'s rule, not this skill's: resolve
-`artifact_path(name, "prototype", "html")` — it returns the `prototypes/` parent; create
-`<name>/` inside it — and never write to the working directory. The full path
-table, defaults, and prohibitions live in `setup/references/paths.md`. If the
-user names a place, use it.
+`artifact_path(name, "prototype", "html")` — it returns the complete file path
+(`.design/prototype-<name>.html` beside the project) — and never write to the
+working directory. The full path table, defaults, and prohibitions live in
+`setup/references/paths.md`. If the user names a place, use it.
 
 > **Claude Code extras:** offer to publish the file as an Artifact when the
 > user wants a shareable link; the file on disk remains the source of truth.

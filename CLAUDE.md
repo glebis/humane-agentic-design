@@ -27,7 +27,7 @@ backticks and name only the handoff — never restate or override it.
 | Skill | Owns |
 | --- | --- |
 | `using-humane` | Routing only: which skill owns a task, and what the declared graph says comes next. Owns the graph *keys* (`handoffs`/`accepts`/`orchestrates`) and their reader, `scripts/graph.py`. Owns no method rules, and no edge — each skill declares its own. |
-| `setup` | Environment and configuration: the six settings, their resolution order, dependency checks, and the install commands for each gap. Owns no method rules. |
+| `setup` | Environment and configuration: the settings table, its resolution order, dependency checks, and the install commands for each gap. Owns no method rules. |
 | `jtbd` | The corpus: jobs, switch forces, ODI outcomes, evidence ledger, granularity and jargon gates. Every downstream claim cites it. |
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
 | `respondent-panel` | Gut reactions from strangers to a **user-facing artifact**, in isolated contexts. Never rewrites. |

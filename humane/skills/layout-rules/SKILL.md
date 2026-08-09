@@ -1,6 +1,6 @@
 ---
 name: layout-rules
-description: This skill should be used when designing, building, or reviewing any layout, dashboard, data-dense tool UI, viewer, or admin interface. Loads a battle-tested avoid-list of 39 rules (structure, footers/metrics, tables, color/contrast, URL state, JS traps, accessibility/touch, i18n/theming, de-slop) distilled from a real build/audit cycle. Triggers on "design a layout", "build a dashboard", "make a viewer/tool UI", "review this UI", "какие правила дизайна", or before writing any HTML/CSS for a tool-like interface.
+description: A battle-tested avoid-list of 39 structural and interaction defect classes for tool/dashboard UIs (structure, footers/metrics, tables, color/contrast, URL state, JS traps, accessibility/touch, i18n/theming, de-slop), distilled from a real build/audit cycle. Use when designing, building, or reviewing any layout, dashboard, data-dense tool UI, viewer, or admin interface. Triggers on "design a layout", "build a dashboard", "make a viewer/tool UI", "review this UI", "какие правила дизайна", or before writing any HTML/CSS for a tool-like interface.
 handoffs:
   - to: design-tokens
     when: rule 12 flags a text/background pair that must be measured or remediated

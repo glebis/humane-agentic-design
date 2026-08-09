@@ -95,6 +95,19 @@ class TestPathsReference(unittest.TestCase):
                     "add the row, or a reader cannot find what that skill wrote",
                 )
 
+    def test_the_design_file_exit_is_documented(self):
+        # The .pen exit writes to the prototypes anchor but is the one artifact
+        # here that cannot be opened without its application. A reader looking
+        # up "where did my design file go" must find it in the table.
+        text = self.REFERENCE.read_text(encoding="utf-8")
+        self.assertIn(".pen", text,
+                      "the design-file exit is not in references/paths.md")
+        self.assertIn("design_tool", text,
+                      "the setting that enables it is not named in the table")
+
+    def test_design_tool_is_a_known_setting(self):
+        self.assertIn("design_tool", humane_setup.SETTINGS)
+
     def test_both_roots_are_documented(self):
         text = self.REFERENCE.read_text(encoding="utf-8")
         for setting in ("corpus_root", "artifact_root"):

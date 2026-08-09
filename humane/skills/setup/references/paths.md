@@ -11,6 +11,10 @@ add the row, do not invent a path at the call site.
 | `corpus_root` | `~/jtbd` | the JTBD corpus and everything derived directly from it |
 | `artifact_root` | *empty → same as `corpus_root`* | generated artifacts: prototypes, specimens, boards, illustrations, walks, reviews |
 
+A design file (`.pen`) is a prototype and lands with the others. It is the one
+artifact here that is **not** openable on its own — it needs its application —
+so the skill that writes it has to say which kind it produced.
+
 They are separate settings because they differ in kind. A corpus is usually
 personal and global — one place you keep every project's jobs. A prototype is
 often something you want beside the code it describes, so it can be committed
@@ -60,6 +64,7 @@ surprising.
 | `before-after` | `before-after.json`, `.md`, `-visual.png` | `<corpus_root>/<slug>/` | `corpus_root` |
 | `walkthrough` | `step-NN-<tier>.png` per step per tier | `<artifact_root>/<slug>/walks/<date>-<task>/` | `artifact_root` |
 | `prototype` | ASCII sketch, SVG click-dummy, HTML prototype | `<artifact_root>/<slug>/prototypes/<name>/` | `artifact_root` |
+| `prototype` | editable design file (`.pen`), when `design_tool` resolves to a backend | `<artifact_root>/<slug>/prototypes/<name>.pen` | `artifact_root` |
 | `type-specimen` | `specimen.json`, the built specimen page | `<artifact_root>/<slug>/specimens/` | `artifact_root` |
 | `brandkit` | brand boards, `direction.json`, `brand-block.draft.json` | `<artifact_root>/<slug>/boards/` | `artifact_root` |
 | `brand-illustrate` | images, `prompts.md`, `metadata.json`, contact sheet, recipe | `<artifact_root>/<slug>/illustrations/<batch>/` | `artifact_root` |

@@ -39,6 +39,31 @@ What you can do with `humane` that you could not do before, newest first.
   traps and requires a width check on every string, including after a copy
   rewrite lengthens one.
 
+## 0.16.0 — 2026-08-09
+
+### Carry a prototype on into a design file
+
+1. When the host exposes a design-file backend, `humane:prototype` can produce
+   an editable design file (`.pen`) instead of a rung-3 HTML page. Take that
+   exit when you want to *carry on designing* — in a visual editor, or by
+   handing it to someone who will.
+2. `scripts/humane_setup.py config --set design_tool=none` pins it off; `auto`
+   (the default) uses a backend when the host has one and stays on the ASCII →
+   SVG → HTML ladder when it does not.
+3. The file lands at `<artifact_root>/<slug>/prototypes/<name>.pen`, alongside
+   every other prototype.
+4. If a token set exists the design file is built from it. If none exists, a
+   backend's own style archetype is scaffolding — it goes in the "what is fake"
+   list, and a direction that survives goes to `humane:brandkit` and then into
+   `humane:design-tokens`, which owns it.
+
+A design file is not a higher rung. The ladder makes disposable artifacts that
+answer one question; a design file is a living document. It also does not open
+on its own, and its HTML export references image assets by relative path rather
+than embedding them — so it is a handoff to implementation, not the
+self-contained artifact rungs 2 and 3 promise. The skill says which of the two
+it produced.
+
 ## 0.15.0 — 2026-08-09
 
 ### Put every generated artifact where you want it

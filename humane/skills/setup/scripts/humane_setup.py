@@ -53,6 +53,8 @@ SETTINGS = {
     # Empty means "wherever the corpus lives" — see artifact_root() below. A
     # literal duplicate of corpus_root's default would drift the first time one
     # of them changed.
+    "design_tool":   ("HUMANE_DESIGN_TOOL",  "auto",
+                      "editable design-file backend for prototype (auto | pencil | none)"),
     "artifact_root": ("HUMANE_ARTIFACT_ROOT", "",
                       "where generated artifacts land (prototypes, specimens, boards, "
                       "illustrations); empty = same as corpus_root"),
@@ -347,6 +349,26 @@ def check_browser_tool(cfg):
                     "npm i -g agent-browser")
 
 
+def check_design_tool(cfg):
+    """Report the setting. Availability is NOT probed, and cannot be from here.
+
+    A design-file backend like Pencil is exposed to the agent as host tools, not
+    as a binary on PATH, so this script has no way to see it — unlike
+    `agent-browser`, which is a file it can look for. Claiming to have verified
+    it would be the kind of unearned confidence the review skills exist to
+    prevent, so the doctor reports what is configured and says plainly that the
+    agent resolves the rest at run time.
+    """
+    wanted = str(cfg["design_tool"]["value"] or "auto").strip().lower()
+    if wanted == "none":
+        return _ok("design tool", "none — prototype stays on the file ladder")
+    if wanted == "auto":
+        return _ok("design tool",
+                   "auto — the agent uses a design-file backend if the host "
+                   "exposes one, and falls back to the file ladder if not")
+    return _ok("design tool", f"pinned: {wanted} (host capability, not verifiable from here)")
+
+
 def check_companions():
     """Plugins humane defers to. Absent is fine and reported honestly — the
     review skills mark those domains Not reviewed rather than improvising."""
@@ -531,7 +553,7 @@ def doctor(project_dir=None):
               check_project_tokens(project_dir),
               check_image_backend(cfg, project_dir),
               check_task_export(cfg),
-              check_browser_tool(cfg)]
+              check_browser_tool(cfg), check_design_tool(cfg)]
     checks.extend(check_companions())
     checks.extend(check_humane_copies(project_dir))
     return {"config": cfg, "checks": checks,

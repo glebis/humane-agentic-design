@@ -39,6 +39,7 @@ path?" is always answerable.
 | `image_backend` | `auto` | which generator `brand-illustrate` shells out to |
 | `task_export` | `none` | where `nielsen-heuristics` files findings (`linear`, `beads`, `none`) |
 | `language` | `en` | the language skills speak; captured evidence is never translated |
+| `design_tool` | `auto` | editable design-file backend for `humane:prototype` (`auto` · `pencil` · `none`). `auto` uses one when the host exposes it and stays on the file ladder when it does not. Not verifiable by the doctor — it is a host capability, not a binary on `PATH` |
 | `artifact_root` | *empty → `corpus_root`* | where generated artifacts land — prototypes, specimens, boards, illustrations, walks, saved reviews. Separate from `corpus_root` because a corpus is usually personal and global while a prototype often belongs beside the code it describes. See `references/paths.md` for the full table of what every skill writes and where |
 | `browser_tool` | `auto` | what drives a live interface in `walkthrough` driven mode (and the skills that cite its procedure). `auto` resolves the ladder in `walkthrough/references/driven.md`: `agent-browser` CLI → Playwright MCP → host browser tools → the user drives. Set explicitly to pin a rung |
 

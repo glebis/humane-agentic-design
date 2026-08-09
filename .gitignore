@@ -24,3 +24,4 @@ evals/artifact_type/runs/
 # humane/skills/setup/references/paths.md — they belong under artifact_root.
 .design/
 prototypes/
+evals/fanout/runs/

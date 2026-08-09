@@ -47,7 +47,7 @@ searched — use it before concluding anything is missing.
 
 ## Where output goes
 
-A batch — images, `prompts.md`, `metadata.json`, the contact sheet, and the saved recipe — goes in `<artifact_root>/<slug>/illustrations/<batch>/`, the `setup` setting defaulting to `corpus_root`, unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
+A batch — images, `prompts.md`, `metadata.json`, the contact sheet, and the saved recipe — goes in `.design/illustration-<batch><batch>/`, the `setup` setting defaulting to `corpus_root`, unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
 
 ## What you need first
 

@@ -55,22 +55,23 @@ SETTINGS = {
     # of them changed.
     "design_tool":   ("HUMANE_DESIGN_TOOL",  "auto",
                       "editable design-file backend for prototype (auto | pencil | none)"),
-    "artifact_root": ("HUMANE_ARTIFACT_ROOT", "",
-                      "where generated artifacts land (prototypes, specimens, boards, "
-                      "illustrations); empty = same as corpus_root"),
+    "artifact_root": ("HUMANE_ARTIFACT_ROOT", ".design",
+                      "where generated artifacts land; a relative value resolves "
+                      "against the project directory, never the working directory"),
 }
 
 
-# Every artifact a skill generates belongs under one of these, inside the
-# project's slug directory. Skills name the kind; this table owns the layout, so
-# a reader can find any artifact without knowing which skill made it.
+# Every artifact is named for the skill that made it, so a flat directory sorts
+# by kind and a reader can tell where a file came from without opening it:
+# `.design/prototype-dashboard.pen`, `.design/specimen-headings.html`. Skills
+# name the kind; this table owns the prefix.
 ARTIFACT_KINDS = {
-    "prototype":        "prototypes",
-    "type-specimen":    "specimens",
-    "brandkit":         "boards",
-    "brand-illustrate": "illustrations",
-    "walkthrough":      "walks",
-    "review":           "reviews",
+    "prototype":        "prototype",
+    "type-specimen":    "specimen",
+    "brandkit":         "board",
+    "brand-illustrate": "illustration",
+    "walkthrough":      "walk",
+    "review":           "review",
 }
 
 
@@ -155,40 +156,54 @@ def resolve_config(project_dir=None):
 
 
 def artifact_root(config=None, project_dir=None):
-    """Resolve where generated artifacts belong, as an expanded path.
+    """Resolve where generated artifacts belong, as an absolute path.
 
-    Empty `artifact_root` resolves to `corpus_root`, so by default a project's
-    prototypes, specimens and boards sit in the same bundle as its corpus and a
-    reader has one place to look. Set it explicitly to put artifacts somewhere
-    else — inside the product repo, say, where they can be committed.
+    Default `.design`, beside the thing being designed, so artifacts travel with
+    the project and can be committed with it. `corpus_root` stays separate: a
+    JTBD corpus is usually personal and global, an artifact usually belongs with
+    the code it describes.
 
-    It exists as a separate setting because the two genuinely differ in kind: a
-    JTBD corpus is usually personal and global, while a prototype is often
-    something you want beside the code it describes.
+    A RELATIVE value resolves against the project directory, never the current
+    working directory. That distinction is the whole point. A CWD-relative
+    default is what once wrote a prototype into this plugin's own source tree,
+    and `.design` would reintroduce it exactly — an agent standing anywhere
+    would create `.design` there. `project_dir` defaults to `.` only because a
+    caller that passed nothing has already told us it means "here".
     """
     config = config or resolve_config(project_dir)
     value = (config.get("artifact_root", {}).get("value") or "").strip()
     if not value:
-        value = config.get("corpus_root", {}).get("value") or SETTINGS["corpus_root"][1]
-    return pathlib.Path(value).expanduser()
+        value = SETTINGS["artifact_root"][1]
+    path = pathlib.Path(value).expanduser()
+    if not path.is_absolute():
+        path = (pathlib.Path(project_dir or ".").expanduser().resolve() / path)
+    return path
 
 
-def artifact_dir(slug, kind, config=None, project_dir=None):
-    """The directory a skill must write `kind` artifacts for `slug` into.
+def artifact_path(name, kind, ext=None, config=None, project_dir=None):
+    """Where a skill must write one artifact, named for the skill that made it.
 
-    Never the current working directory. A CWD-relative default writes a user's
-    artifact into whatever tree the agent happens to be standing in — which is
-    how a prototype landed inside this plugin's own source, untracked and one
-    `git add -A` away from shipping to every user of the plugin.
+        artifact_path("dashboard", "prototype", "pen")
+        -> <project>/.design/prototype-dashboard.pen
+
+    Omit `ext` for a kind that produces several files — a walk's screenshots, an
+    illustration batch — and you get a directory of the same name.
+
+    Never the current working directory, and never a path assembled from a
+    literal at the call site. Both have already put a user's artifact somewhere
+    nobody meant it to go.
     """
     if kind not in ARTIFACT_KINDS:
         raise ValueError(
             f"unknown artifact kind {kind!r}. Known: {', '.join(sorted(ARTIFACT_KINDS))}. "
-            "Add it to ARTIFACT_KINDS rather than inventing a path at the call site."
+            "Add it to ARTIFACT_KINDS rather than inventing a name at the call site."
         )
-    if not slug or "/" in slug or slug.startswith("."):
-        raise ValueError(f"slug {slug!r} must be a plain directory name")
-    return artifact_root(config, project_dir) / slug / ARTIFACT_KINDS[kind]
+    if not name or "/" in name or name.startswith("."):
+        raise ValueError(f"name {name!r} must be a plain file name, no path parts")
+    stem = f"{ARTIFACT_KINDS[kind]}-{name}"
+    if ext:
+        stem = f"{stem}.{ext.lstrip('.')}"
+    return artifact_root(config, project_dir) / stem
 
 
 def write_config(updates, scope="global", project_dir=None):

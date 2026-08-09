@@ -20,7 +20,7 @@ random mockups, or messy AI moodboards.
 
 ## Where output goes
 
-Boards, `direction.json`, and the `brand-block.draft.json` handoff go in `<artifact_root>/<slug>/boards/` — the `setup` setting, defaulting to `corpus_root` — unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
+Boards, `direction.json`, and the `brand-block.draft.json` handoff go in `.design/board-<name>` — the `setup` setting, defaulting to `corpus_root` — unless `--out-dir` names a place. `setup/references/paths.md` owns the full table.
 
 ## Where this sits in the cycle
 

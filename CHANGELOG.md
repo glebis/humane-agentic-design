@@ -28,6 +28,35 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.17.0 — 2026-08-09
+
+### Artifacts live beside the project, named for the skill that made them
+
+1. `artifact_root` now defaults to **`.design`**, next to the thing being
+   designed, so artifacts travel with the project and can be committed with it.
+   `corpus_root` is untouched — a JTBD corpus stays personal and global.
+2. Every artifact is named for its skill in one flat directory:
+   `.design/prototype-dashboard.pen`, `.design/specimen-headings.html`,
+   `.design/board-editorial/`, `.design/walk-signup/`. The prefix tells a reader
+   which skill wrote a file without opening it, and a flat directory sorts by
+   kind.
+3. `artifact_path(name, kind, ext)` resolves it. Omit the extension for a kind
+   that produces several files and you get a directory of the same name.
+4. A **relative** `artifact_root` resolves against the project directory, never
+   the working directory — the distinction the setting exists for. `.design`
+   resolved against the CWD would recreate the bug 0.15.0 fixed, with an agent
+   creating `.design` wherever it happened to be standing.
+
+### Fixed
+
+- `references/paths.md` still claimed a design file would land under
+  `artifact_root`. It cannot: a backend keeps documents in its own store —
+  Pencil in `~/.pencil/documents/<uuid>/` — so `.design` cannot hold a `.pen`.
+  The table now says the location is not ours to set, and names `export_nodes`
+  and `export_html` as the way to get something from a design file into
+  `.design`. `design_tool` says *whether* a backend is used, never *where* it
+  writes.
+
 ## 0.16.1 — 2026-08-09
 
 ### Fixed

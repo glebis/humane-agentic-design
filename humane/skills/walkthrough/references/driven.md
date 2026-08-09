@@ -52,7 +52,7 @@ One screenshot per step per tier walked, captured **before moving to the next
 step**, saved to:
 
 ```
-<corpus_root>/<slug>/walks/<date>-<task-slug>/step-NN-<tier>.png
+.design/walk-<date>-<task-slug>/step-NN-<tier>.png
 ```
 
 (No corpus? Use `./walks/…` in the project and say so.) With `agent-browser`:

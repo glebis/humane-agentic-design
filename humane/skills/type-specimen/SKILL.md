@@ -26,7 +26,7 @@ load from the Google Fonts CSS API at view time.
 
 ## Where output goes
 
-The built specimen page and its `specimen.json` go in `<artifact_root>/<slug>/specimens/` — the `setup` setting, defaulting to `corpus_root`. Pass `-o` to put them elsewhere; never let them default to the current working directory, which writes into whatever tree the agent happens to be standing in. `setup/references/paths.md` owns the full table.
+The built specimen page and its `specimen.json` go in `.design/specimen-<name>` — the `setup` setting, defaulting to `corpus_root`. Pass `-o` to put them elsewhere; never let them default to the current working directory, which writes into whatever tree the agent happens to be standing in. `setup/references/paths.md` owns the full table.
 
 ## Quick reference
 

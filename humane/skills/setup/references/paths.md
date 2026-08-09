@@ -8,56 +8,51 @@ add the row, do not invent a path at the call site.
 
 | Setting | Default | Holds |
 | --- | --- | --- |
+| `artifact_root` | `.design` | generated artifacts, beside the thing being designed |
 | `corpus_root` | `~/jtbd` | the JTBD corpus and everything derived directly from it |
-| `artifact_root` | *empty → same as `corpus_root`* | generated artifacts: prototypes, specimens, boards, illustrations, walks, reviews |
 
-A design file (`.pen`) is the one artifact here that is **not** openable on its
-own and the one whose path this table cannot enforce. A design-file backend
-writes into the document its application has open; Pencil's `filePath` argument
-is accepted and ignored, so a build aimed at a path that is not open lands in
-someone else's file and still reports success. `humane:prototype` therefore
-confirms the active document before building and stops if it is wrong.
+They differ in kind. A corpus is usually personal and global — one place you
+keep every project's jobs. An artifact usually belongs with the code it
+describes, so it travels with the project and can be committed with it.
 
-They are separate settings because they differ in kind. A corpus is usually
-personal and global — one place you keep every project's jobs. A prototype is
-often something you want beside the code it describes, so it can be committed
-with it. Left empty, `artifact_root` follows `corpus_root` and everything lives
-in one bundle.
+**A relative `artifact_root` resolves against the project directory, never the
+current working directory.** That distinction is the whole point of the setting:
+a CWD-relative default is what once wrote a prototype into this plugin's own
+source tree, and `.design` would reintroduce it exactly — an agent standing
+anywhere would create `.design` right there.
 
 ```bash
-scripts/humane_setup.py config --set artifact_root=./design --scope project
-scripts/humane_setup.py config --set corpus_root=~/work/jtbd --scope global
+scripts/humane_setup.py config --set artifact_root=docs/design --scope project
+scripts/humane_setup.py config --set artifact_root=~/design --scope global
 ```
 
-## The bundle
+## The naming rule
 
-Everything for one project sits under one slug directory:
+Every artifact is named for the skill that made it, in one flat directory:
 
 ```
-<corpus_root>/<slug>/
-    jtbd.json                    the corpus — jtbd
-    one-pager.md, gtm-brief.md   jtbd exports
-    before-after.json|.md|.png   before-after
-
-<artifact_root>/<slug>/
-    prototypes/                  prototype
-    specimens/                   type-specimen
-    boards/                      brandkit
-    illustrations/               brand-illustrate
-    walks/<date>-<task>/         walkthrough — step-NN-<tier>.png
-    reviews/<date>/              review, nielsen-heuristics reports
+<project>/.design/
+    prototype-dashboard.pen        prototype
+    prototype-checkout.html        prototype
+    specimen-headings.html         type-specimen
+    board-editorial.png            brandkit
+    illustration-onboarding/       brand-illustrate — a batch, so a directory
+    walk-signup/                   walkthrough — screenshots per step per tier
+    review-2026-08-09.md           review, nielsen-heuristics
 ```
 
-Resolve it in code rather than by string-building:
+A flat directory sorts by kind, and the prefix tells a reader which skill made a
+file without opening it. Resolve it rather than building it:
 
 ```python
-from humane_setup import artifact_dir
-artifact_dir("acme-till", "prototype")   # -> <artifact_root>/acme-till/prototypes
+from humane_setup import artifact_path
+artifact_path("dashboard", "prototype", "pen")   # -> <project>/.design/prototype-dashboard.pen
+artifact_path("signup", "walkthrough")           # -> <project>/.design/walk-signup   (a directory)
 ```
 
-`artifact_dir` refuses an unknown kind and refuses a slug containing `/` or
-starting with `.`, so a bad caller fails loudly instead of writing somewhere
-surprising.
+Omit the extension for a kind that produces several files and you get a
+directory of the same name. `artifact_path` refuses an unknown kind and refuses
+a name containing `/` or starting with `.`, so a bad caller fails loudly.
 
 ## The full table
 
@@ -65,37 +60,46 @@ surprising.
 | --- | --- | --- | --- |
 | `jtbd` | `jtbd.json`, one-pager, messaging angles, GTM brief | `<corpus_root>/<slug>/` | `corpus_root` |
 | `before-after` | `before-after.json`, `.md`, `-visual.png` | `<corpus_root>/<slug>/` | `corpus_root` |
-| `walkthrough` | `step-NN-<tier>.png` per step per tier | `<artifact_root>/<slug>/walks/<date>-<task>/` | `artifact_root` |
-| `prototype` | ASCII sketch, SVG click-dummy, HTML prototype | `<artifact_root>/<slug>/prototypes/<name>/` | `artifact_root` |
-| `prototype` | editable design file (`.pen`), when `design_tool` resolves to a backend | `<artifact_root>/<slug>/prototypes/<name>.pen` — **the user must create and open it first; the backend writes to whatever document its app has open and ignores any path given to it** | the open document |
-| `type-specimen` | `specimen.json`, the built specimen page | `<artifact_root>/<slug>/specimens/` | `artifact_root` |
-| `brandkit` | brand boards, `direction.json`, `brand-block.draft.json` | `<artifact_root>/<slug>/boards/` | `artifact_root` |
-| `brand-illustrate` | images, `prompts.md`, `metadata.json`, contact sheet, recipe | `<artifact_root>/<slug>/illustrations/<batch>/` | `artifact_root` |
-| `review` · `nielsen-heuristics` | a saved report, **when the user asks for a file** | `<artifact_root>/<slug>/reviews/<date>/` | `artifact_root` |
+| `prototype` | ASCII sketch, SVG click-dummy, HTML prototype | `.design/prototype-<name>.html` | `artifact_root` |
+| `prototype` | editable design file (`.pen`) | **wherever its application keeps documents — see below** | not enforceable |
+| `type-specimen` | `specimen.json`, the built specimen page | `.design/specimen-<name>.html` | `artifact_root` |
+| `brandkit` | brand boards, `direction.json`, `brand-block.draft.json` | `.design/board-<name>/` | `artifact_root` |
+| `brand-illustrate` | images, `prompts.md`, `metadata.json`, contact sheet, recipe | `.design/illustration-<batch>/` | `artifact_root` |
+| `walkthrough` | `step-NN-<tier>.png` per step per tier | `.design/walk-<task>/` | `artifact_root` |
+| `review` · `nielsen-heuristics` | a saved report, **when the user asks for a file** | `.design/review-<date>.md` | `artifact_root` |
 | `design-tokens` | `tokens.css`, `DESIGN.md`, `refs.json` | **beside the token file it compiled** | the input path |
 | `persona-review` | `<doc>-persona-review.md` | **beside the document it reviewed** | the input path |
-| `respondent-panel` | nothing — reactions are reported inline | — | — |
-| `ux-writing` · `layout-rules` | nothing — findings are reported inline | — | — |
+| `respondent-panel` · `ux-writing` · `layout-rules` | nothing — reported inline | — | — |
 
-## Two rules that are not negotiable
+## Three rules that are not negotiable
 
 **Never write to the current working directory.** A CWD-relative default puts a
 user's artifact wherever the agent happened to be standing. This is not
 hypothetical: a prototype was written to `./prototypes/<slug>/` and landed
 inside this plugin's own source tree, untracked, one `git add -A` away from
-being distributed to every user of the plugin. Resolve through `artifact_dir`.
+being distributed to every user. Resolve through `artifact_path`.
 
 **Output beside the input is a deliberate exception, not an oversight.**
 `design-tokens` compiles `tokens.css` next to the token file it read, and
-`persona-review` saves next to the document it reviewed. Both are derived from a
-path the user already named, and moving them to a central root would separate a
-compiled file from its source. They are anchored — just to the input, not to a
-setting.
+`persona-review` saves next to the document it reviewed. Moving those to a
+central root would separate a compiled file from its source. They are anchored —
+just to the input, not to a setting.
+
+**A design file's location is not ours to set.** The `design_tool` setting says
+whether a backend is used at all (`auto` · `pencil` · `none`); it does not, and
+cannot, say where the file goes. A design-file backend keeps
+documents in its own store — Pencil in `~/.pencil/documents/<uuid>/` — and the
+`filePath` argument on its tools is accepted and ignored. Passing the path of a
+different existing file returns the *active* document's nodes. So `.design`
+cannot hold a `.pen`, and `humane:prototype` confirms which document is open
+before building rather than pretending to choose. To get one into `.design`,
+export from it: `export_nodes` for a PNG or PDF, `export_html` for markup.
 
 ## Adding a skill that writes something
 
 1. Add the kind to `ARTIFACT_KINDS` in `scripts/humane_setup.py`.
 2. Add a row to the table above.
-3. Call `artifact_dir(slug, kind)`. Do not build the path from a literal.
-4. If the output genuinely belongs beside its input, say so in the row and in
-   the skill, with the reason. Silence reads as an oversight.
+3. Call `artifact_path(name, kind, ext)`. Never assemble the path from a literal.
+4. If the output genuinely belongs beside its input, or the location is not
+   yours to choose, say so in the row with the reason. Silence reads as an
+   oversight.

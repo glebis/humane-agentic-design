@@ -21,39 +21,58 @@ import humane_setup  # noqa: E402
 
 
 class TestArtifactRoot(unittest.TestCase):
-    def test_follows_corpus_root_when_unset(self):
-        config = {"corpus_root": {"value": "~/work/jtbd"},
-                  "artifact_root": {"value": ""}}
-        self.assertEqual(humane_setup.artifact_root(config),
-                         pathlib.Path("~/work/jtbd").expanduser())
+    def test_relative_default_resolves_against_the_project_not_the_cwd(self):
+        # The whole reason this function exists. `.design` resolved against the
+        # working directory would recreate the original bug precisely: an agent
+        # standing in the plugin's source would create `.design` there.
+        root = humane_setup.artifact_root({"artifact_root": {"value": ".design"}},
+                                          project_dir="/tmp/acme")
+        self.assertTrue(root.is_absolute())
+        self.assertEqual(root.name, ".design")
+        self.assertIn("acme", root.parts)
+        self.assertNotEqual(root.parent, pathlib.Path.cwd())
 
-    def test_overrides_corpus_root_when_set(self):
-        config = {"corpus_root": {"value": "~/work/jtbd"},
-                  "artifact_root": {"value": "~/product/design"}}
-        self.assertEqual(humane_setup.artifact_root(config),
-                         pathlib.Path("~/product/design").expanduser())
+    def test_an_absolute_value_is_used_as_given(self):
+        self.assertEqual(
+            humane_setup.artifact_root({"artifact_root": {"value": "~/product/design"}}),
+            pathlib.Path("~/product/design").expanduser())
 
-    def test_whitespace_only_counts_as_unset(self):
-        config = {"corpus_root": {"value": "~/jtbd"},
-                  "artifact_root": {"value": "   "}}
-        self.assertEqual(humane_setup.artifact_root(config),
-                         pathlib.Path("~/jtbd").expanduser())
+    def test_whitespace_only_falls_back_to_the_default(self):
+        root = humane_setup.artifact_root({"artifact_root": {"value": "   "}},
+                                          project_dir="/tmp/acme")
+        self.assertEqual(root.name, humane_setup.SETTINGS["artifact_root"][1])
+
+    def test_the_default_is_design(self):
+        self.assertEqual(humane_setup.SETTINGS["artifact_root"][1], ".design")
 
     def test_it_is_a_known_setting(self):
         self.assertIn("artifact_root", humane_setup.SETTINGS)
 
 
-class TestArtifactDir(unittest.TestCase):
-    CONFIG = {"corpus_root": {"value": "~/jtbd"}, "artifact_root": {"value": ""}}
+class TestArtifactPath(unittest.TestCase):
+    CONFIG = {"artifact_root": {"value": ".design"}}
+    PROJECT = "/tmp/acme"
 
     def test_there_are_kinds_to_check(self):
         # Without this the loops below pass vacuously if the table is emptied.
         self.assertGreater(len(humane_setup.ARTIFACT_KINDS), 0)
 
+    def test_the_name_carries_the_skill_that_made_it(self):
+        path = humane_setup.artifact_path("dashboard", "prototype", "pen",
+                                          self.CONFIG, self.PROJECT)
+        self.assertEqual(path.name, "prototype-dashboard.pen",
+                         "the prefix is how a reader tells which skill wrote a file")
+
+    def test_omitting_the_extension_gives_a_directory_name(self):
+        path = humane_setup.artifact_path("signup", "walkthrough",
+                                          None, self.CONFIG, self.PROJECT)
+        self.assertEqual(path.name, "walk-signup")
+
     def test_every_kind_resolves_to_an_absolute_path(self):
         for kind in humane_setup.ARTIFACT_KINDS:
             with self.subTest(kind=kind):
-                path = humane_setup.artifact_dir("acme", kind, self.CONFIG)
+                path = humane_setup.artifact_path("x", kind, "txt",
+                                                  self.CONFIG, self.PROJECT)
                 self.assertTrue(
                     path.is_absolute(),
                     f"{kind} resolved to {path}, which is relative — a relative "
@@ -61,19 +80,16 @@ class TestArtifactDir(unittest.TestCase):
                     "in, which is how a prototype landed in the plugin source",
                 )
 
-    def test_the_slug_appears_in_the_path(self):
-        path = humane_setup.artifact_dir("acme-till", "prototype", self.CONFIG)
-        self.assertIn("acme-till", path.parts)
-
     def test_unknown_kind_is_refused(self):
         with self.assertRaises(ValueError):
-            humane_setup.artifact_dir("acme", "mockup", self.CONFIG)
+            humane_setup.artifact_path("x", "mockup", "png", self.CONFIG, self.PROJECT)
 
-    def test_slug_cannot_escape_the_root(self):
+    def test_name_cannot_escape_the_root(self):
         for bad in ("../escape", "a/b", ".hidden", ""):
-            with self.subTest(slug=bad):
+            with self.subTest(name=bad):
                 with self.assertRaises(ValueError):
-                    humane_setup.artifact_dir(bad, "prototype", self.CONFIG)
+                    humane_setup.artifact_path(bad, "prototype", "pen",
+                                               self.CONFIG, self.PROJECT)
 
 
 class TestPathsReference(unittest.TestCase):
@@ -87,18 +103,20 @@ class TestPathsReference(unittest.TestCase):
 
     def test_every_kind_is_documented(self):
         text = self.REFERENCE.read_text(encoding="utf-8")
-        for kind, directory in humane_setup.ARTIFACT_KINDS.items():
+        for kind, prefix in humane_setup.ARTIFACT_KINDS.items():
             with self.subTest(kind=kind):
                 self.assertIn(
-                    f"{directory}/", text,
-                    f"`{directory}/` (kind {kind}) is not in references/paths.md — "
-                    "add the row, or a reader cannot find what that skill wrote",
+                    f"{prefix}-", text,
+                    f"the `{prefix}-` prefix (kind {kind}) is not in "
+                    "references/paths.md — add the row, or a reader cannot tell "
+                    "which skill wrote a file",
                 )
 
     def test_the_design_file_exit_is_documented(self):
-        # The .pen exit writes to the prototypes anchor but is the one artifact
-        # here that cannot be opened without its application. A reader looking
-        # up "where did my design file go" must find it in the table.
+        # The .pen exit is the one artifact whose location this table cannot
+        # enforce — the backend keeps its own document store and ignores any
+        # path given to it. A reader asking "where did my design file go" must
+        # find that stated, along with the setting that enables the exit.
         text = self.REFERENCE.read_text(encoding="utf-8")
         self.assertIn(".pen", text,
                       "the design-file exit is not in references/paths.md")
@@ -110,7 +128,7 @@ class TestPathsReference(unittest.TestCase):
 
     def test_both_roots_are_documented(self):
         text = self.REFERENCE.read_text(encoding="utf-8")
-        for setting in ("corpus_root", "artifact_root"):
+        for setting in ("corpus_root", "artifact_root", ".design"):
             with self.subTest(setting=setting):
                 self.assertIn(setting, text)
 

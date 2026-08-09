@@ -118,9 +118,10 @@ and prototype copy that skips the handoff ships unreviewed.
 
 ## Output
 
-Every prototype is a file the user can open, not a paste into chat (rung 1 may
-also be shown inline). It is **self-contained**: no CDN, no external fonts, no
-build step. Double-click opens it.
+Every **ladder** prototype is a file the user can open, not a paste into chat
+(rung 1 may also be shown inline). It is **self-contained**: no CDN, no
+external fonts, no build step. Double-click opens it. The design-file exit is
+the stated exception — `references/design-file.md` owns its output rules.
 
 The destination is `setup`'s rule, not this skill's: resolve
 `artifact_path(name, "prototype", "html")` — it returns the complete file path

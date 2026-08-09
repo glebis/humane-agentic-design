@@ -27,7 +27,7 @@ of the cycle works without them.
 
 ## Configuration
 
-Six settings, resolved highest-precedence first: **project `humane.json` >
+The settings below, resolved highest-precedence first: **project `humane.json` >
 `~/.humane/config.json` > `HUMANE_*` environment > built-in default**. `doctor`
 and `config` print the source beside every value, so "why is it using that
 path?" is always answerable.

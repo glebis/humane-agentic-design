@@ -29,7 +29,7 @@ Every prototype names, before anything is drawn, the **single open question** it
 - **HTML fidelity is your choice:** wireframe (grayscale, system font, no brand — the default when no token set exists) or token-faithful, rendering under the project's compiled `design-tokens` CSS when one exists. It never invents a palette to fake it.
 - **Notes travel with the file:** every artifact carries an embedded notes block — the question it answers, the job it serves cited from the corpus (or "no corpus; structure is a guess"), and what is fake — so a reviewer doesn't report scaffolding as findings.
 - **The editable exit:** when a design-file backend is available (`design_tool` in `setup`), a prototype can instead be an editable design file — not a higher rung but the opposite of one: a living document for carrying on designing, where the ladder produces disposable answers.
-- **Outputs:** a self-contained file at `.design/prototype-<name>.html`, resolved via `artifact_path` — double-click opens it, no CDN, no build step.
+- **Outputs:** every ladder prototype is a self-contained file at `.design/prototype-<name>.html`, resolved via `artifact_path` — double-click opens it, no CDN, no build step. A design file is the exception: it lives in the backend's own store and opens in the application, not the browser.
 - **Reach for it when:** you want to see or try an idea before committing to structure, tokens, or copy. Reactions go to `respondent-panel`, task attempts to `walkthrough`, surviving structure to `design-tokens`, and any string that outlives the prototype to `ux-writing`.
 
 ### 3. `persona-review` + `respondent-panel` — who reacts, and how

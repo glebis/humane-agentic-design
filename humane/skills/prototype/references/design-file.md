@@ -69,13 +69,17 @@ returned `OK`.
 
 So the pre-flight is not optional:
 
-1. **Read the application state and print which document is active.**
-2. **Compare it to where this prototype belongs** —
-   `.design/prototype-<name>.pen`, resolved through `setup`
+1. **Read the application state and print which document is active** — the
+   backend-reported identity is the only trustworthy name for it. A path is
+   not: the backend ignores the paths it is given, and `.design` cannot hold
+   the backend's document at all — it lives in the application's own store
    (`setup/references/paths.md`).
-3. **If they do not match, stop.** Ask the user to create and open the file at
-   that path, and say why: you cannot create or switch documents, and building
-   now would write into their open work.
+2. **Show the user what is active and ask, in so many words: "build this
+   prototype into this document?"**
+3. **Without an explicit yes, stop.** If the active document is the user's
+   other work, ask them to create and open a fresh document for the prototype,
+   and say why: you cannot create or switch documents, and building now would
+   write into what is open.
 4. Build only after the active document is the intended one. Say in the handoff
    which document you wrote into.
 

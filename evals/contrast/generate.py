@@ -32,8 +32,11 @@ import argparse
 import json
 import math
 import random
+import subprocess
 import sys
 from pathlib import Path
+
+from pathlib import Path as pathlib_Path  # noqa: N813
 
 from oracle import LEVELS, STANDARD, measure, oklch_to_rgb, to_hex
 
@@ -177,16 +180,28 @@ def _render(pair_id, level, index, count, fg, bg):
     return f'  <p id="{pair_id}" style="{style}">{_BODY[index % len(_BODY)]}</p>'
 
 
-def build_html(entries):
+# Accessibility defects this generator can plant, all inside the vetted axe
+# allow-list in ../axe/owners.json. `planted` is still never asserted: these are
+# candidates, and only what axe actually reports lands in the manifest.
+A11Y_DEFECTS = {
+    "heading-order":  "a heading level skips (h1 followed by h4)",
+    "empty-heading":  "a heading with no text",
+    "html-has-lang":  "the document declares no language",
+    "no-main":        "no main landmark, so content sits outside any region",
+}
+
+
+def build_html(entries, a11y=()):
     """Return (html_text, {pair_id: line_number}).
 
     Line numbers are 1-based and computed while the document is assembled, not
     grepped afterwards — a locator derived from a second pass can drift from the
     file it claims to describe.
     """
+    a11y = set(a11y)
     lines = [
         "<!doctype html>",
-        '<html lang="en">',
+        "<html>" if "html-has-lang" in a11y else '<html lang="en">',
         "<head>",
         '  <meta charset="utf-8">',
         f"  <title>{_TITLE}</title>",
@@ -199,12 +214,26 @@ def build_html(entries):
         "</head>",
         "<body>",
     ]
+    # Without a landmark, axe reports `region` once per element — twelve
+    # violations for one structural omission. A fixture must not carry an
+    # unplanted accessibility defect, so the default wraps content in <main>
+    # and omitting it becomes something you plant on purpose.
+    if "no-main" not in a11y:
+        lines.append("  <main>")
     at = {}
     for entry in entries:
         line = _render(entry["id"], entry["level"], entry["index"],
                        entry["count"], entry["fg"], entry["bg"])
         lines.append(line)
         at[entry["id"]] = len(lines)  # 1-based: len() after append
+    if "heading-order" in a11y:
+        lines.append('  <h4 id="ax-heading-order">Skipped two levels to get here</h4>')
+        at["ax-heading-order"] = len(lines)
+    if "empty-heading" in a11y:
+        lines.append('  <h2 id="ax-empty-heading"></h2>')
+        at["ax-empty-heading"] = len(lines)
+    if "no-main" not in a11y:
+        lines.append("  </main>")
     lines += ["</body>", "</html>", ""]
     return "\n".join(lines), at
 
@@ -213,7 +242,7 @@ def build_html(entries):
 # Generation
 # ---------------------------------------------------------------------------
 
-def generate(seed, pairs, defects=0, clean=False):
+def generate(seed, pairs, defects=0, clean=False, a11y=()):
     """Return (html_text, manifest_dict). Pure — writes nothing."""
     if pairs < 3:
         raise ValueError("--pairs must be at least 3 (title, content, footer)")
@@ -262,7 +291,7 @@ def generate(seed, pairs, defects=0, clean=False):
             "disagreement": _disagreement(m),
         })
 
-    html, at = build_html(entries)
+    html, at = build_html(entries, a11y)
 
     got_planted = sum(1 for e in entries if e["planted"])
     got_disagreement = sum(1 for e in entries if e["planted"] and e["disagreement"])
@@ -302,6 +331,7 @@ def generate(seed, pairs, defects=0, clean=False):
     manifest = {
         "seed": seed,
         "clean": bool(clean),
+        "a11y_planted": sorted(a11y),
         "fixture": "fixture.html",
         "oracle": {"module": "dtokens.contrast", "standard": STANDARD},
         "counts": {
@@ -324,6 +354,55 @@ def generate(seed, pairs, defects=0, clean=False):
     return html, manifest
 
 
+def run_axe(fixture_path):
+    """Ask oracle #2 what it finds, and record that — never what we intended.
+
+    Same discipline as the contrast oracle: a defect exists because a program
+    says so. A generator that planted a defect and then wrote down its own
+    intent would happily ship a manifest describing a page that is not there.
+
+    Unavailability is a recorded state, not a crash. A run on a machine without
+    node must not look like a smaller but complete result, so the manifest says
+    the pathway went unchecked and the scorer reports that domain Not reviewed.
+    """
+    runner = pathlib_Path(__file__).resolve().parents[1] / "axe" / "run_axe.js"
+    try:
+        out = subprocess.run(["node", str(runner), str(fixture_path)],
+                             capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return {"available": False, "reason": f"could not run node: {exc}"}
+    if out.returncode != 0:
+        return {"available": False, "reason": f"runner exited {out.returncode}: {out.stderr[:200]}"}
+    try:
+        return json.loads(out.stdout)
+    except json.JSONDecodeError as exc:
+        return {"available": False, "reason": f"unparseable runner output: {exc}"}
+
+
+def collapse(violations, owners):
+    """One root cause is one defect, listing every node it affects.
+
+    `region` fires once per element outside a landmark — twelve violations for
+    one missing <main>. Counting those as twelve would let a reviewer that named
+    the single real cause score 1/12 on recall, which is the same mistake the
+    contrast scorer made with consolidated findings and had to be corrected for.
+    """
+    out, seen = [], {}
+    for v in violations:
+        rule = v["rule"]
+        if owners.get("rules", {}).get(rule, {}).get("one_root_cause"):
+            if rule in seen:
+                seen[rule]["selectors"].append(v["selector"])
+                continue
+            entry = dict(v, selectors=[v["selector"]])
+            entry.pop("selector", None)
+            seen[rule] = entry
+            out.append(entry)
+        else:
+            out.append(dict(v, selectors=[v.pop("selector")]))
+    return out
+
+
 def write(out_dir, html, manifest):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -339,6 +418,9 @@ def main(argv=None):
     p.add_argument("--pairs", type=int, required=True)
     p.add_argument("--defects", type=int, default=None,
                    help="how many pairs must fail the oracle")
+    p.add_argument("--a11y", nargs="*", metavar="DEFECT", default=None,
+                   help="plant accessibility defects for oracle #2. No names = all of them. "
+                        "Known: " + ", ".join(sorted(A11Y_DEFECTS)))
     p.add_argument("--clean", action="store_true",
                    help="produce a fixture with zero failing pairs")
     p.add_argument("--out", required=True)
@@ -350,12 +432,33 @@ def main(argv=None):
     if not args.clean and args.defects is None:
         p.error("pass --defects N, or --clean for a fixture with none")
 
+    a11y = sorted(A11Y_DEFECTS) if args.a11y == [] else list(args.a11y or [])
+    unknown = [d for d in a11y if d not in A11Y_DEFECTS]
+    if unknown:
+        p.error(f"unknown --a11y defect(s) {unknown}; known: {sorted(A11Y_DEFECTS)}")
+
     html, manifest = generate(args.seed, args.pairs,
-                              defects=args.defects or 0, clean=args.clean)
+                              defects=args.defects or 0, clean=args.clean, a11y=a11y)
     out = write(args.out, html, manifest)
+
+    # Oracle #2 runs against the file as written, and the manifest records what
+    # it actually reports. Availability is a recorded state: a machine without
+    # node produces a manifest that says this domain went unchecked, not one
+    # that quietly omits it.
+    owners_path = pathlib_Path(__file__).resolve().parents[1] / "axe" / "owners.json"
+    owners = json.loads(owners_path.read_text(encoding="utf-8"))
+    axe = run_axe(pathlib_Path(out) / "fixture.html")
+    manifest["axe"] = {k: axe.get(k) for k in ("available", "reason", "axe_version")}
+    manifest["violations"] = collapse(axe.get("violations", []), owners) if axe.get("available") else []
+    manifest["counts"]["violations"] = len(manifest["violations"])
+    (pathlib_Path(out) / "manifest.json").write_text(
+        json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+
     c = manifest["counts"]
+    note = (f", {c['violations']} axe violation(s)" if axe.get("available")
+            else f", axe unavailable ({axe.get('reason', 'unknown')})")
     print(f"{out}/fixture.html — {c['pairs']} pairs, {c['planted']} planted, "
-          f"{c['disagreement']} disagreement")
+          f"{c['disagreement']} disagreement{note}")
     return 0
 
 

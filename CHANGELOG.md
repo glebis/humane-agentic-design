@@ -33,6 +33,11 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.18.1 — 2026-08-09
+
+The eval harness gains its second oracle in working order (`evals/`). No change
+to any skill; nothing a plugin user invokes behaves differently.
+
 ## 0.18.0 — 2026-08-09
 
 ### Fixed

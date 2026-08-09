@@ -47,7 +47,9 @@ by hand.
 the same code the `design-tokens` skill runs in production, reached through the
 single import point in `contrast/oracle.py`.
 
-**Oracle #2 — accessibility.** `axe-core` under jsdom, via `axe/run_axe.js`. It
+**Oracle #2 — accessibility.** `axe-core` under jsdom, via `axe/run_axe.js`,
+wired into fixture generation by `contrast/generate.py --a11y` and scored by
+`axe/score_a11y.py`. It
 runs a vetted **allow-list** of rules (`axe/owners.json`), never everything axe
 ships: jsdom computes no layout, so rules needing geometry or a resolved cascade
 cannot be judged soundly, and a deny-list would rot the first time an upgrade
@@ -80,6 +82,12 @@ not mark a defensible choice wrong.
 | `padding` | How many findings did it invent on a clean fixture? |
 | `routing_accuracy` | Was the finding reported by the skill that owns the rule? |
 
+Routing only became a real measurement with oracle #2. Until then every planted
+defect was a colour pair, so `design-tokens` was the only possible owner and a
+review could score well by naming it every time. With structural defects owned
+by `layout-rules` and `ux-writing` in the same fixture, the metric can finally
+be wrong.
+
 `false_clear` is the one that matters. Recall and precision are easy to game in
 opposite directions — report everything, or report nothing. Only a calibrated
 reviewer scores well on `false_clear` and `padding` at the same time, and that
@@ -96,13 +104,16 @@ nothing.
 
 ## What is NOT measured
 
-This pathway covers **colour contrast only**. It says nothing about:
+Two domains are covered — **colour contrast** and the **structural subset of
+accessibility** that axe can judge under jsdom. That is still narrow. Nothing
+here says anything about:
 
-- structure, hierarchy, or the `layout-rules` defect classes
-- copy quality, microcopy, or anything `ux-writing` owns
-- task completion (`walkthrough`), heuristic violations (`nielsen-heuristics`)
+- copy quality, microcopy, or most of what `ux-writing` owns
+- task completion (`walkthrough`), or heuristic violations beyond the axe subset
 - de-slop, brand fit, or whether a transformation claim is felt
-- whether the findings were *usefully ranked*, only whether they were found
+- accessibility engineering depth, which `CLAUDE.md` puts out of humane's scope
+  entirely and which the allow-list therefore excludes
+- whether findings were *usefully ranked*, only whether they were found
 
 Those are most of the method. A score here is evidence about one domain, not a
 grade for humane — reporting it as one would fail the same honesty guard the

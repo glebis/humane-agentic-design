@@ -33,6 +33,24 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.18.0 — 2026-08-09
+
+### Fixed
+
+- `humane:review`'s fan-out mode claimed it kept evidence alive that an inline
+  pass would lose to context compaction. Measured, that does not happen: on a
+  60-pair page with 24 planted contrast defects, an inline review found **all
+  24**, with a position bias of 0.500 — evenly across the document, no decay
+  toward the tail. Fanning out matched it and did not beat it. The skill no
+  longer asserts the evidence-survival rationale; the benefit is marked
+  undemonstrated, and fan-out is offered for scope and for keeping each domain
+  in its own lane, not for rescuing findings. The one measured advantage —
+  precision 1.00 against 0.83, padding 1 against 2 — is stated with the caveat
+  that routing 1.00 against 0.67 is close to given, since each domain agent was
+  told which skill it was applying. Preregistered in
+  `evals/PREREGISTERED-D-A2.md`; all three predictions failed, one of them in
+  the opposite direction.
+
 ## 0.17.0 — 2026-08-09
 
 ### Artifacts live beside the project, named for the skill that made them

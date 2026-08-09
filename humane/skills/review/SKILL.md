@@ -121,14 +121,30 @@ plus the artifact plus the evidence will not comfortably coexist. Each domain
 runs in its own context and returns **only its findings table** — not its
 reasoning, not the artifact, not its screenshots.
 
-**Why this is an honesty rule, not an efficiency one.** A host that compacts a
-full context does not fail; it summarizes and continues. The walkthrough
-evidence from step 1 can be summarized away while the *impression* of having
-covered task completion survives to the consolidation step — and this skill then
-reports `Clear` on a domain whose evidence it no longer holds. `Clear` is an
-assertion about the artifact. Losing the evidence for one and still asserting it
-is the exact failure the four-result scale in Output exists to prevent. Fanning
-out keeps each domain's evidence inside a context small enough to survive it.
+**The rationale this mode shipped with is not supported by the one test of it.**
+
+It was introduced on an argument: a host that compacts does not fail, it
+summarizes and continues, so evidence from an early domain could be summarized
+away while the *impression* of coverage survived to consolidation — and the
+review would then report `Clear` over a domain whose evidence it no longer held.
+
+Measured, that did not happen. On a 60-pair page carrying 24 planted contrast
+defects, an inline review found **all 24**, with a position bias of 0.500 —
+perfectly even across the document, no decay toward the tail. Fanning out
+matched it and did not beat it (`evals/fanout/`, preregistered, n=1).
+
+So do not reach for fan-out expecting evidence to survive that would otherwise
+be lost. That benefit is **undemonstrated**. What the same run did show is
+narrower and partly an artifact of how the arms were set up: the fanned-out
+domains reported less outside their own lane — precision 1.00 against 0.83,
+padding 1 against 2, and routing 1.00 against 0.67, the last of which is close
+to given, since each domain agent was told which skill it was applying.
+
+Fan out when the scope is genuinely too large for one pass, or when you want
+each domain's findings kept in its own lane. Do not fan out because this file
+once claimed it rescues evidence. If a larger artifact ever does show decay,
+that is worth measuring and saying — one fixture at one size is not a general
+result, and it is the claim, not the mode, that failed here.
 
 Two constraints on how to fan out:
 

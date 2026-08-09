@@ -1,15 +1,15 @@
 {
-  "title": "Four parameters: two positive, one negative, one void",
+  "title": "Six parameters, and the two that tested my own decisions",
   "subtitle": "Measuring <span style=\"font-family:var(--mono);font-size:.9em\">humane:review</span> against the same review without it",
   "tags": [
-    "13 SEEDS \u00b7 26 BLIND REVIEWS",
+    "23 SEEDS/ARMS \u00b7 39 BLIND REVIEWS",
     "ORACLE: dtokens/contrast.py",
-    "PREREGISTERED \u00d72",
+    "PREREGISTERED \u00d74",
     "2026-08-09"
   ],
   "lede": [
-    "Four things were tested against a preregistered prediction. The skill finds defects an unaided review misses, and it keeps the interface pipeline off a document that is not an interface. It does not measurably improve honesty about what could not be checked. And the fourth test was thrown out \u2014 by me, after scoring, because the fixture could not answer the question.",
-    "Two predictions were falsified and one pathway voided. All of it was written down before the data and is reported here against the record rather than around it."
+    "Six parameters now. The skill finds contrast defects an unaided review misses, and keeps the interface pipeline off a document. It shows no measurable advantage on coverage honesty, and none on inventing findings when there is nothing to find. And the mechanism behind a mode I shipped this morning does not appear at all.",
+    "Four preregistrations, five falsified predictions, one pathway voided by its own author, and three instrument bugs \u2014 two of which favoured the control and one the skill. What survived is narrower than what was claimed, which is the point of doing it this way."
   ],
   "status": [
     {
@@ -25,16 +25,16 @@
       "note": "seeds marking inapplicable domains N/A"
     },
     {
-      "label": "Coverage honesty",
-      "value": "6 / 6",
+      "label": "No difference",
+      "value": "2 of 6",
       "tone": "flat",
-      "note": "both arms honest \u2014 no difference"
+      "note": "coverage honesty \u00b7 padding"
     },
     {
-      "label": "Padding",
-      "value": "void",
+      "label": "My own claim",
+      "value": "falsified",
       "tone": "lose",
-      "note": "fixture flaw found while scoring"
+      "note": "fan-out, shipped as 0.13.0"
     }
   ],
   "sections": [
@@ -452,9 +452,189 @@
       ]
     },
     {
+      "id": "fanout",
+      "title": "6 \u00b7 Fan-out \u2014 my own claim, falsified",
+      "nav": "6 \u00b7 Fan-out",
+      "state_line": "Inline found all 24 defects across 60 pairs, evenly. The mechanism I shipped on does not show up.",
+      "blocks": [
+        {
+          "type": "prose",
+          "html": "<p>Every other pathway evaluates the skills. This one evaluates a decision I made and shipped as <b>0.13.0</b>, with a confident commit message, on argument alone, having measured nothing.</p><p>The argument: a host that compacts a full context summarizes rather than fails, so evidence from an early domain could be summarized away while the impression of coverage survives to the verdict. Therefore each domain should run in its own context. Plausible. Not evidence.</p>"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Metric",
+            "Inline",
+            "Fanned out",
+            "Predicted"
+          ],
+          "rows": [
+            [
+              "recall",
+              "1.000",
+              "1.000",
+              "fan-out higher"
+            ],
+            [
+              "recall \u2014 measurement-only",
+              "1.000",
+              "1.000",
+              "fan-out higher"
+            ],
+            [
+              "position bias",
+              "0.500",
+              "0.500",
+              "inline below 0.5"
+            ],
+            [
+              "precision",
+              "0.833",
+              "1.000",
+              "fan-out worse"
+            ],
+            [
+              "padding",
+              "2",
+              "1",
+              "fan-out worse"
+            ],
+            [
+              "routing accuracy",
+              "0.667",
+              "1.000",
+              "\u2014"
+            ]
+          ],
+          "tones": [
+            [
+              "",
+              "",
+              "",
+              "lose"
+            ],
+            [
+              "",
+              "",
+              "",
+              "lose"
+            ],
+            [
+              "",
+              "",
+              "",
+              "lose"
+            ],
+            [
+              "",
+              "",
+              "",
+              "lose"
+            ],
+            [
+              "",
+              "",
+              "",
+              "lose"
+            ],
+            [
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "caption": "60 pairs, 24 planted, preregistered, n=1. Every prediction wrong \u2014 two by finding no difference, one by being wrong in the opposite direction."
+        },
+        {
+          "type": "aside",
+          "main": [
+            {
+              "type": "prose",
+              "html": "<p><b>Position bias was the mechanism test.</b> If evidence decays as a context fills, the pairs an inline review reports should cluster toward the top of the page. Mean normalised index came out at exactly <b>0.500</b> \u2014 perfectly even. Inline read the whole document and reported all 24 defects. Nothing was lost, so nothing needed rescuing.</p><p>Fan-out did show a benefit, just not the claimed one: each domain stayed in its lane, so precision and padding improved. Routing 1.00 against 0.67 is close to given \u2014 each domain agent was told which skill it was applying \u2014 and I am not counting it.</p>"
+            }
+          ],
+          "notes": [
+            [
+              "What changed.",
+              "review/SKILL.md no longer claims fan-out rescues evidence. The benefit is marked undemonstrated, and the mode is now offered for scope, not for survival."
+            ],
+            [
+              "What this cannot show.",
+              "One fixture at one size, and I cannot force or observe compaction inside a subagent. The claim failed here; the mode is unproven, not disproven."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "padding2",
+      "title": "7 \u00b7 Padding, re-run \u2014 no difference",
+      "nav": "7 \u00b7 Padding",
+      "state_line": "On a genuinely clean page, neither arm invents. The earlier gap was the fixture, not the reviewer.",
+      "blocks": [
+        {
+          "type": "prose",
+          "html": "<p>The first attempt was voided by its own fixture: \"clean\" meant clean at each pair's <i>declared</i> level, so every page still held pairs that fail if judged as body text. The generator now refuses to emit a clean fixture unless every pair clears the strictest bar.</p>"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Seed",
+            "with humane",
+            "without",
+            "False Clear"
+          ],
+          "rows": [
+            [
+              "1337",
+              "0",
+              "0",
+              "no"
+            ],
+            [
+              "2026",
+              "2",
+              "1",
+              "no"
+            ],
+            [
+              "4242",
+              "0",
+              "0",
+              "no"
+            ],
+            [
+              "mean",
+              "0.67",
+              "0.33",
+              "0 / 6"
+            ]
+          ],
+          "caption": "Invented contrast findings on pages with zero planted defects. Both arms marked contrast Clear \u2014 correctly, since with nothing planted, Clear is simply true."
+        },
+        {
+          "type": "aside",
+          "main": [
+            {
+              "type": "prose",
+              "html": "<p>Predicted: the control would average at least 1.5 invented findings, having averaged 3.25 on the detection fixtures. It averaged <b>0.33</b>. That is the falsifying condition, named in advance.</p><p>So the earlier padding gap was an artifact of real defects sitting nearby \u2014 a reviewer surrounded by genuine problems reaches further \u2014 not a standing tendency to invent. On a page with nothing wrong, both arms said so.</p>"
+            }
+          ],
+          "notes": [
+            [
+              "Worth noting.",
+              "Both arms used Clear correctly here, which is the honest use of it: inspected, nothing found."
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "id": "limits",
-      "title": "6 \u00b7 What this does not show",
-      "nav": "6 \u00b7 Limits",
+      "title": "8 \u00b7 What this does not show",
+      "nav": "8 \u00b7 Limits",
       "state_line": "Two domains, one trial each, and a sample too small for a significance test to be honest.",
       "blocks": [
         {
@@ -478,27 +658,32 @@
             [
               "Keeps the UI pipeline off a document",
               "Supported, n=3",
-              "3/3 vs 0/3 marking inapplicable domains N/A"
+              "3/3 vs 0/3 marking domains N/A"
             ],
             [
               "Keeps a review honest about coverage",
               "Not supported, n=3",
-              "Both arms honest 6/6 \u2014 no difference detected"
+              "both arms honest 6/6"
             ],
             [
               "Invents fewer findings on a clean page",
-              "Void",
-              "Fixture was clean only under one level assignment"
+              "Not supported, n=3",
+              "0.67 vs 0.33 \u2014 neither invents"
+            ],
+            [
+              "Fan-out rescues evidence from compaction",
+              "Falsified, n=1",
+              "inline found 24/24, position bias 0.500"
             ],
             [
               "Improves reviews generally",
               "Not shown",
-              "Three domains measured; copy quality and task completion are not"
+              "contrast and scope measured; copy quality is not"
             ],
             [
-              "The difference is statistically real",
+              "Any of it is statistically real",
               "Not shown",
-              "n=3 and n=4; no significance test is honest at this size"
+              "n=1 to 4; no significance test is honest here"
             ]
           ],
           "tones": [
@@ -529,6 +714,11 @@
             ],
             [
               "",
+              "lose",
+              ""
+            ],
+            [
+              "",
               "flat",
               ""
             ],
@@ -538,7 +728,7 @@
               ""
             ]
           ],
-          "caption": "Two supported claims, one negative, one voided by its own author. Nothing here is a grade for the method."
+          "caption": "Three supported claims, two negatives, one falsified claim of my own, and one pathway voided. Nothing here is a grade for the method."
         },
         {
           "type": "aside",
@@ -562,5 +752,5 @@
       ]
     }
   ],
-  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 26 blind reviews across 13 seeds \u00b7 preregistrations in evals/honesty/PREREGISTERED.md and evals/PREREGISTERED-A-B.md"
+  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 39 blind reviews \u00b7 4 preregistrations, 5 falsified predictions"
 }

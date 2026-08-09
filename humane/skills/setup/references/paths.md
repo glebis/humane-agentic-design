@@ -11,9 +11,12 @@ add the row, do not invent a path at the call site.
 | `corpus_root` | `~/jtbd` | the JTBD corpus and everything derived directly from it |
 | `artifact_root` | *empty → same as `corpus_root`* | generated artifacts: prototypes, specimens, boards, illustrations, walks, reviews |
 
-A design file (`.pen`) is a prototype and lands with the others. It is the one
-artifact here that is **not** openable on its own — it needs its application —
-so the skill that writes it has to say which kind it produced.
+A design file (`.pen`) is the one artifact here that is **not** openable on its
+own and the one whose path this table cannot enforce. A design-file backend
+writes into the document its application has open; Pencil's `filePath` argument
+is accepted and ignored, so a build aimed at a path that is not open lands in
+someone else's file and still reports success. `humane:prototype` therefore
+confirms the active document before building and stops if it is wrong.
 
 They are separate settings because they differ in kind. A corpus is usually
 personal and global — one place you keep every project's jobs. A prototype is
@@ -64,7 +67,7 @@ surprising.
 | `before-after` | `before-after.json`, `.md`, `-visual.png` | `<corpus_root>/<slug>/` | `corpus_root` |
 | `walkthrough` | `step-NN-<tier>.png` per step per tier | `<artifact_root>/<slug>/walks/<date>-<task>/` | `artifact_root` |
 | `prototype` | ASCII sketch, SVG click-dummy, HTML prototype | `<artifact_root>/<slug>/prototypes/<name>/` | `artifact_root` |
-| `prototype` | editable design file (`.pen`), when `design_tool` resolves to a backend | `<artifact_root>/<slug>/prototypes/<name>.pen` | `artifact_root` |
+| `prototype` | editable design file (`.pen`), when `design_tool` resolves to a backend | `<artifact_root>/<slug>/prototypes/<name>.pen` — **the user must create and open it first; the backend writes to whatever document its app has open and ignores any path given to it** | the open document |
 | `type-specimen` | `specimen.json`, the built specimen page | `<artifact_root>/<slug>/specimens/` | `artifact_root` |
 | `brandkit` | brand boards, `direction.json`, `brand-block.draft.json` | `<artifact_root>/<slug>/boards/` | `artifact_root` |
 | `brand-illustrate` | images, `prompts.md`, `metadata.json`, contact sheet, recipe | `<artifact_root>/<slug>/illustrations/<batch>/` | `artifact_root` |

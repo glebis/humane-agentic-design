@@ -144,11 +144,41 @@ brand decision through them.
 Copy in a design file is scaffolding on the same terms as anywhere else in this
 skill: any string that outlives the prototype belongs to `ux-writing`.
 
-### Where it goes
+### Where it goes — and why you cannot choose
 
-`<artifact_root>/<slug>/prototypes/<name>.pen` — the same anchor as every other
-prototype, resolved through `setup`, never the working directory. See
-`setup/references/paths.md`.
+**A design-file backend writes into the document the application has open. You
+do not get to pick the path, and it will not tell you that.**
+
+This was established by testing, not assumed. Pencil's tools all take a
+`filePath` argument documented as "access a .pen file". It is ignored. Passing
+the path of a different, existing `.pen` returns the *active* document's nodes,
+and building with a path to a file that does not exist silently builds into
+whatever was already open — in the run that found this, a full dashboard and
+fourteen variables were written into an unrelated icon file, and every call
+returned `OK`.
+
+So the pre-flight is not optional:
+
+1. **Read the application state and print which document is active.**
+2. **Compare it to where this prototype belongs** —
+   `<artifact_root>/<slug>/prototypes/<name>.pen`, resolved through `setup`
+   (`setup/references/paths.md`).
+3. **If they do not match, stop.** Ask the user to create and open the file at
+   that path, and say why: you cannot create or switch documents, and building
+   now would write into their open work.
+4. Build only after the active document is the intended one. Say in the handoff
+   which document you wrote into.
+
+Never build into a document you did not confirm. An `OK` from the backend means
+the operation succeeded somewhere, not that it succeeded where you meant.
+
+If the user would rather not open anything, that is a complete answer: produce
+the rung the question needs instead. A prototype in the wrong file is worse than
+no prototype.
+
+**Cleaning up after a mis-targeted build** is your job, not the user's: delete
+the nodes you added, and check `GetVariables()` — variables merge into the host
+document and survive node deletion.
 
 ## Copy in a prototype
 

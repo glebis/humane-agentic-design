@@ -63,6 +63,23 @@ What you can do with `humane` that you could not do before, newest first.
   traps and requires a width check on every string, including after a copy
   rewrite lengthens one.
 
+## 0.16.1 — 2026-08-09
+
+### Fixed
+
+- `humane:prototype` claimed it would write a design file to
+  `<artifact_root>/<slug>/prototypes/<name>.pen`. It cannot. A design-file
+  backend writes into whichever document its application has open and ignores
+  the path it is given — Pencil accepts a `filePath` argument on every tool and
+  disregards it, so a build aimed at a path that is not open lands in an
+  unrelated file and still reports success. Found by testing the 0.16.0 claim:
+  a full dashboard and fourteen variables were written into an open icon file,
+  every call returning `OK`. The skill now reads the active document, compares
+  it to where the prototype belongs, and **stops** if they differ — asking the
+  user to open the file, because the agent can neither create nor switch one.
+  It also cleans up after a mis-targeted build, including the variables, which
+  merge into the host document and survive node deletion.
+
 ## 0.16.0 — 2026-08-09
 
 ### Carry a prototype on into a design file

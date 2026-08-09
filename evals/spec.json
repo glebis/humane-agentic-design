@@ -1,40 +1,40 @@
 {
-  "title": "Seven parameters: two hold, four don't, one I voided",
+  "title": "Nine parameters, one withdrawn finding, and the first real scope condition",
   "subtitle": "Measuring <span style=\"font-family:var(--mono);font-size:.9em\">humane:review</span> against the same review without it",
   "tags": [
-    "29 SEEDS/ARMS \u00b7 45 BLIND REVIEWS",
+    "61 BLIND REVIEWS",
     "2 ORACLES",
-    "PREREGISTERED \u00d75",
+    "PREREGISTERED \u00d76",
     "2026-08-09"
   ],
   "lede": [
-    "Seven parameters, two oracles, forty-five blind reviews. Two claims hold up. Three found no difference at all. One was a claim of mine that failed. One I threw out myself. The strongest result \u2014 that the skill finds contrast defects an unaided review misses \u2014 is weaker on a harder fixture than it looked on an easier one.",
-    "Five preregistrations, eight falsified predictions, four instrument bugs. What survives is a narrow claim about measurement and scope, not a case that the method makes reviews better."
+    "Nine parameters. Two claims hold, three found nothing, one of my own was falsified, one finding is withdrawn today for being smaller than this harness's own noise, and one new advantage turned up that no pathway was looking for.",
+    "The shape that finally emerged: humane's discipline is worth little to a reviewer that would have been careful anyway, and worth a great deal to one that would not. That is a scope condition, and it took nine pathways and six preregistrations to earn it."
   ],
   "status": [
     {
-      "label": "Detection",
-      "value": "1.00 / 0.79",
+      "label": "Repeatability",
+      "value": "0.00 / 0.17",
       "tone": "win",
-      "note": "but 0.87 / 0.80 on a harder fixture"
+      "note": "recall spread over 4 identical runs \u2014 new"
     },
     {
-      "label": "Artifact type",
-      "value": "3 / 0",
+      "label": "Weak reviewer",
+      "value": "2/3 / 0/3",
       "tone": "win",
-      "note": "the one clean, repeated win"
+      "note": "honest abstention on Haiku"
+    },
+    {
+      "label": "Withdrawn",
+      "value": "0.87 / 0.80",
+      "tone": "lose",
+      "note": "below this harness's own noise floor"
     },
     {
       "label": "No difference",
-      "value": "3 of 7",
+      "value": "3 of 9",
       "tone": "flat",
-      "note": "honesty \u00b7 padding \u00b7 structural breadth"
-    },
-    {
-      "label": "My own claim",
-      "value": "falsified",
-      "tone": "lose",
-      "note": "fan-out, shipped as 0.13.0"
+      "note": "on a strong reviewer"
     }
   ],
   "sections": [
@@ -749,9 +749,176 @@
       ]
     },
     {
+      "id": "variance",
+      "title": "10 \u00b7 Variance \u2014 the denominator, and a withdrawal",
+      "nav": "10 \u00b7 Variance",
+      "state_line": "Four identical runs per arm. One number I published turns out to be smaller than the noise it sits in.",
+      "blocks": [
+        {
+          "type": "prose",
+          "html": "<p>Every figure in this report until now came from one trial per arm, captioned <i>smoke test</i>, with no measurement of how much an identical run varies. So a gap might have been a finding or two draws from one distribution, and nothing here could tell the difference.</p>"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Metric",
+            "with humane \u2014 range",
+            "without \u2014 range",
+            "Reading"
+          ],
+          "rows": [
+            [
+              "recall",
+              "0.000",
+              "0.167",
+              "the skill arm was identical four times"
+            ],
+            [
+              "measurement-only recall",
+              "0.000",
+              "0.500",
+              "the control's swung from 0.00 to 0.50"
+            ],
+            [
+              "precision",
+              "0.111",
+              "0.333",
+              ""
+            ],
+            [
+              "padding",
+              "2.000",
+              "1.000",
+              "both noisy"
+            ]
+          ],
+          "tones": [
+            [
+              "",
+              "win",
+              "lose",
+              ""
+            ],
+            [
+              "",
+              "win",
+              "lose",
+              ""
+            ],
+            [
+              "",
+              "win",
+              "",
+              ""
+            ],
+            [
+              "",
+              "",
+              "",
+              ""
+            ]
+          ],
+          "caption": "Four identical runs, same fixture, same prompt, same model. Range across those four."
+        },
+        {
+          "type": "flyout",
+          "lead": "Withdrawn.",
+          "html": "The two-domain fixture showed contrast recall of <b>0.87 against 0.80</b>. That gap is <b>0.07</b>. The control's own recall varies by <b>0.167</b> across four identical runs. The gap is less than half the noise it sits in, so it is not a finding and is withdrawn. This was named in the preregistration as the number most likely to dissolve \u2014 before the trials ran, so it could not be chosen afterwards."
+        },
+        {
+          "type": "aside",
+          "main": [
+            {
+              "type": "prose",
+              "html": "<p><b>And an advantage nobody was looking for.</b> The humane arm returned <i>exactly</i> the same recall four times \u2014 1.00, 1.00, 1.00, 1.00, range 0.000 \u2014 while the control ranged 0.67 to 0.83, and on the measurement-only defects swung from 0.00 to 0.50.</p><p>That is what running a tool instead of estimating buys: not just a better answer, a <b>repeatable</b> one. A review you cannot reproduce is hard to act on, and no pathway here was designed to measure it.</p>"
+            }
+          ],
+          "notes": [
+            [
+              "Which gaps survive.",
+              "Detection recall (0.29) and detection padding (2.5) both exceed the spread. The two-domain recall gap does not."
+            ],
+            [
+              "What this still cannot show.",
+              "One fixture. Variance may differ with difficulty, and four trials is a small basis for a standard deviation."
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "weak",
+      "title": "11 \u00b7 A weaker reviewer \u2014 the scope condition",
+      "nav": "11 \u00b7 Weak reviewer",
+      "state_line": "The null results were explained by the reviewer being strong. Tested on Haiku, that explanation holds \u2014 for honesty, not for detection.",
+      "blocks": [
+        {
+          "type": "prose",
+          "html": "<p>Three pathways found no difference, and each time the explanation offered was the same: a strong model already does this. That is a hypothesis, not a fact. If humane's discipline is <b>insurance</b>, it is worth nothing when the reviewer would have been careful anyway and a lot when it would not \u2014 so make the bad case happen and re-run with Haiku in both arms, changing nothing else.</p>"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Pathway",
+            "Opus with / without",
+            "Haiku with / without",
+            "Separated?"
+          ],
+          "rows": [
+            [
+              "coverage honesty",
+              "3/3 honest / 3/3 honest",
+              "2/3 honest / 0/3 honest",
+              "yes \u2014 the null was a ceiling effect"
+            ],
+            [
+              "contrast recall",
+              "1.00 / 0.71",
+              "0.75 / 0.67",
+              "no \u2014 the gap narrowed"
+            ]
+          ],
+          "tones": [
+            [
+              "",
+              "flat",
+              "win",
+              "win"
+            ],
+            [
+              "",
+              "win",
+              "lose",
+              "lose"
+            ]
+          ],
+          "caption": "Same fixtures, same prompts, only the model changed."
+        },
+        {
+          "type": "aside",
+          "main": [
+            {
+              "type": "prose",
+              "html": "<p><b>Honesty separated.</b> Every Haiku control run omitted the contrast row entirely \u2014 never telling the reader the domain went unexamined \u2014 where every Opus control had written a careful <i>Not reviewed, no colour value is resolvable</i>. With the skill, Haiku abstained honestly on two of three.</p><p><b>Detection did not.</b> The skill's advantage there is \"run the measurement instead of estimating\", and that requires a model that follows through. Haiku with the skill managed 0.75 against Opus's perfect 1.00. A procedure only helps if it is executed.</p>"
+            }
+          ],
+          "notes": [
+            [
+              "Not full protection.",
+              "On one seed the Haiku skill arm quoted a contrast ratio for a colour that has no value \u2014 confabulated, the strongest failure the honesty scorer defines. The discipline helped; it did not guarantee."
+            ],
+            [
+              "G3 was falsified.",
+              "I predicted the gap would widen on Haiku for at least one metric. It widened for honesty and narrowed for detection."
+            ]
+          ]
+        }
+      ]
+    },
+    {
       "id": "limits",
-      "title": "9 \u00b7 What this does not show",
-      "nav": "9 \u00b7 Limits",
+      "title": "12 \u00b7 What this does not show",
+      "nav": "12 \u00b7 Limits",
       "state_line": "Two domains, one trial each, and a sample too small for a significance test to be honest.",
       "blocks": [
         {
@@ -763,37 +930,47 @@
           ],
           "rows": [
             [
+              "Produces a repeatable review",
+              "Supported, n=4",
+              "recall range 0.000 vs 0.167 over identical runs"
+            ],
+            [
               "Keeps the UI pipeline off a document",
               "Supported, n=3",
-              "3/3 vs 0/3 marking domains N/A \u2014 the clearest win"
+              "3/3 vs 0/3 marking domains N/A"
             ],
             [
               "Finds more contrast defects",
-              "Supported but weaker, n=7",
-              "1.00 vs 0.79 on easy fixtures; 0.87 vs 0.80 on hard ones, at a cost in precision"
+              "Supported on a strong model, n=7",
+              "1.00 vs 0.71; gap exceeds the 0.167 noise floor"
+            ],
+            [
+              "Helps a weaker reviewer stay honest",
+              "Supported, n=3",
+              "Haiku: 2/3 vs 0/3; the Opus null was a ceiling effect"
+            ],
+            [
+              "Finds more with a weaker reviewer",
+              "Not supported, n=2",
+              "gap narrows to 0.08 \u2014 a procedure must be executed"
             ],
             [
               "Finds them with less noise",
               "Contested",
-              "0.75 vs 3.25 on detection; 1.67 vs 1.33 here"
+              "0.75 vs 3.25 on detection; 1.67 vs 1.33 on two domains"
             ],
             [
               "Broader coverage across domains",
               "Not supported, n=3",
-              "both arms 4/4 structural, every seed"
+              "both arms 4/4 structural"
             ],
             [
-              "Keeps a review honest about coverage",
-              "Not supported, n=3",
-              "both arms honest 6/6"
+              "Two-domain contrast advantage",
+              "Withdrawn",
+              "0.07 gap under a 0.167 noise floor"
             ],
             [
-              "Invents fewer findings on a clean page",
-              "Not supported, n=3",
-              "0.67 vs 0.33 \u2014 neither invents"
-            ],
-            [
-              "Fan-out rescues evidence from compaction",
+              "Fan-out rescues evidence",
               "Falsified, n=1",
               "inline found 24/24, position bias 0.500"
             ],
@@ -816,12 +993,22 @@
             ],
             [
               "",
-              "flat",
+              "win",
+              ""
+            ],
+            [
+              "",
+              "win",
               ""
             ],
             [
               "",
               "lose",
+              ""
+            ],
+            [
+              "",
+              "flat",
               ""
             ],
             [
@@ -845,7 +1032,7 @@
               ""
             ]
           ],
-          "caption": "One clear win, one qualified win, one contested, four negatives. Nothing here is a grade for the method."
+          "caption": "Four supported claims, one withdrawn, one falsified, three nulls, one contested."
         },
         {
           "type": "aside",
@@ -869,5 +1056,5 @@
       ]
     }
   ],
-  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 45 blind reviews \u00b7 5 preregistrations, 8 falsified predictions"
+  "footer": "generated 2026-08-09 \u00b7 humane-agentic-design \u00b7 evals/ \u00b7 61 blind reviews \u00b7 6 preregistrations \u00b7 one finding withdrawn"
 }

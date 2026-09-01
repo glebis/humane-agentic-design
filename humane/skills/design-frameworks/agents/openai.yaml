@@ -1,0 +1,4 @@
+interface:
+  display_name: "Design Frameworks"
+  short_description: "Fit product decisions to existing design systems"
+  default_prompt: "Use $design-frameworks to fit this implementation to the project's existing design system and validate both framework compliance and Humane traceability."

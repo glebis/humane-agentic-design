@@ -33,6 +33,25 @@ What you can do with `humane` that you could not do before, newest first.
 
 ---
 
+## 0.20.0 — 2026-08-21
+
+### Fit a settled product decision to an existing design system
+
+1. Run `humane:design-frameworks` after a prototype survives, or against an
+   existing implementation, and choose a preset explicitly or let it probe the
+   project read-only. Astryx is the first full preset; shadcn and Storybook
+   cover registry and project-catalog surfaces.
+2. The skill records the actual CLI, registry, MCP, manifest, token, and check
+   capabilities this project exposes instead of assuming them from the system's
+   name or remembered version.
+3. It produces a fit plan mapping acceptance criteria to native resources,
+   exact write previews, conflicts, deviations, and native validation checks.
+   Overwrite, force, install, migration, eject/swizzle, and agent-doc edits are
+   never implicit.
+4. Validation reports framework compliance separately from Humane traceability,
+   then offers the handoff to `humane:review`; a clean build never becomes a
+   claim that the product idea was validated.
+
 ## 0.19.0 — 2026-08-09
 
 ### Install what the doctor found missing, without leaving the terminal

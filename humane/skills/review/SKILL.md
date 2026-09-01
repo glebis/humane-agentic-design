@@ -3,6 +3,7 @@ name: review
 description: User-invoked review that coordinates the humane review skills — layout-rules, ux-writing, nielsen-heuristics, walkthrough, design-tokens contrast — into one prioritized verdict, and marks the domains it cannot cover instead of improvising them. Supports quick and full modes. Identifies the artifact first and runs a reduced document pipeline for a README, PRD, or docs page rather than stretching a UI pipeline over it. Use when explicitly asked for a holistic review of a screen, flow, feature, product, or document. Triggers on humane review, full review, review the whole thing, holistic UI audit, cross-skill design review, "review this properly", "полный ревью".
 accepts:
   - from: brand-illustrate
+  - from: design-frameworks
 orchestrates:
   - layout-rules
   - ux-writing

@@ -1,0 +1,109 @@
+{
+  "fixtureVersion": "0.1",
+  "source": {
+    "capturedAt": "2026-08-21",
+    "evidence": [
+      "https://astryx.atmeta.com/docs/cli",
+      "https://github.com/facebook/astryx/blob/main/packages/cli/README.md"
+    ],
+    "note": "Read-only normalized discovery based on the published Astryx CLI manifest contract."
+  },
+  "manifest": {
+    "contractVersion": "0.1",
+    "preset": "astryx",
+    "profiles": ["native-cli", "token-toolchain"],
+    "upstream": { "name": "@astryxdesign/cli", "version": "0.0.14" },
+    "projectRoot": ".",
+    "surfaces": [
+      {
+        "id": "astryx-cli",
+        "kind": "cli",
+        "authority": "native",
+        "locator": "astryx manifest --json",
+        "version": "apiVersion:1",
+        "status": "stable"
+      }
+    ],
+    "capabilities": [
+      { "operation": "probe", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "catalog", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "inspect", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "plan", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "preview", "supported": true, "access": "read", "network": false, "preview": "supported", "approval": "not-required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "apply", "supported": false, "access": "write", "network": false, "preview": "not-supported", "approval": "required", "surfaceIds": ["astryx-cli"] },
+      { "operation": "validate", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["astryx-cli"] }
+    ],
+    "checks": [
+      { "id": "astryx-doctor", "name": "Astryx doctor", "surfaceId": "astryx-cli", "mode": "command", "locator": "astryx doctor --json" }
+    ],
+    "limitations": ["The discovery fixture intentionally exposes no write capability."]
+  },
+  "resources": [
+    {
+      "id": "astryx:component:Button",
+      "kind": "component",
+      "name": "Button",
+      "nativeId": "Button",
+      "surfaceId": "astryx-cli",
+      "sourceLocator": "astryx component Button --json",
+      "upstreamVersion": "0.0.14",
+      "dependencies": ["@astryxdesign/core"],
+      "constraints": ["Preserve the owner package and import specifier returned by the CLI."],
+      "nativePayload": { "responseType": "component.detail", "ownerPackage": "@astryxdesign/core" },
+      "provenance": { "authority": "native", "evidence": "typed JSON response" }
+    },
+    {
+      "id": "astryx:document:tokens",
+      "kind": "document",
+      "name": "Token reference",
+      "nativeId": "tokens",
+      "surfaceId": "astryx-cli",
+      "sourceLocator": "astryx docs tokens --json",
+      "upstreamVersion": "0.0.14",
+      "dependencies": [],
+      "constraints": ["Token documentation is framework evidence, not permission to replace project theme values."],
+      "nativePayload": { "responseType": "docs.detail" },
+      "provenance": { "authority": "native", "evidence": "typed JSON response" }
+    }
+  ],
+  "plan": {
+    "contractVersion": "0.1",
+    "id": "astryx-checkout-discovery",
+    "preset": "astryx",
+    "status": "ready",
+    "traceability": "available",
+    "implementationBrief": {
+      "briefId": "checkout-v3",
+      "jobRef": "jtbd.json#outcomes/O-04",
+      "evidenceRefs": ["jtbd.json#evidence/Q12"],
+      "conceptRef": ".design/concept-checkout.md",
+      "prototypeRef": ".design/prototype-checkout.html",
+      "acceptanceCriteria": ["A returning customer can pay without re-entering saved details."]
+    },
+    "selectedResourceIds": ["astryx:component:Button", "astryx:document:tokens"],
+    "operations": [],
+    "conflicts": [],
+    "deviations": [],
+    "validationCheckIds": ["astryx-doctor"]
+  },
+  "findings": [
+    {
+      "id": "astryx-manifest-observed",
+      "lane": "framework",
+      "checkId": "astryx-manifest",
+      "status": "pass",
+      "severity": "info",
+      "summary": "The native CLI exposes a typed capability manifest.",
+      "evidence": [{ "locator": "astryx manifest --json", "observation": "apiVersion, command metadata, JSON support, and response types are present." }]
+    },
+    {
+      "id": "astryx-humane-not-run",
+      "lane": "humane",
+      "checkId": "intent-traceability",
+      "status": "not-run",
+      "severity": "info",
+      "summary": "No implementation was produced by this read-only fixture.",
+      "evidence": []
+    }
+  ]
+}

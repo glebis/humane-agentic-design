@@ -38,6 +38,7 @@ and has no dependencies, so it runs anywhere the plugin is checked out.
 | "something's missing / nothing works / fresh machine" | `humane:setup` | anything else — it diagnoses first |
 | "what should I build", "what are people hiring this for" | `humane:jtbd` | a review skill; there is nothing to review yet |
 | "mock this up", "show me the flow", "wireframe this" | `humane:prototype` | `humane:design-tokens` — the structure is not settled yet |
+| "implement this with Astryx", "fit this to our design system" | `humane:design-frameworks` | `humane:prototype` — use the adapter after the product decision is settled enough to fit |
 | "we need a brand / an identity" | `humane:brandkit` | `humane:design-tokens` — the tokens do not exist yet |
 | "set up tokens", "compile to CSS", "check contrast" | `humane:design-tokens` | `humane:layout-rules`, which only flags the pair |
 | "pick a font", "does this font have Cyrillic" | `humane:type-specimen` | `humane:design-tokens`, until a family is chosen |

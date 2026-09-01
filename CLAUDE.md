@@ -10,7 +10,9 @@ interface: what to build (`jtbd`), for whom (`persona-review`,
 `respondent-panel`), under which system (`design-tokens`) and constraints
 (`layout-rules`), in which words (`ux-writing`), audited (`nielsen-heuristics`)
 and proven (`before-after`). Ring 2 (`brandkit`, `brand-illustrate`) handles
-visual identity.
+visual identity. `design-frameworks` is a separate adapter layer: it fits an
+already-decided implementation to an existing design system without becoming a
+method step or a review domain.
 
 Skills live in `humane/skills/<name>/SKILL.md`; the bundled agent is
 `humane/agents/synthetic-respondent.md`. Bump `version` in
@@ -32,6 +34,7 @@ backticks and name only the handoff — never restate or override it.
 | `persona-review` | Expert stakeholder critique of a **document** that is meant to be studied |
 | `respondent-panel` | Gut reactions from strangers to a **user-facing artifact**, in isolated contexts. Never rewrites. |
 | `prototype` | Pre-system fidelity: the ASCII → SVG click-dummy → HTML ladder, the one-question rule, the self-containment contract, and the "what is fake" disclosure. Owns no token, no final wording, and never reviews its own output. |
+| `design-frameworks` | Implementation fit: preset selection, native capability discovery, component/token/template mapping, guarded framework writes, and framework compliance. Owns no job, evidence, concept, prototype, token authorship, or product-review rule. |
 | `design-tokens` | The token set: DTCG structure, resolution, CSS/DESIGN.md export, the brand block, and **all color measurement and remediation** (`tokens contrast`) |
 | `type-specimen` | Typeface **selection**: the specimen page, its ten-slot copy contract, script and glyph coverage checks, and what a specimen may and may not conclude. Owns no token. |
 | `layout-rules` | Structural and interaction defect classes for tool/dashboard UIs, and the de-slop avoid-list |
@@ -52,6 +55,14 @@ Cross-boundary cases, resolved:
   named for `tokens contrast`, never eyeballed. A prototype is reviewed by
   `respondent-panel`, `walkthrough`, and the rest as a first-class artifact —
   never by `prototype` itself.
+
+- `prototype` owns the proposed structure; `design-frameworks` may fit a
+  settled structure to the components and constraints an existing system
+  actually exposes. A missing component is a reported conflict, not permission
+  to change the job, hierarchy, or interaction model. The adapter may read
+  native tokens but never takes token authorship or contrast remediation from
+  `design-tokens`, and it hands the implemented result to `review` rather than
+  reviewing its own work.
 
 - `layout-rules` rule 12 states that text must clear the contrast bar;
   `design-tokens` owns measuring the pair and changing the color. A review that

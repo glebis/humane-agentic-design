@@ -1,0 +1,90 @@
+{
+  "fixtureVersion": "0.1",
+  "source": {
+    "capturedAt": "2026-08-21",
+    "evidence": [
+      "https://ui.shadcn.com/docs/registry/registry-json",
+      "https://ui.shadcn.com/docs/registry/api-reference"
+    ],
+    "note": "Read-only normalized discovery of one schema-governed registry item."
+  },
+  "manifest": {
+    "contractVersion": "0.1",
+    "preset": "shadcn",
+    "profiles": ["registry", "native-cli", "catalog-mcp"],
+    "upstream": { "name": "shadcn", "version": "4" },
+    "projectRoot": ".",
+    "surfaces": [
+      { "id": "shadcn-registry", "kind": "registry", "authority": "remote", "locator": "https://ui.shadcn.com/schema/registry-item.json", "version": "current", "status": "stable" },
+      { "id": "shadcn-cli", "kind": "cli", "authority": "native", "locator": "shadcn", "version": "4", "status": "stable" }
+    ],
+    "capabilities": [
+      { "operation": "probe", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["shadcn-cli"] },
+      { "operation": "catalog", "supported": true, "access": "read", "network": true, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["shadcn-registry"] },
+      { "operation": "inspect", "supported": true, "access": "read", "network": true, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["shadcn-registry", "shadcn-cli"] },
+      { "operation": "plan", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["shadcn-cli"] },
+      { "operation": "preview", "supported": true, "access": "read", "network": true, "preview": "supported", "approval": "not-required", "surfaceIds": ["shadcn-cli"] },
+      { "operation": "apply", "supported": false, "access": "write", "network": true, "preview": "not-supported", "approval": "required", "surfaceIds": ["shadcn-cli"] },
+      { "operation": "validate", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["shadcn-registry"] }
+    ],
+    "checks": [
+      { "id": "shadcn-registry-schema", "name": "Registry item schema", "surfaceId": "shadcn-registry", "mode": "schema", "locator": "https://ui.shadcn.com/schema/registry-item.json" }
+    ],
+    "limitations": ["Schema validity proves registry shape, not source safety or product fit."]
+  },
+  "resources": [
+    {
+      "id": "shadcn:registry:button",
+      "kind": "component",
+      "name": "Button",
+      "nativeId": "button",
+      "surfaceId": "shadcn-registry",
+      "sourceLocator": "registry/default/ui/button.json",
+      "upstreamVersion": "4",
+      "dependencies": ["@radix-ui/react-slot"],
+      "constraints": ["Installed source becomes project-owned.", "Overwrite remains disabled."],
+      "nativePayload": { "type": "registry:ui", "files": [{ "path": "ui/button.tsx", "type": "registry:ui" }] },
+      "provenance": { "authority": "remote", "evidence": "schema-governed registry item" }
+    }
+  ],
+  "plan": {
+    "contractVersion": "0.1",
+    "id": "shadcn-checkout-discovery",
+    "preset": "shadcn",
+    "status": "ready",
+    "traceability": "available",
+    "implementationBrief": {
+      "briefId": "checkout-v3",
+      "jobRef": "jtbd.json#outcomes/O-04",
+      "evidenceRefs": ["jtbd.json#evidence/Q12"],
+      "conceptRef": ".design/concept-checkout.md",
+      "prototypeRef": ".design/prototype-checkout.html",
+      "acceptanceCriteria": ["A returning customer can pay without re-entering saved details."]
+    },
+    "selectedResourceIds": ["shadcn:registry:button"],
+    "operations": [],
+    "conflicts": [],
+    "deviations": ["The fixture does not authorize registry installation."],
+    "validationCheckIds": ["shadcn-registry-schema"]
+  },
+  "findings": [
+    {
+      "id": "shadcn-schema-observed",
+      "lane": "framework",
+      "checkId": "shadcn-registry-schema",
+      "status": "pass",
+      "severity": "info",
+      "summary": "The registry item retains files and dependency metadata.",
+      "evidence": [{ "locator": "registry/default/ui/button.json", "observation": "Native type, file target, and dependency remain attached." }]
+    },
+    {
+      "id": "shadcn-humane-not-run",
+      "lane": "humane",
+      "checkId": "intent-traceability",
+      "status": "not-run",
+      "severity": "info",
+      "summary": "No implementation was produced by this read-only fixture.",
+      "evidence": []
+    }
+  ]
+}

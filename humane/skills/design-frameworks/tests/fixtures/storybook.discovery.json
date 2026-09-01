@@ -1,0 +1,99 @@
+{
+  "fixtureVersion": "0.1",
+  "source": {
+    "capturedAt": "2026-08-21",
+    "evidence": [
+      "https://storybook.js.org/docs/ai/manifests",
+      "https://storybook.js.org/docs/ai/mcp/overview"
+    ],
+    "note": "Read-only project catalog and MCP/test overlay fixture."
+  },
+  "manifest": {
+    "contractVersion": "0.1",
+    "preset": "storybook",
+    "profiles": ["catalog-mcp"],
+    "upstream": { "name": "storybook", "version": "preview" },
+    "projectRoot": ".",
+    "surfaces": [
+      { "id": "storybook-manifest", "kind": "manifest", "authority": "project", "locator": "components.json", "version": "preview", "status": "experimental" },
+      { "id": "storybook-mcp", "kind": "mcp", "authority": "project", "locator": "http://localhost:6006/mcp", "version": "negotiated", "status": "experimental" }
+    ],
+    "capabilities": [
+      { "operation": "probe", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["storybook-manifest", "storybook-mcp"] },
+      { "operation": "catalog", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["storybook-manifest"] },
+      { "operation": "inspect", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["storybook-manifest", "storybook-mcp"] },
+      { "operation": "plan", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["storybook-manifest"] },
+      { "operation": "preview", "supported": false, "access": "read", "network": false, "preview": "not-supported", "approval": "not-required", "surfaceIds": ["storybook-manifest"] },
+      { "operation": "apply", "supported": false, "access": "write", "network": false, "preview": "not-supported", "approval": "required", "surfaceIds": ["storybook-manifest"] },
+      { "operation": "validate", "supported": true, "access": "read", "network": false, "preview": "not-applicable", "approval": "not-required", "surfaceIds": ["storybook-mcp"] }
+    ],
+    "checks": [
+      { "id": "storybook-story-tests", "name": "Story interaction and accessibility tests", "surfaceId": "storybook-mcp", "mode": "tool", "locator": "run-story-tests" }
+    ],
+    "limitations": ["AI manifests and MCP are preview features.", "Documentation manifests are currently renderer-limited and must be probed per project.", "Storybook exposes no component-source apply operation."]
+  },
+  "resources": [
+    {
+      "id": "storybook:component:Button",
+      "kind": "component",
+      "name": "Button",
+      "nativeId": "example-button",
+      "surfaceId": "storybook-manifest",
+      "sourceLocator": "src/components/Button.stories.tsx",
+      "upstreamVersion": "preview",
+      "dependencies": [],
+      "constraints": ["The story documents project source; Storybook does not own that source."],
+      "nativePayload": { "stories": ["Primary", "Secondary"], "propExtraction": "react-docgen-typescript" },
+      "provenance": { "authority": "project", "evidence": "generated components manifest" }
+    }
+  ],
+  "plan": {
+    "contractVersion": "0.1",
+    "id": "storybook-checkout-discovery",
+    "preset": "storybook",
+    "status": "ready",
+    "traceability": "available",
+    "implementationBrief": {
+      "briefId": "checkout-v3",
+      "jobRef": "jtbd.json#outcomes/O-04",
+      "evidenceRefs": ["jtbd.json#evidence/Q12"],
+      "conceptRef": ".design/concept-checkout.md",
+      "prototypeRef": ".design/prototype-checkout.html",
+      "acceptanceCriteria": ["A returning customer can pay without re-entering saved details."]
+    },
+    "selectedResourceIds": ["storybook:component:Button"],
+    "operations": [],
+    "conflicts": [],
+    "deviations": ["Storybook is validation evidence, not the implementation writer."],
+    "validationCheckIds": ["storybook-story-tests"]
+  },
+  "findings": [
+    {
+      "id": "storybook-catalog-observed",
+      "lane": "framework",
+      "checkId": "storybook-manifest",
+      "status": "pass",
+      "severity": "info",
+      "summary": "The project manifest exposes component and story metadata.",
+      "evidence": [{ "locator": "components.json", "observation": "Component ID, story names, prop extraction, and source locator are retained." }]
+    },
+    {
+      "id": "storybook-tests-not-run",
+      "lane": "framework",
+      "checkId": "storybook-story-tests",
+      "status": "not-run",
+      "severity": "info",
+      "summary": "The fixture records the test capability without starting Storybook.",
+      "evidence": []
+    },
+    {
+      "id": "storybook-humane-not-run",
+      "lane": "humane",
+      "checkId": "intent-traceability",
+      "status": "not-run",
+      "severity": "info",
+      "summary": "No implementation was produced by this read-only fixture.",
+      "evidence": []
+    }
+  ]
+}

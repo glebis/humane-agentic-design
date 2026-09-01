@@ -1,8 +1,9 @@
 # humane
 
-A design *method* cycle, packaged as a plugin. Fourteen skills covering the work
+A design *method* cycle, packaged as a plugin. Skills covering the work
 **around** an interface — what to build, for whom, under which system and
-constraints, in which words, audited and proven — plus one bundled agent.
+constraints, in which words, audited and proven — plus one bundled agent and a
+separate implementation-adapter layer.
 
 Nothing here is a UI framework or a component library. These skills decide what
 gets built and judge whether it worked.
@@ -42,6 +43,12 @@ reviewing the same sentence twice under two names.
 | **`brandkit`** | Runs **before** a token set exists. Explores competing directions for a brand that doesn't have one yet, then hands the winner into the `design-tokens` brand block. |
 | **`brand-illustrate`** | Runs **after** one exists. Reads the palette, fonts, and brand block, merges the `layout-rules` de-slop negatives, and generates a batch that reads as one family. Shells out to whichever image backend is installed. |
 
+### Adapter layer — implementation fit
+
+| Skill | What it does | Owns |
+| --- | --- | --- |
+| **`design-frameworks`** | Selects and probes a design-system preset, maps an implementation brief to native components/tokens/templates, previews guarded writes, then validates framework compliance separately from Humane traceability. Astryx is the first full preset; shadcn and Storybook exercise registry and catalog/MCP surfaces. | Framework discovery, fit, guarded execution, and compliance. Never the job, concept, prototype, or product verdict. |
+
 ### Bundled agent
 
 **`synthetic-respondent`** — an ordinary person reacting to copy: gut-level, no
@@ -59,6 +66,10 @@ setup  →  jtbd  →  persona-review / respondent-panel
                 →  layout-rules  →  ux-writing
                 →  nielsen-heuristics + walkthrough  →  review  →  before-after ⤾
 ```
+
+When a surviving prototype must enter an existing design system, insert
+`design-frameworks` after `prototype` and before `review`. It is an adapter, not
+a new method stage.
 
 The loop matters: `before-after` feeds back into `jtbd` as evidence, so the next
 pass starts from what actually happened rather than what you hoped would.

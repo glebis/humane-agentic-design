@@ -114,6 +114,19 @@ Two extra skills sit alongside the cycle for visual identity work:
 - **`brandkit`** (upstream of tokens) — explores a brand that *doesn't exist yet*. Generates premium brand-guidelines boards for several competing directions — logo systems, mockups, art-directed imagery — and then hands the winning direction into the `design-tokens` brand block via a confirm-then-write handoff, so a token set is born with its art direction attached.
 - **`brand-illustrate`** (downstream of tokens) — produces assets under an *existing* token contract. It reads the palette, fonts, shape language, and brand block, runs a short one-question-at-a-time questionnaire, merges the `layout-rules` de-slop negatives into the prompt, and generates a batch that reads as one family. Generators live outside the plugin: it shells out to whichever backend is installed (`gpt-image-2`, `nano-banana`) and stops with instructions if none is. Saves a reusable recipe and builds a cross-batch contact-sheet gallery of every version.
 
+### Adapter layer — `design-frameworks`
+
+When a settled-enough prototype or existing implementation must enter a real
+design system, `humane:design-frameworks` probes that system's native machine
+surfaces and fits the implementation without changing the product decision
+above it. Astryx is the first full preset; shadcn exercises a schema-governed
+registry, and Storybook supplies a project-local catalog/test overlay. Every
+write is previewed and approved, and framework compliance is reported
+separately from Humane traceability.
+
+This is not step 11. It is an implementation adapter between the method's
+prototype and review stages.
+
 ## Install
 
 ### Claude Code
@@ -155,7 +168,7 @@ Start a new product idea and let the cycle carry it end to end. The steps are th
 3. **Pressure-test with people** — `humane:persona-review` on the brief for expert objections, then `humane:respondent-panel` on the copy — or the prototype — for gut reactions from people who have read none of your reasoning.
 4. **Set the system** — `humane:design-tokens` turns the brand into DTCG tokens and compiled CSS variables before any layout exists. Run `tokens contrast` once per theme and fix what it flags.
    If the typeface is still open, settle it first with `humane:type-specimen`: it sets the shortlist in your own copy on one page, so the family enters the token set having already been seen doing the job.
-5. **Build under constraints** — load `humane:layout-rules` before writing any HTML/CSS and treat its avoid-list as hard rules.
+5. **Build under constraints** — if the project already has a design system, run `humane:design-frameworks` first to select and probe its preset, produce the fit plan, and preview any framework-owned writes. Then load `humane:layout-rules` before writing any HTML/CSS and treat its avoid-list as hard rules.
 6. **Write the words** — `humane:ux-writing` turns the corpus into interface copy: the anxiety force shapes the confirmation, the quotes supply the vocabulary.
 7. **Audit it** — `humane:nielsen-heuristics` for the formal usability inspection.
 8. **Check someone can get through it** — `humane:walkthrough` takes an underserved outcome and attempts it as the person who has it, including the empty, error, and interrupted paths.

@@ -2,6 +2,8 @@
 name: prototype
 description: Make an idea lookable and clickable at the cheapest fidelity that answers its one open question — an ASCII sketch, an SVG click-dummy with hotspots linking screens, or a self-contained HTML file. Use when the user wants to see or try an idea before committing to structure, tokens, or copy. Triggers on prototype, wireframe, mockup, click-dummy, sketch the screens, "what would this look like", "mock this up", "show me the flow", "прототип", "макет".
 handoffs:
+  - to: design-frameworks
+    when: the structure has survived and must be fitted to an existing design system or component toolchain
   - to: design-tokens
     when: the structure has survived a look or a click-through and needs a system to render under
   - to: respondent-panel
@@ -169,6 +171,7 @@ silently assumed.
 | Structural defect classes in the eventual real build | `layout-rules` |
 | How the prototype lands with strangers | `respondent-panel` |
 | Whether a person can complete a task on it | `walkthrough` |
+| Fitting the settled structure to an existing design system | `design-frameworks` |
 
 A prototype is never reviewed by this skill. It is handed to the reviewers as a
 first-class artifact and judged there, once, by the skill that owns each rule.
